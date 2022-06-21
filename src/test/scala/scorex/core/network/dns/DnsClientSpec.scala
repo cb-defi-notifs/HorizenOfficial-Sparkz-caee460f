@@ -1,0 +1,121 @@
+package scorex.core.network.dns
+
+import akka.actor.{ActorRef, ActorSystem}
+import akka.pattern.ask
+import akka.util.Timeout
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.must.Matchers.be
+import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
+import scorex.core.network.dns.DnsClient.ReceivableMessages.GetDnsSeeds
+import scorex.core.network.dns.model.{DnsClientInput, DnsSeederDomain}
+import scorex.core.network.dns.strategy.Response.LookupResponse
+import scorex.core.network.dns.strategy.Strategy.{LeastNodeQuantity, MaxNodeQuantity, ThresholdNodeQuantity}
+
+import java.net.InetAddress
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
+
+class DnsClientSpec extends AnyFlatSpec {
+  private val fakeURLOne = new DnsSeederDomain("fake-url.com")
+  private val fakeIpSeqOne = Seq(
+    InetAddress.getByName("127.0.0.1"), InetAddress.getByName("127.0.0.2"), InetAddress.getByName("127.0.0.3"), InetAddress.getByName("127.0.0.4")
+  )
+
+  private val fakeURLTwo = new DnsSeederDomain("fake-url2.com")
+  private val fakeIpSeqTwo = Seq(InetAddress.getByName("127.0.1.1"))
+
+  private val fakeURLThree = new DnsSeederDomain("fake-url3.com")
+  private val fakeIpSeqThree = Seq(InetAddress.getByName("127.0.1.1"), InetAddress.getByName("127.0.1.2"))
+
+  private val mockLookupFunction = (url: DnsSeederDomain) => url match {
+    case `fakeURLOne` => fakeIpSeqOne
+    case `fakeURLTwo` => fakeIpSeqTwo
+    case `fakeURLThree` => fakeIpSeqThree
+    case _ => throw new IllegalArgumentException("Unexpected url in test")
+  }
+
+  "A DnsClient" should "reply with the least number of IPs" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    implicit val timeout: Timeout = Timeout(5 seconds)
+
+    val dnsClientParams = DnsClientInput(
+      Seq(fakeURLOne, fakeURLTwo, fakeURLThree),
+      mockLookupFunction
+    )
+
+    val dnsClient: ActorRef = DnsClientRef(dnsClientParams)
+
+    // Act
+    val futureResponse = (dnsClient ? GetDnsSeeds(LeastNodeQuantity(), dnsClientParams)).mapTo[LookupResponse]
+    val response: LookupResponse = Await.result(futureResponse, 5 seconds)
+
+    // Assert
+    response.ipv4Addresses.size should be(fakeIpSeqOne.size)
+  }
+
+  "A DnsClient" should "reply with the max number of IPs" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    implicit val timeout: Timeout = Timeout(5 seconds)
+
+    val dnsClientParams = DnsClientInput(
+      Seq(fakeURLOne, fakeURLTwo, fakeURLThree),
+      mockLookupFunction
+    )
+
+    val dnsClient: ActorRef = DnsClientRef(dnsClientParams)
+
+    // Act
+    val futureResponse = (dnsClient ? GetDnsSeeds(MaxNodeQuantity(), dnsClientParams)).mapTo[LookupResponse]
+    val response: LookupResponse = Await.result(futureResponse, 5 seconds)
+
+    // Assert
+    response.ipv4Addresses.size should be(fakeIpSeqOne.size + fakeIpSeqTwo.size + fakeIpSeqThree.size)
+  }
+
+  "A DnsClient" should "reply with a threshold number of IPs" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    implicit val timeout: Timeout = Timeout(5 seconds)
+
+    val nodesThreshold = 3
+
+    val dnsClientParams = DnsClientInput(
+      Seq(fakeURLOne, fakeURLTwo, fakeURLThree),
+      mockLookupFunction
+    )
+
+    val dnsClient: ActorRef = DnsClientRef(dnsClientParams)
+
+    // Act
+    val futureResponse = (dnsClient ? GetDnsSeeds(ThresholdNodeQuantity(nodesThreshold), dnsClientParams)).mapTo[LookupResponse]
+    val response: LookupResponse = Await.result(futureResponse, 5 seconds)
+
+    // Assert
+    response.ipv4Addresses.size should (be <= fakeIpSeqOne.size and be >= nodesThreshold)
+  }
+
+  "A DnsClient" should "reply with a threshold number of IPs bis" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    implicit val timeout: Timeout = Timeout(5 seconds)
+
+    val nodesThreshold = 5
+
+    val dnsClientParams = DnsClientInput(
+      Seq(fakeURLOne, fakeURLTwo, fakeURLThree),
+      mockLookupFunction
+    )
+
+    val dnsClient: ActorRef = DnsClientRef(dnsClientParams)
+
+    // Act
+    val futureResponse = (dnsClient ? GetDnsSeeds(ThresholdNodeQuantity(nodesThreshold), dnsClientParams)).mapTo[LookupResponse]
+    val response: LookupResponse = Await.result(futureResponse, 5 seconds)
+
+    // Assert
+    response.ipv4Addresses.size should be (fakeIpSeqOne.size + fakeIpSeqTwo.size)
+  }
+}
