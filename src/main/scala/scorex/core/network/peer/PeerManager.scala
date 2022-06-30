@@ -23,7 +23,11 @@ class PeerManager(settings: ScorexSettings, scorexContext: ScorexContext) extend
 
   if (peerDatabase.isEmpty) {
     // fill database with peers from config file if empty
-    settings.network.knownPeers.foreach { address =>
+    fillPeerDatabase(settings.network.knownPeers)
+  }
+
+  private def fillPeerDatabase(addresses: Seq[InetSocketAddress]): Unit = {
+    addresses.foreach { address =>
       if (!isSelf(address)) {
         peerDatabase.addOrUpdateKnownPeer(PeerInfo.fromAddress(address))
       }
@@ -65,6 +69,9 @@ class PeerManager(settings: ScorexSettings, scorexContext: ScorexContext) extend
     case RemovePeer(address) =>
       log.info(s"$address removed from peers database")
       peerDatabase.remove(address)
+      if (peerDatabaseHasOnlyKnownPeersFromConfig()) {
+        sender() ! EmptyPeerDatabase
+      }
 
     case get: GetPeers[_] =>
       sender() ! get.choose(peerDatabase.knownPeers, peerDatabase.blacklistedPeers, scorexContext)
@@ -91,6 +98,8 @@ class PeerManager(settings: ScorexSettings, scorexContext: ScorexContext) extend
     peerSpec.declaredAddress.exists(isSelf) || peerSpec.localAddressOpt.exists(isSelf)
   }
 
+  private def peerDatabaseHasOnlyKnownPeersFromConfig(): Boolean = peerDatabase.knownPeers.size <= settings.network.knownPeers.size
+
 }
 
 object PeerManager {
@@ -113,6 +122,8 @@ object PeerManager {
     case class AddPeerIfEmpty(data: PeerSpec)
 
     case class RemovePeer(address: InetSocketAddress)
+
+    case class EmptyPeerDatabase()
 
     /**
       * Message to get peers from known peers map filtered by `choose` function
