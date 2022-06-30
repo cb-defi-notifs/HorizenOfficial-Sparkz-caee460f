@@ -6,7 +6,7 @@ import akka.util.Timeout
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.must.Matchers.be
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
-import scorex.core.network.dns.DnsClient.ReceivableMessages.GetDnsSeeds
+import scorex.core.network.dns.DnsClient.ReceivableMessages.LookupRequest
 import scorex.core.network.dns.model.{DnsClientInput, DnsSeederDomain}
 import scorex.core.network.dns.strategy.Response.LookupResponse
 import scorex.core.network.dns.strategy.Strategy.{LeastNodeQuantity, MaxNodeQuantity, ThresholdNodeQuantity}
@@ -48,7 +48,7 @@ class DnsClientSpec extends AnyFlatSpec {
     val dnsClient: ActorRef = DnsClientRef(dnsClientParams)
 
     // Act
-    val futureResponse = (dnsClient ? GetDnsSeeds(LeastNodeQuantity(), dnsClientParams)).mapTo[LookupResponse]
+    val futureResponse = (dnsClient ? LookupRequest(LeastNodeQuantity())).mapTo[LookupResponse]
     val response: LookupResponse = Await.result(futureResponse, 5 seconds)
 
     // Assert
@@ -68,7 +68,7 @@ class DnsClientSpec extends AnyFlatSpec {
     val dnsClient: ActorRef = DnsClientRef(dnsClientParams)
 
     // Act
-    val futureResponse = (dnsClient ? GetDnsSeeds(MaxNodeQuantity(), dnsClientParams)).mapTo[LookupResponse]
+    val futureResponse = (dnsClient ? LookupRequest(MaxNodeQuantity())).mapTo[LookupResponse]
     val response: LookupResponse = Await.result(futureResponse, 5 seconds)
 
     // Assert
@@ -90,7 +90,7 @@ class DnsClientSpec extends AnyFlatSpec {
     val dnsClient: ActorRef = DnsClientRef(dnsClientParams)
 
     // Act
-    val futureResponse = (dnsClient ? GetDnsSeeds(ThresholdNodeQuantity(nodesThreshold), dnsClientParams)).mapTo[LookupResponse]
+    val futureResponse = (dnsClient ? LookupRequest(ThresholdNodeQuantity(nodesThreshold))).mapTo[LookupResponse]
     val response: LookupResponse = Await.result(futureResponse, 5 seconds)
 
     // Assert
@@ -112,7 +112,7 @@ class DnsClientSpec extends AnyFlatSpec {
     val dnsClient: ActorRef = DnsClientRef(dnsClientParams)
 
     // Act
-    val futureResponse = (dnsClient ? GetDnsSeeds(ThresholdNodeQuantity(nodesThreshold), dnsClientParams)).mapTo[LookupResponse]
+    val futureResponse = (dnsClient ? LookupRequest(ThresholdNodeQuantity(nodesThreshold))).mapTo[LookupResponse]
     val response: LookupResponse = Await.result(futureResponse, 5 seconds)
 
     // Assert
