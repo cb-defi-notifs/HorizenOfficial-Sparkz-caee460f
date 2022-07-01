@@ -4,9 +4,8 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
-import scorex.core.network.PeerSynchronizer.ReceivableMessages.GetNewPeers
+import scorex.core.network.PeerSynchronizer.ReceivableMessages.{GetNewPeers, LookupResponse}
 import scorex.core.network.dns.DnsClient.ReceivableMessages.LookupRequest
-import scorex.core.network.dns.strategy.Response.LookupResponse
 import scorex.core.network.dns.strategy.Strategy.LeastNodeQuantity
 import scorex.core.network.message.{GetPeersSpec, Message, MessageSpec, PeersSpec}
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, AddPeerIfEmpty, SeenPeers}
@@ -15,7 +14,7 @@ import scorex.core.settings.NetworkSettings
 import scorex.util.ScorexLogging
 import shapeless.syntax.typeable._
 
-import java.net.InetSocketAddress
+import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -104,6 +103,8 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
 object PeerSynchronizer {
   object ReceivableMessages {
     case class GetNewPeers()
+
+    case class LookupResponse(ipv4Addresses: Seq[InetAddress], ipv6Addresses: Seq[InetAddress])
   }
 }
 

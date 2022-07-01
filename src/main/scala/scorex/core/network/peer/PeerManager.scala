@@ -1,9 +1,9 @@
 package scorex.core.network.peer
 
 import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import scorex.core.app.ScorexContext
+import scorex.core.network.NetworkController.ReceivableMessages.EmptyPeerDatabase
 import scorex.core.network._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkUtils
@@ -122,8 +122,6 @@ object PeerManager {
     case class AddPeerIfEmpty(data: PeerSpec)
 
     case class RemovePeer(address: InetSocketAddress)
-
-    case class EmptyPeerDatabase()
 
     /**
       * Message to get peers from known peers map filtered by `choose` function

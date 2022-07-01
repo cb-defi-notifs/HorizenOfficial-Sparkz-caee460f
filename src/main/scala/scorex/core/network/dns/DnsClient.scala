@@ -6,6 +6,7 @@ import scorex.core.network.dns.strategy.LookupStrategy
 import scorex.util.ScorexLogging
 
 class DnsClient(dnsClientParams: DnsClientInput) extends Actor with ScorexLogging {
+
   import scorex.core.network.dns.DnsClient.ReceivableMessages.LookupRequest
 
   override def receive: Receive =
@@ -25,12 +26,18 @@ object DnsClient {
   object ReceivableMessages {
     case class LookupRequest(s: LookupStrategy)
   }
+
+  object Exception {
+    final case class DnsLookupException(private val message: String = "")
+      extends Exception(message)
+  }
 }
 
 object DnsClientRef {
   def props(params: DnsClientInput): Props = {
     Props(new DnsClient(params))
   }
+
   def apply(dnsClientParams: DnsClientInput)(implicit system: ActorSystem): ActorRef = {
     system.actorOf(props(dnsClientParams))
   }

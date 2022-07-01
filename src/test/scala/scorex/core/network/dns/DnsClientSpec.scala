@@ -6,15 +6,16 @@ import akka.util.Timeout
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.must.Matchers.be
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
+import scorex.core.network.PeerSynchronizer.ReceivableMessages.LookupResponse
 import scorex.core.network.dns.DnsClient.ReceivableMessages.LookupRequest
 import scorex.core.network.dns.model.{DnsClientInput, DnsSeederDomain}
-import scorex.core.network.dns.strategy.Response.LookupResponse
 import scorex.core.network.dns.strategy.Strategy.{LeastNodeQuantity, MaxNodeQuantity, ThresholdNodeQuantity}
 
 import java.net.InetAddress
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
+import scala.util.Try
 
 class DnsClientSpec extends AnyFlatSpec {
   private val fakeURLOne = new DnsSeederDomain("fake-url.com")
@@ -28,10 +29,12 @@ class DnsClientSpec extends AnyFlatSpec {
   private val fakeURLThree = new DnsSeederDomain("fake-url3.com")
   private val fakeIpSeqThree = Seq(InetAddress.getByName("127.0.1.1"), InetAddress.getByName("127.0.1.2"))
 
+  private val badURL = new DnsSeederDomain("bad-url.com")
+
   private val mockLookupFunction = (url: DnsSeederDomain) => url match {
-    case `fakeURLOne` => fakeIpSeqOne
-    case `fakeURLTwo` => fakeIpSeqTwo
-    case `fakeURLThree` => fakeIpSeqThree
+    case `fakeURLOne` => Try(fakeIpSeqOne)
+    case `fakeURLTwo` => Try(fakeIpSeqTwo)
+    case `fakeURLThree` => Try(fakeIpSeqThree)
     case _ => throw new IllegalArgumentException("Unexpected url in test")
   }
 

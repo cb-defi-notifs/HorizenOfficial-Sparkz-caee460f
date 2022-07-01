@@ -1,9 +1,11 @@
 package scorex.core.network.dns.strategy
 
+import scorex.core.network.PeerSynchronizer.ReceivableMessages.LookupResponse
+import scorex.core.network.dns.DnsClient.Exception.DnsLookupException
 import scorex.core.network.dns.model.DnsClientInput
-import scorex.core.network.dns.strategy.Response.LookupResponse
 
 import java.net.{Inet4Address, Inet6Address, InetAddress}
+import scala.util.{Failure, Success}
 
 trait LookupStrategy {
   def apply(dnsClientParams: DnsClientInput): LookupResponse
@@ -33,22 +35,28 @@ object Strategy {
     val seeders = dnsClientParams.dnsSeeders
     val lookupFunction = dnsClientParams.lookupFunction
 
+    val exceptionMessages = Seq[String]()
+
     val (ipv4Addresses, ipv6Addresses) = seeders.foldLeft(Seq[InetAddress]()) { (acc, curr) =>
       val newElements = if (acc.size < nodesThreshold) {
-        lookupFunction(curr)
+        lookupFunction(curr) match {
+          case Success(value) => value
+          case Failure(exception) =>
+            exceptionMessages ++ exception.getMessage
+            Seq[InetAddress]()
+        }
       } else {
         Seq[InetAddress]()
       }
+
       acc ++ newElements
     }.partition {
       case _: Inet4Address => true
       case _: Inet6Address => false
     }
 
+    if (ipv4Addresses.isEmpty && ipv6Addresses.isEmpty) throw DnsLookupException("All dns lookups failed: " + exceptionMessages.mkString(", "))
+
     LookupResponse(ipv4Addresses, ipv6Addresses)
   }
-}
-
-object Response {
-  case class LookupResponse(ipv4Addresses: Seq[InetAddress], ipv6Addresses: Seq[InetAddress])
 }

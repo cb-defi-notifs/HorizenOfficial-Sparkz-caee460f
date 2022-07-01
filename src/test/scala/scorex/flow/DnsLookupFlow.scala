@@ -4,17 +4,19 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.io.Tcp.{Bind, Bound, Message => _}
 import akka.testkit.TestProbe
 import scorex.core.app.ScorexContext
+import scorex.core.network.NetworkController.ReceivableMessages.EmptyPeerDatabase
 import scorex.core.network._
 import scorex.core.network.dns.DnsClientRef
 import scorex.core.network.dns.model.{DnsClientInput, DnsSeederDomain}
 import scorex.core.network.message._
-import scorex.core.network.peer.PeerManager.ReceivableMessages.{EmptyPeerDatabase, GetAllPeers}
+import scorex.core.network.peer.PeerManager.ReceivableMessages.GetAllPeers
 import scorex.core.network.peer._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.LocalTimeProvider
 import scorex.network.NetworkTests
 
 import java.net.{InetAddress, InetSocketAddress}
+import scala.util.Try
 
 class DnsLookupFlow extends NetworkTests {
   type Data = Map[InetSocketAddress, PeerInfo]
@@ -33,9 +35,9 @@ class DnsLookupFlow extends NetworkTests {
   private val fakeIpSeqThree = Seq(InetAddress.getByName("127.0.1.1"), InetAddress.getByName("127.0.1.2"))
 
   private val mockLookupFunction = (url: DnsSeederDomain) => url match {
-    case `fakeURLOne` => fakeIpSeqOne
-    case `fakeURLTwo` => fakeIpSeqTwo
-    case `fakeURLThree` => fakeIpSeqThree
+    case `fakeURLOne` => Try(fakeIpSeqOne)
+    case `fakeURLTwo` => Try(fakeIpSeqTwo)
+    case `fakeURLThree` => Try(fakeIpSeqThree)
     case _ => throw new IllegalArgumentException("Unexpected url in test")
   }
   private val featureSerializers = Map(LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer)

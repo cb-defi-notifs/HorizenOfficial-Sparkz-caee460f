@@ -504,6 +504,8 @@ object NetworkController {
 
     case object GetConnectedPeers
 
+    case class EmptyPeerDatabase()
+
     /**
       * Get p2p network status
       */
