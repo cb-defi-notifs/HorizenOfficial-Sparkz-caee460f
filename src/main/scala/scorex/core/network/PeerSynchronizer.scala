@@ -48,6 +48,12 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
     val msg = Message[Unit](GetPeersSpec, Right(Unit), None)
     val stn = SendToNetwork(msg, SendToRandom)
     context.system.scheduler.scheduleWithFixedDelay(2.seconds, settings.getPeersInterval, networkControllerRef, stn)
+
+    performFirstDnsSeedersLookup()
+  }
+
+  private def performFirstDnsSeedersLookup(): Unit = {
+    self ! GetNewPeers()
   }
 
   override def receive: Receive = {

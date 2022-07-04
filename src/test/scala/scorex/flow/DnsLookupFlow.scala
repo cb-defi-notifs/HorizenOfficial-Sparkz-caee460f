@@ -67,6 +67,28 @@ class DnsLookupFlow extends NetworkTests {
     system.terminate()
   }
 
+  it should "fill peer database with dns response when PeerSynchronizer is instantiated" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+
+    val probe = TestProbe("probe")(system)
+    implicit val defaultSender: ActorRef = probe.testActor
+
+    val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
+    val scorexSettings = settings.copy(network = settings.network.copy(bindAddress = nodeAddr))
+    val (_, peerManager) = createNetworkController(scorexSettings, tcpManagerProbe)
+
+    // Assert
+    Thread.sleep(1000)
+    peerManager ! GetAllPeers
+    val data = probe.expectMsgClass(classOf[Data])
+    data.size should be(fakeIpSeqOne.size)
+
+    system.terminate()
+  }
+
   private def createNetworkController(settings: ScorexSettings, tcpManagerProbe: TestProbe, upnp: Option[UPnPGateway] = None)(implicit system: ActorSystem) = {
     val timeProvider = LocalTimeProvider
     val externalAddr = settings.network.declaredAddress
