@@ -1,7 +1,5 @@
 package scorex.core.network.peer
 
-import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import scorex.core.app.ScorexContext
 import scorex.core.network._
@@ -9,6 +7,7 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkUtils
 import scorex.util.ScorexLogging
 
+import java.net.{InetAddress, InetSocketAddress}
 import scala.util.Random
 
 /**
@@ -20,10 +19,11 @@ class PeerManager(settings: ScorexSettings, scorexContext: ScorexContext) extend
   import PeerManager.ReceivableMessages._
 
   private val peerDatabase = new InMemoryPeerDatabase(settings.network, scorexContext.timeProvider)
+  private val knownPeersSet: Set[InetSocketAddress] = settings.network.knownPeers.toSet
 
   if (peerDatabase.isEmpty) {
     // fill database with peers from config file if empty
-    settings.network.knownPeers.foreach { address =>
+    knownPeersSet.foreach { address =>
       if (!isSelf(address)) {
         peerDatabase.addOrUpdateKnownPeer(PeerInfo.fromAddress(address))
       }
@@ -63,8 +63,10 @@ class PeerManager(settings: ScorexSettings, scorexContext: ScorexContext) extend
       }
 
     case RemovePeer(address) =>
-      log.info(s"$address removed from peers database")
-      peerDatabase.remove(address)
+      if (!knownPeersSet(address)) {
+        peerDatabase.remove(address)
+        log.info(s"$address removed from peers database")
+      }
 
     case get: GetPeers[_] =>
       sender() ! get.choose(peerDatabase.knownPeers, peerDatabase.blacklistedPeers, scorexContext)
