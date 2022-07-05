@@ -29,8 +29,6 @@ class DnsClientSpec extends AnyFlatSpec {
   private val fakeURLThree = new DnsSeederDomain("fake-url3.com")
   private val fakeIpSeqThree = Seq(InetAddress.getByName("127.0.1.1"), InetAddress.getByName("127.0.1.2"))
 
-  private val badURL = new DnsSeederDomain("bad-url.com")
-
   private val mockLookupFunction = (url: DnsSeederDomain) => url match {
     case `fakeURLOne` => Try(fakeIpSeqOne)
     case `fakeURLTwo` => Try(fakeIpSeqTwo)
@@ -56,6 +54,8 @@ class DnsClientSpec extends AnyFlatSpec {
 
     // Assert
     response.ipv4Addresses.size should be(fakeIpSeqOne.size)
+
+    system.terminate()
   }
 
   "A DnsClient" should "reply with the max number of IPs" in {
@@ -76,6 +76,8 @@ class DnsClientSpec extends AnyFlatSpec {
 
     // Assert
     response.ipv4Addresses.size should be(fakeIpSeqOne.size + fakeIpSeqTwo.size + fakeIpSeqThree.size)
+
+    system.terminate()
   }
 
   "A DnsClient" should "reply with a threshold number of IPs" in {
@@ -98,6 +100,8 @@ class DnsClientSpec extends AnyFlatSpec {
 
     // Assert
     response.ipv4Addresses.size should (be <= fakeIpSeqOne.size and be >= nodesThreshold)
+
+    system.terminate()
   }
 
   "A DnsClient" should "reply with a threshold number of IPs bis" in {
@@ -119,6 +123,8 @@ class DnsClientSpec extends AnyFlatSpec {
     val response: LookupResponse = Await.result(futureResponse, 5 seconds)
 
     // Assert
-    response.ipv4Addresses.size should be (fakeIpSeqOne.size + fakeIpSeqTwo.size)
+    response.ipv4Addresses.size should be(fakeIpSeqOne.size + fakeIpSeqTwo.size)
+
+    system.terminate()
   }
 }

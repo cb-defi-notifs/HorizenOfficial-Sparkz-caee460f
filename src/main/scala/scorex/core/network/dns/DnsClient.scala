@@ -5,6 +5,8 @@ import scorex.core.network.dns.model.DnsClientInput
 import scorex.core.network.dns.strategy.LookupStrategy
 import scorex.util.ScorexLogging
 
+import scala.util.{Failure, Success}
+
 class DnsClient(dnsClientParams: DnsClientInput) extends Actor with ScorexLogging {
 
   import scorex.core.network.dns.DnsClient.ReceivableMessages.LookupRequest
@@ -13,7 +15,11 @@ class DnsClient(dnsClientParams: DnsClientInput) extends Actor with ScorexLoggin
     dnsLookup orElse nonsense
 
   private def dnsLookup: Receive = {
-    case LookupRequest(strategy: LookupStrategy) => sender() ! strategy.apply(dnsClientParams)
+    case LookupRequest(strategy: LookupStrategy) =>
+      strategy.apply(dnsClientParams) match {
+        case Success(response) => sender() ! response
+        case Failure(exception) => log.error("Failed to perform a dns lookup: " + exception.getMessage)
+      }
   }
 
   private def nonsense: Receive = {
