@@ -1,7 +1,5 @@
 package scorex.core.network
 
-import java.net._
-
 import akka.actor._
 import akka.io.Tcp._
 import akka.io.{IO, Tcp}
@@ -12,12 +10,13 @@ import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{Disconnected
 import scorex.core.network.message.Message.MessageCode
 import scorex.core.network.message.{Message, MessageSpec}
 import scorex.core.network.peer.PeerManager.ReceivableMessages._
-import scorex.core.network.peer.{LocalAddressPeerFeature, PeerInfo, PeerManager, PeersStatus, PenaltyType, SessionIdPeerFeature}
+import scorex.core.network.peer._
 import scorex.core.settings.NetworkSettings
 import scorex.core.utils.TimeProvider.Time
 import scorex.core.utils.{NetworkUtils, TimeProvider}
 import scorex.util.ScorexLogging
 
+import java.net._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.{existentials, postfixOps}
@@ -220,15 +219,17 @@ class NetworkController(settings: NetworkSettings,
     */
   private def scheduleConnectionToPeer(): Unit = {
     context.system.scheduler.scheduleWithFixedDelay(5.seconds, 5.seconds) {
-      () => if (connections.size < settings.maxConnections) {
-        log.debug(s"Looking for a new random connection")
-        val randomPeerF = peerManagerRef ? RandomPeerExcluding(connections.values.flatMap(_.peerInfo).toSeq)
-        randomPeerF.mapTo[Option[PeerInfo]].foreach { peerInfoOpt =>
-          peerInfoOpt.foreach { peerInfo =>
-            getPeerAddress(peerInfo).foreach { remote =>
-              if (connectionForPeerAddress(remote).isEmpty && !unconfirmedConnections.contains(remote))
-                self ! ConnectTo(peerInfo)
-            }
+      () => {
+        if (connections.size < settings.maxConnections) {
+          log.debug(s"Looking for a new random connection")
+          val connectionsAddressSeq = connections.values.flatMap(_.peerInfo).toSeq
+          val unconfirmedConnectionsAddressSeq = unconfirmedConnections.map(connection => PeerInfo.fromAddress(connection)).toSeq
+          val mergedSeq = connectionsAddressSeq ++ unconfirmedConnectionsAddressSeq
+          val peersAddresses = mergedSeq.map(getPeerAddress)
+          val randomPeerF = peerManagerRef ? RandomPeerExcluding(peersAddresses)
+          randomPeerF.mapTo[Option[PeerInfo]].foreach {
+            case Some(peerInfo) => self ! ConnectTo(peerInfo)
+            case None => log.warn("Could not find a peer to connect to, skipping this connectionToPeer round")
           }
         }
       }
