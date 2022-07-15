@@ -2,7 +2,6 @@ package scorex.core.network
 
 
 import java.net.InetSocketAddress
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
@@ -21,8 +20,10 @@ import scorex.core.transaction.{MempoolReader, Transaction}
 import scorex.core.utils.{NetworkTimeProvider, ScorexEncoding}
 import scorex.core.validation.MalformedModifierError
 import scorex.core.{ModifierTypeId, NodeViewModifier, PersistentNodeViewModifier, idsToString}
+import scorex.util.serialization.{VLQByteBufferReader, VLQReader}
 import scorex.util.{ModifierId, ScorexLogging}
 
+import java.nio.ByteBuffer
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -314,7 +315,7 @@ PMOD <: PersistentNodeViewModifier, HR <: HistoryReader[PMOD, SI] : ClassTag, MR
 
   /**
     * Parse modifiers using specified serializer, check that its id is equal to the declared one,
-    * penalize misbehaving peer for every incorrect modifier,
+    * penalize misbehaving peer for every incorrect modifier or additional bytes after the modifier,
     * call deliveryTracker.onReceive() for every correct modifier to update its status
     *
     * @return collection of parsed modifiers
@@ -323,7 +324,14 @@ PMOD <: PersistentNodeViewModifier, HR <: HistoryReader[PMOD, SI] : ClassTag, MR
                                                     serializer: ScorexSerializer[M],
                                                     remote: ConnectedPeer): Iterable[M] = {
     modifiers.flatMap { case (id, bytes) =>
-      serializer.parseBytesTry(bytes) match {
+      val reader: VLQReader = new VLQByteBufferReader(ByteBuffer.wrap(bytes))
+
+      if (reader.remaining != 0) {
+        penalizeMisbehavingPeer(remote)
+        log.warn(s"Received additional bytes after block. Declared id ${encoder.encodeId(id)} from ${remote.toString}")
+      }
+
+      serializer.parseTry(reader) match {
         case Success(mod) if id == mod.id =>
           Some(mod)
         case _ =>
