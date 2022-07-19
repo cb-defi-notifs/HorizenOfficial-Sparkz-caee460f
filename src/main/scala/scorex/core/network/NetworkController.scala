@@ -6,6 +6,7 @@ import akka.io.{IO, Tcp}
 import akka.pattern.ask
 import akka.util.Timeout
 import scorex.core.app.{ScorexContext, Version}
+import scorex.core.network.NetworkController.ReceivableMessages.Internal.ConnectionToPeer
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{DisconnectedPeer, HandshakedPeer}
 import scorex.core.network.message.Message.MessageCode
 import scorex.core.network.message.{Message, MessageSpec}
@@ -187,6 +188,9 @@ class NetworkController(settings: NetworkSettings,
 
     case _: ConnectionClosed =>
       log.info("Denied connection has been closed")
+
+    case ConnectionToPeer(activeConnections, unconfirmedConnections) =>
+      connectionToPeer(activeConnections, unconfirmedConnections)
   }
 
   //calls from API / application
@@ -222,17 +226,21 @@ class NetworkController(settings: NetworkSettings,
       () => {
         if (connections.size < settings.maxConnections) {
           log.debug(s"Looking for a new random connection")
-          val connectionsAddressSeq = connections.values.flatMap(_.peerInfo).toSeq
-          val unconfirmedConnectionsAddressSeq = unconfirmedConnections.map(connection => PeerInfo.fromAddress(connection)).toSeq
-          val mergedSeq = connectionsAddressSeq ++ unconfirmedConnectionsAddressSeq
-          val peersAddresses = mergedSeq.map(getPeerAddress)
-          val randomPeerF = peerManagerRef ? RandomPeerExcluding(peersAddresses)
-          randomPeerF.mapTo[Option[PeerInfo]].foreach {
-            case Some(peerInfo) => self ! ConnectTo(peerInfo)
-            case None => log.warn("Could not find a peer to connect to, skipping this connectionToPeer round")
-          }
+          connectionToPeer(connections, unconfirmedConnections)
         }
       }
+    }
+  }
+
+  private def connectionToPeer(activeConnections: Map[InetSocketAddress, ConnectedPeer], unconfirmedConnections: Set[InetSocketAddress]): Unit = {
+    val connectionsAddressSeq = activeConnections.values.flatMap(_.peerInfo).toSeq
+    val unconfirmedConnectionsAddressSeq = unconfirmedConnections.map(connection => PeerInfo.fromAddress(connection)).toSeq
+    val mergedSeq = connectionsAddressSeq ++ unconfirmedConnectionsAddressSeq
+    val peersAddresses = mergedSeq.map(getPeerAddress)
+    val randomPeerF = peerManagerRef ? RandomPeerExcluding(peersAddresses)
+    randomPeerF.mapTo[Option[PeerInfo]].foreach {
+      case Some(peerInfo) => self ! ConnectTo(peerInfo)
+      case None => log.warn("Could not find a peer to connect to, skipping this connectionToPeer round")
     }
   }
 
@@ -511,6 +519,10 @@ object NetworkController {
       * Get p2p network status
       */
     case object GetPeersStatus
+
+    private[network] object Internal {
+      case class ConnectionToPeer(activeConnections: Map[InetSocketAddress, ConnectedPeer], unconfirmedConnections: Set[InetSocketAddress])
+    }
 
   }
 

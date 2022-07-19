@@ -155,7 +155,7 @@ object PeerManager {
                           blacklistedPeers: Seq[InetAddress],
                           sc: ScorexContext): Option[PeerInfo] = {
         val candidates = knownPeers.values.filterNot { p =>
-          excludedPeers.contains(p.peerSpec.address) &&
+          excludedPeers.contains(p.peerSpec.address) ||
             blacklistedPeers.exists(addr => p.peerSpec.address.map(_.getAddress).contains(addr))
         }.toSeq
         if (candidates.nonEmpty) Some(candidates(Random.nextInt(candidates.size)))
