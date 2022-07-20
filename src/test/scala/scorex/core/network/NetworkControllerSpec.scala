@@ -195,7 +195,6 @@ class NetworkControllerSpec extends NetworkTests {
     system.terminate()
   }
 
-
   it should "receive external address from UPnP gateway" in {
     implicit val system = ActorSystem()
 
@@ -309,6 +308,7 @@ class NetworkControllerSpec extends NetworkTests {
   }
 
   it should "skip connection attempt if the only connection in PeerManager is marked as unconfirmed" in {
+    // Arrange
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
@@ -322,16 +322,18 @@ class NetworkControllerSpec extends NetworkTests {
 
     unconfirmedConnections += peerAddressOne
 
+    // Act
     peerManager ! AddOrUpdatePeer(peerInfoOne)
-
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
 
+    // Assert
     tcpManagerProbe.expectNoMessage()
 
     system.terminate()
   }
 
   it should "select the only candidate existing in the PeerManager since there are neither active or unconfirmed connections" in {
+    // Arrange
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
@@ -343,16 +345,21 @@ class NetworkControllerSpec extends NetworkTests {
     val activeConnections = Map.empty[InetSocketAddress, ConnectedPeer]
     val unconfirmedConnections = Set.empty[InetSocketAddress]
 
+    // Act
     peerManager ! AddOrUpdatePeer(peerInfoOne)
-
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
 
-    tcpManagerProbe.expectMsgClass(classOf[Connect])
+    // Assert
+    tcpManagerProbe.expectMsgPF() {
+      case ok@Connect(remoteAddress, _, _, _, _) if remoteAddress == peerAddressOne => ok
+      case _ => fail("Unexpected message received")
+    }
 
     system.terminate()
   }
 
   it should "skip the peer connection attempt since the only peer in the PeerManager is already connected" in {
+    // Arrange
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
@@ -371,16 +378,18 @@ class NetworkControllerSpec extends NetworkTests {
       Some(peerInfoOne)
     )
 
+    // Act
     peerManagerRef ! AddOrUpdatePeer(peerInfoOne)
-
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
 
+    // Assert
     tcpManagerProbe.expectNoMessage()
 
     system.terminate()
   }
 
   it should "connect to the second peer since is not an active or unconfirmed connection" in {
+    // Arrange
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
@@ -401,12 +410,53 @@ class NetworkControllerSpec extends NetworkTests {
       Some(peerInfoOne)
     )
 
+    // Act
     peerManagerRef ! AddOrUpdatePeer(peerInfoOne)
     peerManagerRef ! AddOrUpdatePeer(peerInfoTwo)
-
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
 
-    tcpManagerProbe.expectMsgClass(classOf[Connect])
+    // Assert
+    tcpManagerProbe.expectMsgPF() {
+      case ok@Connect(remoteAddress, _, _, _, _) if remoteAddress == peerAddressTwo => ok
+      case _ => fail("Unexpected message received")
+    }
+
+    system.terminate()
+  }
+
+  it should "connect to the second peer using the local address peer feature" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    val tcpManagerProbe = TestProbe()
+
+    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe, None)
+
+    val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
+    val peerInfoOne = getPeerInfo(peerAddressOne)
+    val peerAddressTwo = new InetSocketAddress("55.66.77.88", 11223)
+    val featureSeq = Seq(LocalAddressPeerFeature(peerAddressTwo))
+    val peerInfoTwo = getPeerInfo(peerAddressTwo, featureSeq = featureSeq)
+
+    var activeConnections = Map.empty[InetSocketAddress, ConnectedPeer]
+    val unconfirmedConnections = Set.empty[InetSocketAddress]
+
+    activeConnections += peerAddressOne -> ConnectedPeer(
+      ConnectionId(peerAddressOne, peerAddressOne, Incoming),
+      networkControllerRef,
+      1,
+      Some(peerInfoOne)
+    )
+
+    // Act
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne)
+    peerManagerRef ! AddOrUpdatePeer(peerInfoTwo)
+    networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // Assert
+    tcpManagerProbe.expectMsgPF() {
+      case ok@Connect(remoteAddress, _, _, _, _) if remoteAddress == peerAddressTwo => ok
+      case _ => fail("Unexpected message received")
+    }
 
     system.terminate()
   }
