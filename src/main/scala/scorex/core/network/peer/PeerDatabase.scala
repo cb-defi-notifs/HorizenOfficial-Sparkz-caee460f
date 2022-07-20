@@ -10,9 +10,12 @@ trait PeerDatabase {
 
   /**
     * Add peer to the database, or update it
+    *
     * @param peerInfo - peer record
     */
   def addOrUpdateKnownPeer(peerInfo: PeerInfo): Unit
+
+  def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo]): Unit
 
   def knownPeers: Map[InetSocketAddress, PeerInfo]
 
@@ -25,5 +28,4 @@ trait PeerDatabase {
   def isBlacklisted(address: InetAddress): Boolean
 
   def remove(address: InetSocketAddress): Unit
-
 }

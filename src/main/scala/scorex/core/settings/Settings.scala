@@ -48,6 +48,7 @@ case class NetworkSettings(nodeName: String,
                            magicBytes: Array[Byte],
                            getPeersInterval: FiniteDuration,
                            maxPeerSpecObjects: Int,
+                           storedPeersLimit: Int,
                            temporalBanDuration: FiniteDuration,
                            penaltySafeInterval: FiniteDuration,
                            penaltyScoreThreshold: Int)

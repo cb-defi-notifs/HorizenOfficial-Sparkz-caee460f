@@ -6,7 +6,7 @@ import akka.util.Timeout
 import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
 import scorex.core.network.message.{GetPeersSpec, Message, MessageSpec, PeersSpec}
 import scorex.core.network.peer.{PeerInfo, PenaltyType}
-import scorex.core.network.peer.PeerManager.ReceivableMessages.{AddPeerIfEmpty, SeenPeers}
+import scorex.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, SeenPeers}
 import scorex.core.settings.NetworkSettings
 import scorex.util.ScorexLogging
 import shapeless.syntax.typeable._
@@ -62,7 +62,7 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
     * @param peers sequence of peer specs describing a remote peers details
     */
   private def addNewPeers(peers: Seq[PeerSpec]): Unit = {
-    peers.foreach(peerSpec => peerManager ! AddPeerIfEmpty(peerSpec))
+    peerManager ! AddPeersIfEmpty(peers)
   }
 
   /**

@@ -1,9 +1,11 @@
 package scorex.core.network.peer
 
 import java.net.InetSocketAddress
-
 import org.scalatest.Assertion
+import scorex.core.network.Outgoing
 import scorex.network.NetworkTests
+
+import scala.util.Random
 
 class InMemoryPeerDatabaseSpec extends NetworkTests {
 
@@ -11,7 +13,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
   private val peerAddress2 = new InetSocketAddress("2.2.2.2", 27017)
 
   private def withDb(test: InMemoryPeerDatabase => Assertion): Assertion =
-    test(new InMemoryPeerDatabase(settings.network, timeProvider))
+    test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = 10), timeProvider))
 
   "new DB" should "be empty" in {
     withDb { db =>
@@ -100,6 +102,53 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
       db.penaltyScore(peerAddress1) shouldBe PenaltyType.SpamPenalty.penaltyScore
       db.penalize(peerAddress1, PenaltyType.MisbehaviorPenalty)
       db.penaltyScore(peerAddress1) shouldBe PenaltyType.SpamPenalty.penaltyScore
+    }
+  }
+
+  it should "not add more peers than configured by storedPeersLimit" in {
+    withDb { db =>
+      val ninePeers = generatePeers(9)
+      val oneMorePeer = generatePeers(1)
+      val fiveMorePeers = generatePeers(5)
+      db.addOrUpdateKnownPeers(ninePeers)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.size shouldBe 9
+
+      db.addOrUpdateKnownPeers(oneMorePeer)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.size shouldBe 10
+
+      db.addOrUpdateKnownPeers(fiveMorePeers)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.size shouldBe 10
+    }
+  }
+
+  it should "not replace existing peers if they are connected" in {
+    withDb { db =>
+      val peersLimit = 10
+      val nineConnectedPeers = generatePeers(peersLimit - 1).map(_.copy(connectionType = Some(Outgoing)))
+      val fiveMorePeers = generatePeers(5)
+      db.addOrUpdateKnownPeers(nineConnectedPeers)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.size shouldBe 9
+
+      db.addOrUpdateKnownPeers(fiveMorePeers)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.values should (contain allElementsOf nineConnectedPeers and have size 10)
+    }
+  }
+
+  private def generatePeers(ammount: Int) = {
+    val random = Random
+    val base = (1 to 3).map(_ => random.nextInt(256)).mkString(".")
+    var counter = 1
+    (1 to ammount).map { _ =>
+      val host = base + counter
+      counter += 1
+      getPeerInfo(
+        new InetSocketAddress(host, 0)
+      )
     }
   }
 
