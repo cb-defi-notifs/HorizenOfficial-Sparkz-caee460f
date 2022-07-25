@@ -57,7 +57,7 @@ class RequestTracker(
 
               networkControllerRef ! message.copy(sendingStrategy = SendToPeer(peer))
 
-              context.system.scheduler.scheduleOnce(timeout.duration, self, VerifyDelivery(requestKey, peer))
+              context.system.scheduler.scheduleOnce(deliveryTimeout, self, VerifyDelivery(requestKey, peer))
             }
         }
   }
@@ -65,7 +65,7 @@ class RequestTracker(
   private def receiveResponse: Receive = {
     case m@Message(spec, _, Some(remote)) if spec.messageCode == trackedResponseCode =>
       //verify we asked with requestTracker
-      if (requestTracker.remove((trackedResponseCode, remote))) {
+      if (requestTracker.remove((trackedRequestCode, remote))) {
         handler.foreach(actor => actor ! m)
       } else {
         networkControllerRef ! PenalizePeer(remote.connectionId.remoteAddress, PenaltyType.SpamPenalty)
