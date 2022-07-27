@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import scorex.core.app.ScorexContext
-import scorex.network.NetworkTests
+import scorex.core.network.NetworkTests
 
 
 class PeerManagerSpec extends NetworkTests {

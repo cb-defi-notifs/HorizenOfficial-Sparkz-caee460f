@@ -39,7 +39,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
     localFeatures.map(f => f.featureId -> (f.serializer: ScorexSerializer[_ <: PeerFeature])).toMap
 
   private val handshakeSerializer = new HandshakeSpec(featureSerializers, settings.maxHandshakeSize)
-  private val messageSerializer = new MessageSerializer(scorexContext.messageSpecs, settings.magicBytes)
+  private val messageSerializer = new MessageSerializer(scorexContext.messageSpecs, settings.magicBytes, settings.messageLengthBytesLimit)
 
   // there is no recovery for broken connections
   override val supervisorStrategy: SupervisorStrategy = SupervisorStrategy.stoppingStrategy
@@ -176,7 +176,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
 
     case ReceivableMessages.Ack(id) =>
       outMessagesBuffer -= id
-      if (outMessagesBuffer.nonEmpty){
+      if (outMessagesBuffer.nonEmpty) {
         writeFirst()
       } else {
         log.info("Buffered messages processed, exiting buffering mode")

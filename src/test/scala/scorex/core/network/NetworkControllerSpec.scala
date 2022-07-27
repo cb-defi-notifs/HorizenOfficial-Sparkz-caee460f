@@ -1,4 +1,4 @@
-package scorex.network
+package scorex.core.network
 
 import java.net.{InetAddress, InetSocketAddress}
 
@@ -13,7 +13,6 @@ import org.scalatest.TryValues._
 import org.scalatest.matchers.should.Matchers
 import scorex.core.app.{Version, ScorexContext}
 import scorex.core.network.NetworkController.ReceivableMessages.{GetConnectedPeers, GetPeersStatus}
-import scorex.core.network._
 import scorex.core.network.message.{PeersSpec, _}
 import scorex.core.network.peer.{LocalAddressPeerFeature, PeerManagerRef, LocalAddressPeerFeatureSerializer, PeersStatus, SessionIdPeerFeature}
 import scorex.core.settings.ScorexSettings
@@ -370,7 +369,7 @@ class TestPeer(settings: ScorexSettings, networkControllerRef: ActorRef, tcpMana
   private val handshakeSerializer = new HandshakeSpec(featureSerializers, Int.MaxValue)
   private val peersSpec = new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects)
   private val messageSpecs = Seq(GetPeersSpec, peersSpec)
-  private val messagesSerializer = new MessageSerializer(messageSpecs, settings.network.magicBytes)
+  private val messagesSerializer = new MessageSerializer(messageSpecs, settings.network.magicBytes, settings.network.messageLengthBytesLimit)
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
   private var connectionHandler: ActorRef = _
@@ -399,7 +398,7 @@ class TestPeer(settings: ScorexSettings, networkControllerRef: ActorRef, tcpMana
     * @return
     */
   def sendHandshake(declaredAddress: Option[InetSocketAddress], localAddress: Option[InetSocketAddress]): Tcp.ResumeReading.type = {
-    val localFeature:Seq[PeerFeature] = localAddress.map(LocalAddressPeerFeature(_)).toSeq
+    val localFeature: Seq[PeerFeature] = localAddress.map(LocalAddressPeerFeature(_)).toSeq
     val features = localFeature :+ SessionIdPeerFeature(settings.network.magicBytes)
     val handshakeToNode = Handshake(PeerSpec(settings.network.agentName,
       Version(settings.network.appVersion), "test",

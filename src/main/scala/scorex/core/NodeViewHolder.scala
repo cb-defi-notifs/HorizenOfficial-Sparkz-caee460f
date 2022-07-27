@@ -163,61 +163,55 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
     }
   }
 
-  protected def requestDownloads(pi: ProgressInfo[PMOD]): Unit =
-    pi.toDownload.foreach { case (tid, id) =>
-      context.system.eventStream.publish(DownloadRequest(tid, id))
-    }
-
   private def trimChainSuffix(suffix: IndexedSeq[PMOD], rollbackPoint: scorex.util.ModifierId): IndexedSeq[PMOD] = {
     val idx = suffix.indexWhere(_.id == rollbackPoint)
     if (idx == -1) IndexedSeq() else suffix.drop(idx)
   }
 
   /**
-
-    Assume that history knows the following blocktree:
-
-           G
-          / \
-         *   G
-        /     \
-       *       G
-
-    where path with G-s is about canonical chain (G means semantically valid modifier), path with * is sidechain (* means
-    that semantic validity is unknown). New modifier is coming to the sidechain, it sends rollback to the root +
-    application of the sidechain to the state. Assume that state is finding that some modifier in the sidechain is
-    incorrect:
-
-           G
-          / \
-         G   G
-        /     \
-       B       G
-      /
-     *
-
-    In this case history should be informed about the bad modifier and it should retarget state
-
-    //todo: improve the comment below
-
-    We assume that we apply modifiers sequentially (on a single modifier coming from the network or generated locally),
-    and in case of failed application of some modifier in a progressInfo, rollback point in an alternative should be not
-    earlier than a rollback point of an initial progressInfo.
-   **/
+    *
+    * Assume that history knows the following blocktree:
+    *
+    * G
+    * / \
+    * G
+    * /     \
+    * G
+    *
+    * where path with G-s is about canonical chain (G means semantically valid modifier), path with * is sidechain (* means
+    * that semantic validity is unknown). New modifier is coming to the sidechain, it sends rollback to the root +
+    * application of the sidechain to the state. Assume that state is finding that some modifier in the sidechain is
+    * incorrect:
+    *
+    * G
+    * / \
+    * G   G
+    * /     \
+    * B       G
+    * /
+    *
+    *
+    * In this case history should be informed about the bad modifier and it should retarget state
+    *
+    * //todo: improve the comment below
+    *
+    * We assume that we apply modifiers sequentially (on a single modifier coming from the network or generated locally),
+    * and in case of failed application of some modifier in a progressInfo, rollback point in an alternative should be not
+    * earlier than a rollback point of an initial progressInfo.
+    * */
 
   @tailrec
   protected final def updateState(history: HIS,
-                          state: MS,
-                          progressInfo: ProgressInfo[PMOD],
-                          suffixApplied: IndexedSeq[PMOD]): (HIS, Try[MS], Seq[PMOD]) = {
-    requestDownloads(progressInfo)
+                                  state: MS,
+                                  progressInfo: ProgressInfo[PMOD],
+                                  suffixApplied: IndexedSeq[PMOD]): (HIS, Try[MS], Seq[PMOD]) = {
 
     val (stateToApplyTry: Try[MS], suffixTrimmed: IndexedSeq[PMOD]) = if (progressInfo.chainSwitchingNeeded) {
-        @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-        val branchingPoint = progressInfo.branchPoint.get //todo: .get
-        if (state.version != branchingPoint) {
-          state.rollbackTo(idToVersion(branchingPoint)) -> trimChainSuffix(suffixApplied, branchingPoint)
-        } else Success(state) -> IndexedSeq()
+      @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
+      val branchingPoint = progressInfo.branchPoint.get //todo: .get
+      if (state.version != branchingPoint) {
+        state.rollbackTo(idToVersion(branchingPoint)) -> trimChainSuffix(suffixApplied, branchingPoint)
+      } else Success(state) -> IndexedSeq()
     } else Success(state) -> suffixApplied
 
     stateToApplyTry match {
@@ -244,9 +238,9 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
   }
 
   private def applyState(history: HIS,
-                           stateToApply: MS,
-                           suffixTrimmed: IndexedSeq[PMOD],
-                           progressInfo: ProgressInfo[PMOD]): Try[UpdateInformation] = {
+                         stateToApply: MS,
+                         suffixTrimmed: IndexedSeq[PMOD],
+                         progressInfo: ProgressInfo[PMOD]): Try[UpdateInformation] = {
     val updateInfoSample = UpdateInformation(history, stateToApply, None, None, suffixTrimmed)
     progressInfo.toApply.foldLeft[Try[UpdateInformation]](Success(updateInfoSample)) {
       case (f@Failure(ex), _) =>
@@ -308,7 +302,6 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
                 updateNodeView(updatedHistory = Some(newHistory))
             }
           } else {
-            requestDownloads(progressInfo)
             updateNodeView(updatedHistory = Some(historyBeforeStUpdate))
           }
         case Failure(e) =>
@@ -403,7 +396,7 @@ object NodeViewHolder {
     // Modifiers received from the remote peer with new elements in it
     case class ModifiersFromRemote[PM <: PersistentNodeViewModifier](modifiers: Iterable[PM])
 
-    sealed trait NewTransactions[TX <: Transaction]{
+    sealed trait NewTransactions[TX <: Transaction] {
       val txs: Iterable[TX]
     }
 
@@ -424,9 +417,6 @@ object NodeViewHolder {
   // fixme: should we delete these messages?
   case class ModificationApplicationStarted[PMOD <: PersistentNodeViewModifier](modifier: PMOD)
     extends NodeViewHolderEvent
-
-  case class DownloadRequest(modifierTypeId: ModifierTypeId,
-                             modifierId: scorex.util.ModifierId) extends NodeViewHolderEvent
 
   case class CurrentView[HIS, MS, VL, MP](history: HIS, state: MS, vault: VL, pool: MP)
 

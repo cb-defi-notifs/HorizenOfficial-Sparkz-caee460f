@@ -98,7 +98,7 @@ class HybridHistory(val storage: HistoryStorage,
   private def powBlockAppend(powBlock: PowBlock): (HybridHistory, ProgressInfo[HybridBlock]) = {
     val progress: ProgressInfo[HybridBlock] = if (isGenesis(powBlock)) {
       storage.update(powBlock, None, isBest = true)
-      ProgressInfo(None, Seq(), Seq(powBlock), Seq())
+      ProgressInfo(None, Seq(), Seq(powBlock))
     } else {
       storage.heightOf(powBlock.parentId) match {
         case Some(_) =>
@@ -112,25 +112,25 @@ class HybridHistory(val storage: HistoryStorage,
             if (isGenesis(powBlock) || (powBlock.parentId == bestPowId && powBlock.prevPosId == bestPosId)) {
               log.debug(s"New best PoW block ${encoder.encodeId(powBlock.id)}")
               //just apply one block to the end
-              ProgressInfo(None, Seq(), Seq(powBlock), Seq())
+              ProgressInfo(None, Seq(), Seq(powBlock))
             } else if (isBestBrother) {
               log.debug(s"New best brother ${encoder.encodeId(powBlock.id)}")
               //new best brother
-              ProgressInfo(Some(powBlock.prevPosId), Seq(bestPowBlock), Seq(powBlock), Seq())
+              ProgressInfo(Some(powBlock.prevPosId), Seq(bestPowBlock), Seq(powBlock))
             } else {
               //we're switching to a better chain, if it does not contain an invalid block
               bestForkChanges(powBlock)
             }
           } else {
             log.debug(s"New orphaned PoW block ${encoder.encodeId(powBlock.id)}")
-            ProgressInfo(None, Seq(), Seq(), Seq())
+            ProgressInfo(None, Seq(), Seq())
           }
           storage.update(powBlock, None, isBest)
           mod
 
         case None =>
           log.warn(s"No parent block ${powBlock.parentId} in history")
-          ProgressInfo[HybridBlock](None, Seq[HybridBlock](), Seq(), Seq())
+          ProgressInfo[HybridBlock](None, Seq[HybridBlock](), Seq())
       }
     }
     // require(modifications.toApply.exists(_.id sameElements powBlock.id))
@@ -146,14 +146,14 @@ class HybridHistory(val storage: HistoryStorage,
 
     val mod: ProgressInfo[HybridBlock] = if (!isBest) {
       log.debug(s"New orphaned PoS block ${encoder.encodeId(posBlock.id)}")
-      ProgressInfo(None, Seq(), Seq(), Seq())
+      ProgressInfo(None, Seq(), Seq())
     } else if (posBlock.parentId == bestPowId) {
       log.debug(s"New best PoS block ${encoder.encodeId(posBlock.id)}")
-      ProgressInfo(None, Seq(), Seq(posBlock), Seq())
+      ProgressInfo(None, Seq(), Seq(posBlock))
     } else if (parent.prevPosId == bestPowBlock.prevPosId) {
       log.debug(s"New best PoS block with link to non-best brother ${encoder.encodeId(posBlock.id)}")
       //rollback to previous PoS block and apply parent block one more time
-      ProgressInfo(Some(parent.prevPosId), Seq(bestPowBlock), Seq[HybridBlock](parent, posBlock), Seq())
+      ProgressInfo(Some(parent.prevPosId), Seq(bestPowBlock), Seq[HybridBlock](parent, posBlock))
     } else {
       bestForkChanges(posBlock)
     }
@@ -212,10 +212,10 @@ class HybridHistory(val storage: HistoryStorage,
       require(applyBlocks.nonEmpty)
       require(throwBlocks.nonEmpty)
 
-      ProgressInfo[HybridBlock](rollbackPoint, throwBlocks, applyBlocks, Seq())
+      ProgressInfo[HybridBlock](rollbackPoint, throwBlocks, applyBlocks)
     } else {
       log.info(s"Orphaned block $block from invalid suffix")
-      ProgressInfo(None, Seq(), Seq(), Seq())
+      ProgressInfo(None, Seq(), Seq())
     }
   }
 
@@ -487,7 +487,7 @@ class HybridHistory(val storage: HistoryStorage,
     storage.updateValidity(modifier, Invalid)
 
     new HybridHistory(storage, settings, validators, statsLogger, timeProvider) ->
-      ProgressInfo(None, Seq(), Seq(), Seq())
+      ProgressInfo(None, Seq(), Seq())
   }
 
   override def isSemanticallyValid(modifierId: ModifierId): ModifierSemanticValidity =
