@@ -11,9 +11,10 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
 
   private val peerAddress1 = new InetSocketAddress("1.1.1.1", 27017)
   private val peerAddress2 = new InetSocketAddress("2.2.2.2", 27017)
+  private val storedPeersLimit = 10
 
   private def withDb(test: InMemoryPeerDatabase => Assertion): Assertion =
-    test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = 10), timeProvider))
+    test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = storedPeersLimit), timeProvider))
 
   "new DB" should "be empty" in {
     withDb { db =>
@@ -107,6 +108,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
 
   it should "not add more peers than configured by storedPeersLimit" in {
     withDb { db =>
+
       val ninePeers = generatePeers(9)
       val oneMorePeer = generatePeers(1)
       val fiveMorePeers = generatePeers(5)
@@ -116,17 +118,17 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
 
       db.addOrUpdateKnownPeers(oneMorePeer)
       db.blacklistedPeers.isEmpty shouldBe true
-      db.knownPeers.size shouldBe 10
+      db.knownPeers.size shouldBe storedPeersLimit
 
       db.addOrUpdateKnownPeers(fiveMorePeers)
       db.blacklistedPeers.isEmpty shouldBe true
-      db.knownPeers.size shouldBe 10
+      db.knownPeers.size shouldBe storedPeersLimit
     }
   }
 
   it should "not replace existing peers if they are connected" in {
     withDb { db =>
-      val peersLimit = 10
+      val peersLimit = storedPeersLimit
       val nineConnectedPeers = generatePeers(peersLimit - 1).map(_.copy(connectionType = Some(Outgoing)))
       val fiveMorePeers = generatePeers(5)
       db.addOrUpdateKnownPeers(nineConnectedPeers)
@@ -135,7 +137,58 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
 
       db.addOrUpdateKnownPeers(fiveMorePeers)
       db.blacklistedPeers.isEmpty shouldBe true
-      db.knownPeers.values should (contain allElementsOf nineConnectedPeers and have size 10)
+      db.knownPeers.values should (contain allElementsOf nineConnectedPeers and have size storedPeersLimit)
+    }
+  }
+
+  it should "should replace oldest not-connected peers" in {
+    withDb { db =>
+      val tenPeersLimit = storedPeersLimit
+
+      val oldestFivePeers = generatePeers(5)
+      val medianFivePeers = generatePeers(5)
+      val newestFivePeers = generatePeers(5)
+
+      db.addOrUpdateKnownPeers(oldestFivePeers)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.values should (have size 5 and contain allElementsOf oldestFivePeers)
+
+      db.addOrUpdateKnownPeers(medianFivePeers)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.size shouldBe tenPeersLimit
+      db.knownPeers.values should (contain allElementsOf oldestFivePeers and contain allElementsOf medianFivePeers)
+
+      db.addOrUpdateKnownPeers(newestFivePeers)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.size shouldBe tenPeersLimit
+      db.knownPeers.values should (contain allElementsOf medianFivePeers and contain allElementsOf newestFivePeers)
+    }
+  }
+
+  it should "replace not-connected peers even if they are latest" in {
+    withDb { db =>
+      val tenPeersLimit = storedPeersLimit
+      val twoPeers = 2
+      val eightPeers = tenPeersLimit - 2
+
+      val eightConnectedPeers = generatePeers(eightPeers).map(_.copy(connectionType = Some(Outgoing)))
+      val twoNotConnected = generatePeers(twoPeers)
+      val twoMoreNotConnected = generatePeers(twoPeers)
+
+      db.addOrUpdateKnownPeers(eightConnectedPeers)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.size shouldBe eightPeers
+
+      db.addOrUpdateKnownPeers(twoNotConnected)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.size shouldBe tenPeersLimit
+      db.knownPeers.values should (contain allElementsOf eightConnectedPeers and contain allElementsOf twoNotConnected)
+
+
+      db.addOrUpdateKnownPeers(twoMoreNotConnected)
+      db.blacklistedPeers.isEmpty shouldBe true
+      db.knownPeers.size shouldBe tenPeersLimit
+      db.knownPeers.values should (contain allElementsOf eightConnectedPeers and contain allElementsOf twoMoreNotConnected)
     }
   }
 
