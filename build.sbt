@@ -1,6 +1,6 @@
 import scala.util.Try
 
-name := "scorex-core"
+name := "sparkz-core"
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.12",
@@ -19,22 +19,24 @@ lazy val commonSettings = Seq(
     Wart.JavaSerializable,
     Wart.Serializable,
     Wart.OptionPartial),
-  organization := "org.scorexfoundation",
+  organization := "io.horizen",
+  organizationName := "Zen Blockchain Foundation",
+  version := "2.0.0-RC7",
   licenses := Seq("CC0" -> url("https://creativecommons.org/publicdomain/zero/1.0/legalcode")),
-  homepage := Some(url("https://github.com/ScorexFoundation/Scorex")),
-  pomExtra :=
+  homepage := Some(url("https://github.com/HorizenOfficial/Sparkz")),
+  pomExtra := (
+      <scm>
+        <url>https://github.com/HorizenOfficial/Sparkz</url>
+        <connection>scm:git:git@github.com:HorizenOfficial/Sparkz.git</connection>
+      </scm>
       <developers>
         <developer>
-          <id>kushti</id>
-          <name>Alexander Chepurnoy</name>
-          <url>http://chepurnoy.org/</url>
+          <id>HorizenOfficial</id>
+          <name>Zen Blockchain Foundation</name>
+          <url>https://github.com/HorizenOfficial</url>
         </developer>
-        <developer>
-          <id>catena2w</id>
-          <name>catena</name>
-          <url>https://github.com/catena2w</url>
-        </developer>
-      </developers>,
+      </developers>
+  ),
   publishMavenStyle := true,
   publishArtifact in Test := false,
   publishTo := sonatypePublishToBundle.value,
@@ -109,12 +111,12 @@ lazy val examples = Project(id = "examples", base = file(s"examples"))
   .dependsOn(basics, testkit)
   .settings(commonSettings: _*)
 
-lazy val basics = Project(id = "scorex", base = file("."))
+lazy val basics = Project(id = "sparkz", base = file("."))
   .settings(commonSettings: _*)
 
 credentials ++= (for {
-  username <- Option(System.getenv().get("SONATYPE_USERNAME"))
-  password <- Option(System.getenv().get("SONATYPE_PASSWORD"))
+  username <- Option(System.getenv().get("CONTAINER_OSSRH_JIRA_USERNAME"))
+  password <- Option(System.getenv().get("CONTAINER_OSSRH_JIRA_PASSWORD"))
 } yield Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", username, password)).toSeq
 
 
@@ -122,16 +124,7 @@ credentials ++= (for {
 // signing is done by sbt-pgp plugin
 // how to generate a key - https://central.sonatype.org/pages/working-with-pgp-signatures.html
 // how to export a key and use it with Travis - https://docs.scala-lang.org/overviews/contributors/index.html#export-your-pgp-key-pair
-pgpPublicRing := file("ci/pubring.asc")
-pgpSecretRing := file("ci/secring.asc")
-pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray)
-usePgpKeyHex("D78982639AD538EF361DEC6BF264D529385A0333")
+pgpPassphrase := sys.env.get("CONTAINER_GPG_PASSPHRASE").map(_.toArray)
 
 //FindBugs settings
-
 findbugsReportType := Some(FindbugsReport.PlainHtml)
-
-// prefix version with "-SNAPSHOT" for builds without a git tag
-dynverSonatypeSnapshots in ThisBuild := true
-// use "-" instead of default "+"
-dynverSeparator in ThisBuild := "-"
