@@ -30,7 +30,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
   private val (networkControllerProbe, peerSynchronizerProbe, networkSettings) = prepareTestData()
 
   private def withRequestTracker(test: ActorRef => Unit): Unit =
-    test(RequestTrackerRef(networkControllerProbe.ref, requestMessageCode, responseMessageCode, networkSettings.requestTrackerDeliveryTimeout, networkSettings.penalizeNonDelivery))
+    test(RequestTrackerRef(networkControllerProbe.ref, requestMessageCode, responseMessageCode, deliveryTimeout, networkSettings.penalizeNonDelivery))
 
   "Request Tracker" should "forward registerMessageSpec to network controller, replacing ref to itself" in {
     withRequestTracker { requestTracker =>
@@ -147,7 +147,6 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
     val networkControllerProbe = TestProbe()
     val peerSynchronizerProbe = TestProbe()
     val networkSettings = settings.network.copy(
-      requestTrackerDeliveryTimeout = deliveryTimeout,
       penalizeNonDelivery = true
     )
 

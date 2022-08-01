@@ -89,7 +89,7 @@ object PeerSynchronizerRef {
       networkControllerRef,
       GetPeersSpec.messageCode,
       PeersSpec.messageCode,
-      settings.requestTrackerDeliveryTimeout,
+      settings.getPeersInterval / 2,
       settings.penalizeNonDelivery
     )
     Props(new PeerSynchronizer(wrappedNetworkController, peerManager, settings, featureSerializers))
