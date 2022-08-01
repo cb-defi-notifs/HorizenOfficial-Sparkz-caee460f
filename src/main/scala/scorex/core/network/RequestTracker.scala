@@ -2,7 +2,7 @@ package scorex.core.network
 
 import akka.actor._
 import akka.util.Timeout
-import scorex.core.network.NetworkController.ReceivableMessages.{GetConnectedPeers, PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import scorex.core.network.NetworkController.ReceivableMessages.{GetFilteredConnectedPeers, PenalizePeer, RegisterMessageSpecs, SendToNetwork}
 import scorex.core.network.message.Message
 import scorex.core.network.message.Message.MessageCode
 import scorex.core.network.peer.PenaltyType
@@ -47,18 +47,17 @@ class RequestTracker(
 
   private def sendTrackedRequest: Receive = {
     case message@SendToNetwork(m@Message(spec, _, _), strategy) if spec.messageCode == trackedRequestCode =>
-      askActor[Seq[ConnectedPeer]](networkControllerRef, GetConnectedPeers)
-        .map { peers =>
-          strategy.choose(peers.filter(_.peerInfo.exists(_.peerSpec.protocolVersion >= m.spec.protocolVersion)))
-            .foreach { peer =>
-              val requestKey = (trackedRequestCode, peer)
+      askActor[Seq[ConnectedPeer]](networkControllerRef, GetFilteredConnectedPeers(strategy, m.spec.protocolVersion))
+        .map {
+          _.foreach { peer =>
+            val requestKey = (trackedRequestCode, peer)
 
-              requestTracker += requestKey
+            requestTracker += requestKey
 
-              networkControllerRef ! message.copy(sendingStrategy = SendToPeer(peer))
+            networkControllerRef ! message.copy(sendingStrategy = SendToPeer(peer))
 
-              context.system.scheduler.scheduleOnce(deliveryTimeout, self, VerifyDelivery(requestKey, peer))
-            }
+            context.system.scheduler.scheduleOnce(deliveryTimeout, self, VerifyDelivery(requestKey, peer))
+          }
         }
   }
 
@@ -90,13 +89,13 @@ class RequestTracker(
 }
 
 object RequestTrackerRef {
-  def props(ncr: ActorRef, tRequestC: MessageCode, tResponseC: MessageCode, dt: FiniteDuration, pnd: Boolean)(implicit ec: ExecutionContext): Props = {
-    Props(new RequestTracker(ncr, tRequestC, tResponseC, dt, pnd))
+  def props(networkControllerRef: ActorRef, trackedRequestCode: MessageCode, trackedResponseCode: MessageCode, deliveryTimeout: FiniteDuration, penalizeNonDelivery: Boolean)(implicit ec: ExecutionContext): Props = {
+    Props(new RequestTracker(networkControllerRef, trackedRequestCode, trackedResponseCode, deliveryTimeout, penalizeNonDelivery))
   }
 
-  def apply(ncr: ActorRef, tRequestC: MessageCode, tResponseC: MessageCode, dt: FiniteDuration, pnd: Boolean)
+  def apply(networkControllerRef: ActorRef, trackedRequestCode: MessageCode, trackedResponseCode: MessageCode, deliveryTimeout: FiniteDuration, penalizeNonDelivery: Boolean)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-    system.actorOf(props(ncr, tRequestC, tResponseC, dt, pnd))
+    system.actorOf(props(networkControllerRef, trackedRequestCode, trackedResponseCode, deliveryTimeout, penalizeNonDelivery))
   }
 }
 

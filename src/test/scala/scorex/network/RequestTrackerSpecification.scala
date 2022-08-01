@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import scorex.ObjectGenerators
 import scorex.core.app.Version
-import scorex.core.network.NetworkController.ReceivableMessages.{GetConnectedPeers, PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import scorex.core.network.NetworkController.ReceivableMessages.{GetFilteredConnectedPeers, PenalizePeer, RegisterMessageSpecs, SendToNetwork}
 import scorex.core.network.message.Message.MessageCode
 import scorex.core.network.message.{GetPeersSpec, Message, ModifiersSpec, PeersSpec}
 import scorex.core.network.peer.PeerInfo
@@ -24,7 +24,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
 
-  private val deliveryTimeout: FiniteDuration = 5.seconds
+  private val deliveryTimeout: FiniteDuration = 2.seconds
   private val requestMessageCode: MessageCode = GetPeersSpec.messageCode
   private val responseMessageCode: MessageCode = PeersSpec.messageCode
   private val (networkControllerProbe, peerSynchronizerProbe, networkSettings) = prepareTestData()
@@ -72,13 +72,13 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
       networkControllerProbe.setAutoPilot(
         (sender: ActorRef, msg: Any) => {
           msg match {
-            case GetConnectedPeers => sender ! Seq(connectedPeer)
+            case GetFilteredConnectedPeers(_,_) => sender ! Seq(connectedPeer)
             case _ =>
           }
           TestActor.KeepRunning
         }
       )
-      networkControllerProbe.expectMsg(GetConnectedPeers)
+      networkControllerProbe.expectMsg(GetFilteredConnectedPeers(SendToRandom, GetPeersSpec.protocolVersion))
       networkControllerProbe.expectMsg(request.copy(sendingStrategy = SendToPeer(connectedPeer)))
 
       //penalty
@@ -105,13 +105,13 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
       networkControllerProbe.setAutoPilot(
         (sender: ActorRef, msg: Any) => {
           msg match {
-            case GetConnectedPeers => sender ! Seq(connectedPeer)
+            case GetFilteredConnectedPeers(_,_) => sender ! Seq(connectedPeer)
             case _ =>
           }
           TestActor.KeepRunning
         }
       )
-      networkControllerProbe.expectMsg(GetConnectedPeers)
+      networkControllerProbe.expectMsg(GetFilteredConnectedPeers(SendToRandom, GetPeersSpec.protocolVersion))
       networkControllerProbe.expectMsg(request.copy(sendingStrategy = SendToPeer(connectedPeer)))
 
       //response
@@ -119,7 +119,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
       peerSynchronizerProbe.expectMsg(response)
 
       //no penalty
-      networkControllerProbe.expectNoMessage(10.seconds)
+      networkControllerProbe.expectNoMessage(deliveryTimeout + 1.seconds)
     }
   }
 
