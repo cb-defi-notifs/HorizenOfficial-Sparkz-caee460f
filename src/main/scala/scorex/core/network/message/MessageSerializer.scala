@@ -45,7 +45,7 @@ class MessageSerializer(specs: Seq[MessageSpec[_]], magicBytes: Array[Byte], mes
 
       //peer is trying to cause buffer overflow or breaking the parsing
       if (length < 0 || length > messageLengthBytesLimit) {
-        throw MaliciousBehaviorException("Data length is negative!")
+        throw MaliciousBehaviorException("Data length is negative or it's beyond the allowed threshold!")
       }
 
       if (length != 0 && byteString.length < length + HeaderLength + ChecksumLength) {

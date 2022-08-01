@@ -99,7 +99,8 @@ class DeliveryTracker(system: ActorSystem,
       require(isCorrectTransition(status(id), Requested), s"Illegal status transition: ${status(id)} -> Requested")
       val cancellable = system.scheduler.scheduleOnce(deliveryTimeout, nvsRef, CheckDelivery(supplier, typeId, id))
       requested.put(id, RequestedInfo(supplier, cancellable, checksDone)) match {
-        case Some(_) => //we already had this modifier, it is counted
+        case Some(RequestedInfo(peer,_,_)) if supplier.connectionId == peer.connectionId => //we already had this modifier, it is counted
+        case Some(RequestedInfo(peer,_,_)) => decrementPeerLimitCounter(peer); incrementPeerLimitCounter(supplier)
         case None => incrementPeerLimitCounter(supplier)
       }
     }

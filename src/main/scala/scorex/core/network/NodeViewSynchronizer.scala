@@ -361,7 +361,6 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     * Scheduler asking node view synchronizer to check whether requested modifiers have been delivered.
     * Do nothing, if modifier is already in a different state (it might be already received, applied, etc.),
     * wait for delivery until the number of checks exceeds the maximum if the peer sent `Inv` for this modifier
-    * re-request modifier from a different random peer, if our node does not know a peer who have it
     */
   protected def checkDelivery: Receive = {
     case CheckDelivery(peer, modifierTypeId, modifierId) =>

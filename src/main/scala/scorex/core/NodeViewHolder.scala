@@ -172,24 +172,24 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
     *
     * Assume that history knows the following blocktree:
     *
-    * G
-    * / \
-    * G
-    * /     \
-    * G
+    *      G
+    *     / \
+    *    *   G
+    *   /     \
+    *  *       G
     *
     * where path with G-s is about canonical chain (G means semantically valid modifier), path with * is sidechain (* means
     * that semantic validity is unknown). New modifier is coming to the sidechain, it sends rollback to the root +
     * application of the sidechain to the state. Assume that state is finding that some modifier in the sidechain is
     * incorrect:
     *
-    * G
-    * / \
-    * G   G
-    * /     \
-    * B       G
-    * /
-    *
+    *       G
+    *      / \
+    *     G   G
+    *    /     \
+    *   B       G
+    *  /
+    * *
     *
     * In this case history should be informed about the bad modifier and it should retarget state
     *
