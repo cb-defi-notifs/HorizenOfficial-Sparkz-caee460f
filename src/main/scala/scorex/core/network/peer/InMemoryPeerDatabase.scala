@@ -35,7 +35,7 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     }
   }
 
-  /*
+  /**
    * Adds a peer to the in-memory database ignoring the configurable limit.
    * Used for high-priority peers, like peers from config file or connected peers
    */
