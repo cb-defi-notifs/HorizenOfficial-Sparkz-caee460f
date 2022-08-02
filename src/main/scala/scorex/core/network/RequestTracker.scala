@@ -11,7 +11,7 @@ import scorex.util.ScorexLogging
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
+import scala.concurrent.duration.{DurationLong, FiniteDuration, SECONDS}
 import scala.language.postfixOps
 
 /**
@@ -47,6 +47,7 @@ class RequestTracker(
 
   private def sendTrackedRequest: Receive = {
     case message@SendToNetwork(m@Message(spec, _, _), strategy) if spec.messageCode == trackedRequestCode =>
+      val start = System.nanoTime
       askActor[Seq[ConnectedPeer]](networkControllerRef, GetFilteredConnectedPeers(strategy, m.spec.protocolVersion))
         .map {
           _.foreach { peer =>
@@ -56,7 +57,8 @@ class RequestTracker(
 
             networkControllerRef ! message.copy(sendingStrategy = SendToPeer(peer))
 
-            context.system.scheduler.scheduleOnce(deliveryTimeout, self, VerifyDelivery(requestKey, peer))
+            val elapsed = (System.nanoTime - start).nano
+            context.system.scheduler.scheduleOnce(deliveryTimeout - elapsed, self, VerifyDelivery(requestKey, peer))
           }
         }
   }
