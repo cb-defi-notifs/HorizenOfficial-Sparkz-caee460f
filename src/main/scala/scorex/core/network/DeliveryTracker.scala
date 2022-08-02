@@ -175,6 +175,18 @@ class DeliveryTracker(system: ActorSystem,
       }
     }
 
+  def peerInfo(id: ModifierId): Option[ConnectedPeer] = {
+    val modifierStatus: ModifiersStatus = status(id)
+    modifierStatus match {
+      case Requested =>
+        requested.get(id).map(_.peer)
+      case Received =>
+        received.get(id)
+      case _ =>
+        None
+    }
+  }
+
   def getPeerLimit(peer: ConnectedPeer): Int = {
     maxRequestedPerPeer - peerLimits.getOrElse(peer, 0)
   }
