@@ -1,12 +1,12 @@
 package scorex.core.network.peer
 
-import java.net.InetSocketAddress
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import scorex.core.app.ScorexContext
+import scorex.core.network.peer.PeerManager.ReceivableMessages.RemovePeer
 import scorex.network.NetworkTests
 
+import java.net.InetSocketAddress
 
 class PeerManagerSpec extends NetworkTests {
 
@@ -16,7 +16,7 @@ class PeerManagerSpec extends NetworkTests {
   private val DefaultPort = 27017
 
   it should "ignore adding self as a peer" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
@@ -35,7 +35,7 @@ class PeerManagerSpec extends NetworkTests {
   }
 
   it should "added peer be returned in GetAllPeers" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
@@ -49,6 +49,30 @@ class PeerManagerSpec extends NetworkTests {
 
     val data = p.expectMsgClass(classOf[Data])
     data.keySet should contain(peerAddress)
+    system.terminate()
+  }
+
+  it should "not remove a known peer, but remove a normal peer" in {
+    implicit val system: ActorSystem = ActorSystem()
+    val p = TestProbe("p")(system)
+    implicit val defaultSender: ActorRef = p.testActor
+
+    val scorexContext = ScorexContext(Seq.empty, Seq.empty, None, timeProvider, None)
+    val peerManager = PeerManagerRef(settings, scorexContext)(system)
+    val knownPeerAddress = new InetSocketAddress("127.0.0.1", DefaultPort)
+
+    val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
+    val peerInfo = getPeerInfo(peerAddress)
+
+    peerManager ! AddOrUpdatePeer(peerInfo)
+
+    peerManager ! RemovePeer(peerAddress)
+    peerManager ! RemovePeer(knownPeerAddress)
+    peerManager ! GetAllPeers
+
+    val data = p.expectMsgClass(classOf[Data])
+    data.keySet should contain(knownPeerAddress)
+    data.keySet should not contain peerAddress
     system.terminate()
   }
 
