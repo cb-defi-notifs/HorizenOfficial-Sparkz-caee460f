@@ -46,16 +46,16 @@ class DeliveryTrackerSpecification extends AnyPropSpec
     def put(mod: FakeModifier): Unit = mods.put(mod.id, mod)
   }
 
-  property("expect from random") {
+  property("expect from peer") {
     val tracker = genDeliveryTracker
 
     val modids: Seq[ModifierId] = Seq(Blake2b256("1"), Blake2b256("2"), Blake2b256("3")).map(bytesToId)
 
-    tracker.setRequested(modids, mtid, None)
+    tracker.setRequested(modids, mtid, cp)
     modids.foreach(id => tracker.status(id) shouldBe Requested)
 
     // reexpect
-    tracker.setRequested(modids, mtid, None)
+    tracker.setRequested(modids, mtid, cp)
     modids.foreach(id => tracker.status(id) shouldBe Requested)
   }
 
@@ -79,7 +79,7 @@ class DeliveryTrackerSpecification extends AnyPropSpec
     modids.foreach(id => tracker.status(id) shouldBe Unknown)
     modids.foreach(id => tracker.status(id) should not be Requested)
 
-    tracker.setRequested(modids, mtid, Some(cp))
+    tracker.setRequested(modids, mtid, cp)
     modids.foreach(id => tracker.status(id) shouldBe Requested)
     modids.foreach(id => tracker.status(id) shouldBe Requested)
 
@@ -116,7 +116,7 @@ class DeliveryTrackerSpecification extends AnyPropSpec
 
     val modids: Seq[ModifierId] = Seq(Blake2b256("1"), Blake2b256("2"), Blake2b256("3")).map(bytesToId)
 
-    tracker.setRequested(modids, mtid, Some(cp))
+    tracker.setRequested(modids, mtid, cp)
     tracker.status(modids.head) shouldBe Requested
 
     tracker.setReceived(modids.head, cp)
@@ -131,12 +131,35 @@ class DeliveryTrackerSpecification extends AnyPropSpec
     tracker.status(modids(1)) should not be Requested
   }
 
+  property("return count requests per peer and calculate remaining limit") {
+    val tracker = genDeliveryTracker
+    val otherPeer = connectedPeerGen(null).sample.get
+
+    val modids: Seq[ModifierId] = Seq(Blake2b256("1"), Blake2b256("2"), Blake2b256("3")).map(bytesToId)
+
+    tracker.setRequested(modids, mtid, cp)
+    tracker.getPeerLimit(cp) shouldBe 0
+    tracker.getPeerLimit(otherPeer) shouldBe 3
+
+    tracker.setReceived(modids.head, cp)
+    tracker.getPeerLimit(cp) shouldBe 1
+    tracker.getPeerLimit(otherPeer) shouldBe 3
+
+    tracker.onStillWaiting(cp, mtid, modids(1))
+    tracker.getPeerLimit(cp) shouldBe 1
+    tracker.getPeerLimit(otherPeer) shouldBe 3
+
+    tracker.onStillWaiting(cp, mtid, modids(1))
+    tracker.getPeerLimit(cp) shouldBe 2
+    tracker.getPeerLimit(otherPeer) shouldBe 3
+  }
+
   private def genDeliveryTracker = {
     val system = ActorSystem()
     val probe = TestProbe("p")(system)
     implicit val nvsStub: ActorRef = probe.testActor
     val dt = FiniteDuration(3, MINUTES)
-    new DeliveryTracker(system, deliveryTimeout = dt, maxDeliveryChecks = 2, nvsStub)
+    new DeliveryTracker(system, deliveryTimeout = dt, maxDeliveryChecks = 2, maxRequestedPerPeer = 3, nvsStub)
   }
 
 }

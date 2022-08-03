@@ -1,10 +1,9 @@
-package scorex.network
+package scorex.core.network
 
 import java.net.InetSocketAddress
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import scorex.core.app.Version
-import scorex.core.network.{PeerFeature, PeerSpec}
 import scorex.core.network.peer.PeerInfo
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.{NetworkTimeProvider, TimeProvider}

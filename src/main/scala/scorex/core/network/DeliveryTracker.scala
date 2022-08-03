@@ -37,12 +37,16 @@ import scala.util.{Failure, Try}
 class DeliveryTracker(system: ActorSystem,
                       deliveryTimeout: FiniteDuration,
                       maxDeliveryChecks: Int,
+                      maxRequestedPerPeer: Int,
                       nvsRef: ActorRef) extends ScorexLogging with ScorexEncoding {
 
-  protected case class RequestedInfo(peer: Option[ConnectedPeer], cancellable: Cancellable, checks: Int)
+  protected case class RequestedInfo(peer: ConnectedPeer, cancellable: Cancellable, checks: Int)
 
   // when a remote peer is asked for a modifier we add the requested data to `requested`
   protected val requested: mutable.Map[ModifierId, RequestedInfo] = mutable.Map()
+
+  // to keep track of requested modifiers on per-peer basis, and limit to prevent overflow
+  protected val peerLimits: mutable.Map[ConnectedPeer, Int] = mutable.Map()
 
   // when our node received invalid modifier we put it to `invalid`
   protected val invalid: mutable.HashSet[ModifierId] = mutable.HashSet()
@@ -82,22 +86,26 @@ class DeliveryTracker(system: ActorSystem,
     tryWithLogging {
       val checks = requested(modifierId).checks + 1
       setUnknown(modifierId)
-      if (checks < maxDeliveryChecks) setRequested(modifierId, modifierTypeId,  Some(cp), checks)
+      if (checks < maxDeliveryChecks) setRequested(modifierId, modifierTypeId, cp, checks)
       else throw new StopExpectingError(modifierId, checks)
     }
 
   /**
     * Set status of modifier with id `id` to `Requested`
     */
-  def setRequested(id: ModifierId, typeId: ModifierTypeId, supplierOpt: Option[ConnectedPeer], checksDone: Int = 0)
-                  (implicit ec: ExecutionContext): Unit =
+  private def setRequested(id: ModifierId, typeId: ModifierTypeId, supplier: ConnectedPeer, checksDone: Int = 0)
+                          (implicit ec: ExecutionContext): Unit =
     tryWithLogging {
       require(isCorrectTransition(status(id), Requested), s"Illegal status transition: ${status(id)} -> Requested")
-      val cancellable = system.scheduler.scheduleOnce(deliveryTimeout, nvsRef, CheckDelivery(supplierOpt, typeId, id))
-      requested.put(id, RequestedInfo(supplierOpt, cancellable, checksDone))
+      val cancellable = system.scheduler.scheduleOnce(deliveryTimeout, nvsRef, CheckDelivery(supplier, typeId, id))
+      requested.put(id, RequestedInfo(supplier, cancellable, checksDone)) match {
+        case Some(RequestedInfo(peer,_,_)) if supplier.connectionId == peer.connectionId => //we already had this modifier, it is counted
+        case Some(RequestedInfo(peer,_,_)) => decrementPeerLimitCounter(peer); incrementPeerLimitCounter(supplier)
+        case None => incrementPeerLimitCounter(supplier)
+      }
     }
 
-  def setRequested(ids: Seq[ModifierId], typeId: ModifierTypeId, cp: Option[ConnectedPeer])
+  def setRequested(ids: Seq[ModifierId], typeId: ModifierTypeId, cp: ConnectedPeer)
                   (implicit ec: ExecutionContext): Unit = ids.foreach(setRequested(_, typeId, cp))
 
   /**
@@ -115,7 +123,8 @@ class DeliveryTracker(system: ActorSystem,
         val senderOpt = oldStatus match {
           case Requested =>
             requested(modifierId).cancellable.cancel()
-            requested.remove(modifierId).flatMap(_.peer)
+            requested.remove(modifierId).map(_.peer)
+              .map(decrementPeerLimitCounter)
           case Received =>
             received.remove(modifierId)
           case _ =>
@@ -161,9 +170,42 @@ class DeliveryTracker(system: ActorSystem,
       if (oldStatus != Received) {
         requested(id).cancellable.cancel()
         requested.remove(id)
+        decrementPeerLimitCounter(sender)
         received.put(id, sender)
       }
     }
+
+  def peerInfo(id: ModifierId): Option[ConnectedPeer] = {
+    val modifierStatus: ModifiersStatus = status(id)
+    modifierStatus match {
+      case Requested =>
+        requested.get(id).map(_.peer)
+      case Received =>
+        received.get(id)
+      case _ =>
+        None
+    }
+  }
+
+  def getPeerLimit(peer: ConnectedPeer): Int = {
+    maxRequestedPerPeer - peerLimits.getOrElse(peer, 0)
+  }
+
+  private def incrementPeerLimitCounter(peer: ConnectedPeer): Unit = {
+    peerLimits.get(peer) match {
+      case Some(value) => peerLimits.put(peer, value + 1)
+      case None => peerLimits.put(peer, 1)
+    }
+  }
+
+  private def decrementPeerLimitCounter(peer: ConnectedPeer): ConnectedPeer = {
+    peerLimits.get(peer) match {
+      case Some(value) if value == 1 => peerLimits.remove(peer)
+      case Some(value) => peerLimits.put(peer, value - 1)
+      case _ =>
+    }
+    peer
+  }
 
   /**
     * Self-check that transition between states is correct.
@@ -188,7 +230,8 @@ class DeliveryTracker(system: ActorSystem,
     oldStatus match {
       case Requested =>
         requested(id).cancellable.cancel()
-        requested.remove(id).flatMap(_.peer)
+        requested.remove(id).map(_.peer)
+          .map(decrementPeerLimitCounter)
       case Received =>
         received.remove(id)
       case _ =>

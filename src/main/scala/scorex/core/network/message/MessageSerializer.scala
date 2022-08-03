@@ -8,7 +8,7 @@ import scorex.crypto.hash.Blake2b256
 import scala.util.Try
 
 
-class MessageSerializer(specs: Seq[MessageSpec[_]], magicBytes: Array[Byte]) {
+class MessageSerializer(specs: Seq[MessageSpec[_]], magicBytes: Array[Byte], messageLengthBytesLimit: Int) {
 
   import Message.{ChecksumLength, HeaderLength, MagicLength}
 
@@ -44,8 +44,8 @@ class MessageSerializer(specs: Seq[MessageSpec[_]], magicBytes: Array[Byte]) {
       val length = it.getInt
 
       //peer is trying to cause buffer overflow or breaking the parsing
-      if (length < 0) {
-        throw MaliciousBehaviorException("Data length is negative!")
+      if (length < 0 || length > messageLengthBytesLimit) {
+        throw MaliciousBehaviorException("Data length is negative or it's beyond the allowed threshold!")
       }
 
       if (length != 0 && byteString.length < length + HeaderLength + ChecksumLength) {

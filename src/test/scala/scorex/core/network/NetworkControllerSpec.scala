@@ -17,7 +17,6 @@ import scorex.core.network.peer.PeerManager.ReceivableMessages.AddOrUpdatePeer
 import scorex.core.network.peer._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.LocalTimeProvider
-import scorex.network.NetworkTests
 
 import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext
@@ -525,7 +524,7 @@ class TestPeer(settings: ScorexSettings, networkControllerRef: ActorRef, tcpMana
   private val handshakeSerializer = new HandshakeSpec(featureSerializers, Int.MaxValue)
   private val peersSpec = new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects)
   private val messageSpecs = Seq(GetPeersSpec, peersSpec)
-  private val messagesSerializer = new MessageSerializer(messageSpecs, settings.network.magicBytes)
+  private val messagesSerializer = new MessageSerializer(messageSpecs, settings.network.magicBytes, settings.network.messageLengthBytesLimit)
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
   private var connectionHandler: ActorRef = _
@@ -554,7 +553,7 @@ class TestPeer(settings: ScorexSettings, networkControllerRef: ActorRef, tcpMana
     * @return
     */
   def sendHandshake(declaredAddress: Option[InetSocketAddress], localAddress: Option[InetSocketAddress]): Tcp.ResumeReading.type = {
-    val localFeature:Seq[PeerFeature] = localAddress.map(LocalAddressPeerFeature(_)).toSeq
+    val localFeature: Seq[PeerFeature] = localAddress.map(LocalAddressPeerFeature(_)).toSeq
     val features = localFeature :+ SessionIdPeerFeature(settings.network.magicBytes)
     val handshakeToNode = Handshake(PeerSpec(settings.network.agentName,
       Version(settings.network.appVersion), "test",
