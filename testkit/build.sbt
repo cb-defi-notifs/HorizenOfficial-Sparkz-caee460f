@@ -1,11 +1,11 @@
 name := "scorex-testkit"
 
 libraryDependencies ++= Seq(
-  "org.scalactic" %% "scalactic" % "3.0.1",
-  "org.scalatest" %% "scalatest" % "3.1.1",
-  "org.scalacheck" %% "scalacheck" % "1.14.+",
+  "org.scalactic" %% "scalactic" % "3.2.12",
+  "org.scalatest" %% "scalatest" % "3.2.12",
+  "org.scalacheck" %% "scalacheck" % "1.16.0",
   "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2",
-  "com.typesafe.akka" %% "akka-testkit" % "2.6.10"
+  "com.typesafe.akka" %% "akka-testkit" % "2.6.19"
 )
 
 fork in Test := true

@@ -43,9 +43,9 @@ lazy val commonSettings = Seq(
   fork := true // otherwise, "java.net.SocketException: maximum number of DatagramSockets reached"
 )
 
-val circeVersion = "0.13.0"
-val akkaVersion = "2.6.10"
-val akkaHttpVersion = "10.2.1"
+val circeVersion = "0.14.2"
+val akkaVersion = "2.6.19"
+val akkaHttpVersion = "10.2.9"
 
 val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
@@ -55,35 +55,35 @@ val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-protobuf" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "org.bitlet" % "weupnp" % "0.1.4",
-  "commons-net" % "commons-net" % "3.6"
+  "commons-net" % "commons-net" % "3.8.0"
 )
 
 val apiDependencies = Seq(
   "io.circe" %% "circe-core" % circeVersion,
   "io.circe" %% "circe-generic" % circeVersion,
   "io.circe" %% "circe-parser" % circeVersion,
-  "de.heikoseeberger" %% "akka-http-circe" % "1.20.0"
+  "de.heikoseeberger" %% "akka-http-circe" % "1.39.2"
 )
 
 val loggingDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.3.0-alpha4"
+  "ch.qos.logback" % "logback-classic" % "1.3.0-alpha16"
 )
 
-val scorexUtil = "org.scorexfoundation" %% "scorex-util" % "0.1.8"
+val scorexUtil = "org.scorexfoundation" %% "scorex-util" % "0.1.6"
 
 val testingDependencies = Seq(
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
-  "org.scalactic" %% "scalactic" % "3.0.3" % "test",
-  "org.scalatest" %% "scalatest" % "3.1.1" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.14.+",
+  "org.scalactic" %% "scalactic" % "3.2.12" % "test",
+  "org.scalatest" %% "scalatest" % "3.2.12" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.16.0",
   "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2" % Test,
-  scorexUtil, (scorexUtil % Test).classifier("tests")
+  "org.scorexfoundation" %% "scorex-util" % "0.1.6" % Test classifier "tests"
 )
 
 libraryDependencies ++= Seq(
-  "com.iheart" %% "ficus" % "1.4.2",
-  "org.scorexfoundation" %% "scrypto" % "2.1.10",
+  "com.iheart" %% "ficus" % "1.5.2",
+  "org.scorexfoundation" %% "scrypto" % "2.1.7",
   scorexUtil
 ) ++ networkDependencies ++ apiDependencies ++ loggingDependencies ++ testingDependencies
 
