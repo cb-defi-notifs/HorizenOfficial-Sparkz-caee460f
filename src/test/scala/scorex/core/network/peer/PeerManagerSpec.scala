@@ -53,13 +53,15 @@ class PeerManagerSpec extends NetworkTests {
   }
 
   it should "not remove a known peer, but remove a normal peer" in {
+    val knownPeerAddress = new InetSocketAddress("127.0.0.1", DefaultPort)
+    val settingsWithKnownPeer = settings.copy(network = settings.network.copy(knownPeers = Seq(knownPeerAddress)))
+
     implicit val system: ActorSystem = ActorSystem()
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
     val scorexContext = ScorexContext(Seq.empty, Seq.empty, None, timeProvider, None)
-    val peerManager = PeerManagerRef(settings, scorexContext)(system)
-    val knownPeerAddress = new InetSocketAddress("127.0.0.1", DefaultPort)
+    val peerManager = PeerManagerRef(settingsWithKnownPeer, scorexContext)(system)
 
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
     val peerInfo = getPeerInfo(peerAddress)

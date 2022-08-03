@@ -10,7 +10,7 @@ import scorex.core.network.message.{GetPeersSpec, Message, ModifiersSpec, PeersS
 import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PenaltyType.{NonDeliveryPenalty, SpamPenalty}
 import scorex.core.network._
-import scorex.core.settings.NetworkSettings
+import scorex.core.settings.{NetworkSettings, ScorexSettings}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -27,13 +27,16 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
   private val deliveryTimeout: FiniteDuration = 2.seconds
   private val requestMessageCode: MessageCode = GetPeersSpec.messageCode
   private val responseMessageCode: MessageCode = PeersSpec.messageCode
-  private val (networkControllerProbe, peerSynchronizerProbe, networkSettings) = prepareTestData()
+  private val connectedPeer = connectedPeerGen(null).sample.get
+    .copy(peerInfo = Some(PeerInfo(PeerSpec("unknown", Version.initial, "unknown", None, Seq()), 0L, Some(Outgoing))))
 
-  private def withRequestTracker(test: ActorRef => Unit): Unit =
-    test(RequestTrackerRef(networkControllerProbe.ref, requestMessageCode, responseMessageCode, deliveryTimeout, networkSettings.penalizeNonDelivery))
+  private def withTestedActors(test: (ActorRef, TestProbe, TestProbe, NetworkSettings) => Unit): Unit = {
+    val (requestTracker, networkControllerProbe, peerSynchronizerProbe, networkSettings) = prepareTestData()
+    test(requestTracker, networkControllerProbe, peerSynchronizerProbe, networkSettings)
+  }
 
   "Request Tracker" should "forward registerMessageSpec to network controller, replacing ref to itself" in {
-    withRequestTracker { requestTracker =>
+    withTestedActors { (requestTracker, networkControllerProbe, peerSynchronizerProbe, _) =>
       val registerSpecMessage = RegisterMessageSpecs(Seq(), peerSynchronizerProbe.ref)
       requestTracker ! registerSpecMessage
       networkControllerProbe.expectMsg(RegisterMessageSpecs(Seq(), requestTracker))
@@ -41,7 +44,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
   }
 
   it should "use actor specified in registerMessageSpec for forwarding" in {
-    withRequestTracker { requestTracker =>
+    withTestedActors { (requestTracker, networkControllerProbe, peerSynchronizerProbe, _) =>
       val registerSpecMessage = RegisterMessageSpecs(Seq(), peerSynchronizerProbe.ref)
       requestTracker ! registerSpecMessage
       val messageToBeForwarded = Message(new ModifiersSpec(1), Left(null), None)
@@ -56,9 +59,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
   }
 
   it should "penalize peer for not delivering response" in {
-    withRequestTracker { requestTracker =>
-      val connectedPeer  = connectedPeerGen(null).sample.get
-        .copy(peerInfo = Some(PeerInfo(PeerSpec("unknown", Version.initial, "unknown", None, Seq()), 0L, Some(Outgoing))))
+    withTestedActors { (requestTracker, networkControllerProbe, peerSynchronizerProbe, _) =>
       val msg = Message(GetPeersSpec, Left(null), None)
       val request = SendToNetwork(msg, SendToRandom)
 
@@ -68,7 +69,6 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
       networkControllerProbe.expectMsg(RegisterMessageSpecs(Seq(), requestTracker))
 
       //request
-      requestTracker ! request
       networkControllerProbe.setAutoPilot(
         (sender: ActorRef, msg: Any) => {
           msg match {
@@ -78,6 +78,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
           TestActor.KeepRunning
         }
       )
+      requestTracker ! request
       networkControllerProbe.expectMsg(GetFilteredConnectedPeers(SendToRandom, GetPeersSpec.protocolVersion))
       networkControllerProbe.expectMsg(request.copy(sendingStrategy = SendToPeer(connectedPeer)))
 
@@ -88,9 +89,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
 
 
   it should "not penalize when response is received" in {
-    withRequestTracker { requestTracker =>
-      val connectedPeer  = connectedPeerGen(null).sample.get
-        .copy(peerInfo = Some(PeerInfo(PeerSpec("unknown", Version.initial, "unknown", None, Seq()), 0L, Some(Outgoing))))
+    withTestedActors { (requestTracker, networkControllerProbe, peerSynchronizerProbe, _) =>
       val msg = Message(GetPeersSpec, Left(null), None)
       val request = SendToNetwork(msg, SendToRandom)
       val response = Message(new PeersSpec(Map(), 1), Left(null), Some(connectedPeer))
@@ -101,7 +100,6 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
       networkControllerProbe.expectMsg(RegisterMessageSpecs(Seq(), requestTracker))
 
       //request
-      requestTracker ! request
       networkControllerProbe.setAutoPilot(
         (sender: ActorRef, msg: Any) => {
           msg match {
@@ -111,6 +109,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
           TestActor.KeepRunning
         }
       )
+      requestTracker ! request
       networkControllerProbe.expectMsg(GetFilteredConnectedPeers(SendToRandom, GetPeersSpec.protocolVersion))
       networkControllerProbe.expectMsg(request.copy(sendingStrategy = SendToPeer(connectedPeer)))
 
@@ -124,9 +123,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
   }
 
   it should "penalize peer for spamming" in {
-    withRequestTracker { requestTracker =>
-      val connectedPeer  = connectedPeerGen(null).sample.get
-        .copy(peerInfo = Some(PeerInfo(PeerSpec("unknown", Version.initial, "unknown", None, Seq()), 0L, Some(Outgoing))))
+    withTestedActors { (requestTracker, networkControllerProbe, peerSynchronizerProbe, _) =>
       val response = Message(new PeersSpec(Map(), 1), Left(null), Some(connectedPeer))
 
       //register
@@ -143,14 +140,15 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
     }
   }
 
-  private def prepareTestData(): (TestProbe, TestProbe, NetworkSettings) = {
+  private def prepareTestData(): (ActorRef, TestProbe, TestProbe, NetworkSettings) = {
     val networkControllerProbe = TestProbe()
     val peerSynchronizerProbe = TestProbe()
-    val networkSettings = settings.network.copy(
+    val networkSettings = ScorexSettings.read(None).network.copy(
       penalizeNonDelivery = true
     )
+    val requestTracker = RequestTrackerRef(networkControllerProbe.ref, requestMessageCode, responseMessageCode, deliveryTimeout, networkSettings.penalizeNonDelivery)
 
-    (networkControllerProbe, peerSynchronizerProbe, networkSettings)
+    (requestTracker, networkControllerProbe, peerSynchronizerProbe, networkSettings)
   }
 
 }

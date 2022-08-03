@@ -1,14 +1,17 @@
 package scorex.util.serialization
 
 import akka.util.ByteString
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.propspec.AnyPropSpecLike
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
-class VQLByteStringReaderWriterSpecification extends VLQReaderWriterSpecification {
+class VQLByteStringReaderWriterSpecification extends AnyPropSpecLike with scorex.util.Generators with ScalaCheckPropertyChecks with Matchers {
 
-  override def byteBufReader(bytes: Array[Byte]): VLQReader = {
+  def byteBufReader(bytes: Array[Byte]): VLQReader = {
     new VLQByteStringReader(ByteString(bytes))
   }
 
-  override def byteArrayWriter(): VLQWriter = {
+  def byteArrayWriter(): VLQWriter = {
     new VLQByteStringWriter()
   }
 }
