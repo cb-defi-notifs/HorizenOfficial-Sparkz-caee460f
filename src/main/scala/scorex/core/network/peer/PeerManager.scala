@@ -54,13 +54,16 @@ class PeerManager(settings: ScorexSettings, scorexContext: ScorexContext) extend
         sender() ! Blacklisted(peer)
       }
 
-    case AddPeerIfEmpty(peerSpec) =>
-      // We have received peer data from other peers. It might be modified and should not affect existing data if any
-      if (peerSpec.address.forall(a => peerDatabase.get(a).isEmpty) && !isSelf(peerSpec)) {
-        val peerInfo: PeerInfo = PeerInfo(peerSpec, 0, None)
-        log.info(s"New discovered peer: $peerInfo")
-        peerDatabase.addOrUpdateKnownPeer(peerInfo)
-      }
+    case AddPeersIfEmpty(peersSpec) =>
+      // We have received peers data from other peers. It might be modified and should not affect existing data if any
+      val filteredPeers = peersSpec
+        .collect {
+          case peerSpec if peerSpec.address.forall(a => peerDatabase.get(a).isEmpty) && !isSelf(peerSpec) =>
+            val peerInfo: PeerInfo = PeerInfo(peerSpec, 0L, None)
+            log.info(s"New discovered peer: $peerInfo")
+            peerInfo
+        }
+      peerDatabase.addOrUpdateKnownPeers(filteredPeers)
 
     case RemovePeer(address) =>
       if (!knownPeersSet(address)) {
@@ -112,7 +115,7 @@ object PeerManager {
     // peerListOperations messages
     case class AddOrUpdatePeer(data: PeerInfo)
 
-    case class AddPeerIfEmpty(data: PeerSpec)
+    case class AddPeersIfEmpty(data: Seq[PeerSpec])
 
     case class RemovePeer(address: InetSocketAddress)
 
