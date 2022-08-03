@@ -1,7 +1,5 @@
 package scorex.core.network
 
-import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.io.Tcp
 import akka.io.Tcp.{Message => _, _}
@@ -11,14 +9,19 @@ import org.scalatest.EitherValues._
 import org.scalatest.OptionValues._
 import org.scalatest.TryValues._
 import org.scalatest.matchers.should.Matchers
-import scorex.core.app.{Version, ScorexContext}
+import scorex.core.app.{ScorexContext, Version}
+import scorex.core.network.NetworkController.ReceivableMessages.Internal.ConnectionToPeer
 import scorex.core.network.NetworkController.ReceivableMessages.{GetConnectedPeers, GetPeersStatus}
-import scorex.core.network.message.{PeersSpec, _}
-import scorex.core.network.peer.{LocalAddressPeerFeature, PeerManagerRef, LocalAddressPeerFeatureSerializer, PeersStatus, SessionIdPeerFeature}
+import scorex.core.network.message._
+import scorex.core.network.peer.PeerManager.ReceivableMessages.AddOrUpdatePeer
+import scorex.core.network.peer._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.LocalTimeProvider
+import scorex.network.NetworkTests
 
+import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext
+import scala.language.postfixOps
 
 class NetworkControllerSpec extends NetworkTests {
 
@@ -30,7 +33,7 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
-    val networkControllerRef: ActorRef = createNetworkController(settings, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
     val testPeer = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
 
     val peerAddr = new InetSocketAddress("127.0.0.1", 5678)
@@ -49,7 +52,7 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
-    val networkControllerRef: ActorRef = createNetworkController(settings, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
     val testPeer = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
 
     val nodeAddr = new InetSocketAddress("127.0.0.1", settings.network.bindAddress.getPort)
@@ -67,7 +70,7 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
-    val networkControllerRef: ActorRef = createNetworkController(settings, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
     val testPeer = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
 
     val nodeAddr = new InetSocketAddress("127.0.0.1", settings.network.bindAddress.getPort)
@@ -89,7 +92,7 @@ class NetworkControllerSpec extends NetworkTests {
 
     val bindAddress = new InetSocketAddress("88.77.66.55", 12345)
     val settings2 = settings.copy(network = settings.network.copy(bindAddress = bindAddress))
-    val networkControllerRef: ActorRef = createNetworkController(settings2, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
     val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
 
     testPeer.connect(new InetSocketAddress("88.77.66.55", 5678), bindAddress)
@@ -110,7 +113,7 @@ class NetworkControllerSpec extends NetworkTests {
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
     val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr))
-    val networkControllerRef: ActorRef = createNetworkController(settings2, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     val peer1Addr = new InetSocketAddress("88.77.66.55", 5678)
     testPeer1.connect(peer1Addr, nodeAddr)
@@ -138,7 +141,7 @@ class NetworkControllerSpec extends NetworkTests {
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
     val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr))
-    val networkControllerRef: ActorRef = createNetworkController(settings2, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
@@ -169,7 +172,7 @@ class NetworkControllerSpec extends NetworkTests {
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
     val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr))
-    val networkControllerRef: ActorRef = createNetworkController(settings2, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
@@ -192,7 +195,6 @@ class NetworkControllerSpec extends NetworkTests {
     system.terminate()
   }
 
-
   it should "receive external address from UPnP gateway" in {
     implicit val system = ActorSystem()
 
@@ -205,7 +207,7 @@ class NetworkControllerSpec extends NetworkTests {
     ) { _ => None }
 
     val nodeAddr = new InetSocketAddress(gatewayAddr, settings.network.bindAddress.getPort)
-    val networkControllerRef: ActorRef = createNetworkController(settings, tcpManagerProbe, Some(upnp))
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe, Some(upnp))
 
     val testPeer1 = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
     val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
@@ -233,7 +235,7 @@ class NetworkControllerSpec extends NetworkTests {
       InetAddress.getByName("192.169.1.11")
     ) { _ => Some(knownPeerLocalAddress) }
 
-    val networkControllerRef: ActorRef = createNetworkController(settings2, tcpManagerProbe, Some(upnp))
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe, Some(upnp))
 
     import scala.concurrent.duration._
     val connectAddr = tcpManagerProbe.expectMsgPF(10.seconds) {
@@ -251,7 +253,7 @@ class NetworkControllerSpec extends NetworkTests {
     val tcpManagerProbe = TestProbe()
 
     val nodeAddr = new InetSocketAddress("127.0.0.1", settings.network.bindAddress.getPort)
-    val networkControllerRef: ActorRef = createNetworkController(settings, tcpManagerProbe, None)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe, None)
     val testPeer = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
 
     val peerLocalAddress = new InetSocketAddress("192.168.1.2", settings.network.bindAddress.getPort)
@@ -277,7 +279,7 @@ class NetworkControllerSpec extends NetworkTests {
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
     val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr))
-    val networkControllerRef: ActorRef = createNetworkController(settings2, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     val peerAddr = new InetSocketAddress("88.77.66.55", 5678)
@@ -301,6 +303,160 @@ class NetworkControllerSpec extends NetworkTests {
     p.send(networkControllerRef, GetPeersStatus)
     val status = p.expectMsgClass(classOf[PeersStatus])
     status.lastIncomingMessage shouldBe ls
+
+    system.terminate()
+  }
+
+  it should "skip connection attempt if the only connection in PeerManager is marked as unconfirmed" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    val tcpManagerProbe = TestProbe()
+
+    val (networkControllerRef, peerManager) = createNetworkController(settings, tcpManagerProbe, None)
+
+    val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
+    val peerInfoOne = getPeerInfo(peerAddressOne)
+
+    val activeConnections = Map.empty[InetSocketAddress, ConnectedPeer]
+    var unconfirmedConnections = Set.empty[InetSocketAddress]
+
+    unconfirmedConnections += peerAddressOne
+
+    // Act
+    peerManager ! AddOrUpdatePeer(peerInfoOne)
+    networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // Assert
+    tcpManagerProbe.expectNoMessage()
+
+    system.terminate()
+  }
+
+  it should "select the only candidate existing in the PeerManager since there are neither active or unconfirmed connections" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    val tcpManagerProbe = TestProbe()
+
+    val (networkControllerRef, peerManager) = createNetworkController(settings, tcpManagerProbe, None)
+
+    val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
+    val peerInfoOne = getPeerInfo(peerAddressOne)
+
+    val activeConnections = Map.empty[InetSocketAddress, ConnectedPeer]
+    val unconfirmedConnections = Set.empty[InetSocketAddress]
+
+    // Act
+    peerManager ! AddOrUpdatePeer(peerInfoOne)
+    networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // Assert
+    tcpManagerProbe.expectMsgPF() {
+      case ok@Connect(remoteAddress, _, _, _, _) if remoteAddress == peerAddressOne => ok
+      case _ => fail("Unexpected message received")
+    }
+
+    system.terminate()
+  }
+
+  it should "skip the peer connection attempt since the only peer in the PeerManager is already connected" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    val tcpManagerProbe = TestProbe()
+
+    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe, None)
+
+    val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
+    val peerInfoOne = getPeerInfo(peerAddressOne)
+
+    var activeConnections = Map.empty[InetSocketAddress, ConnectedPeer]
+    val unconfirmedConnections = Set.empty[InetSocketAddress]
+
+    activeConnections += peerAddressOne -> ConnectedPeer(
+      ConnectionId(peerAddressOne, peerAddressOne, Incoming),
+      networkControllerRef,
+      1,
+      Some(peerInfoOne)
+    )
+
+    // Act
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne)
+    networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // Assert
+    tcpManagerProbe.expectNoMessage()
+
+    system.terminate()
+  }
+
+  it should "connect to the second peer since is not an active or unconfirmed connection" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    val tcpManagerProbe = TestProbe()
+
+    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe, None)
+
+    val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
+    val peerInfoOne = getPeerInfo(peerAddressOne)
+    val peerAddressTwo = new InetSocketAddress("55.66.77.88", 11223)
+    val peerInfoTwo = getPeerInfo(peerAddressTwo)
+
+    var activeConnections = Map.empty[InetSocketAddress, ConnectedPeer]
+    val unconfirmedConnections = Set.empty[InetSocketAddress]
+
+    activeConnections += peerAddressOne -> ConnectedPeer(
+      ConnectionId(peerAddressOne, peerAddressOne, Incoming),
+      networkControllerRef,
+      1,
+      Some(peerInfoOne)
+    )
+
+    // Act
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne)
+    peerManagerRef ! AddOrUpdatePeer(peerInfoTwo)
+    networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // Assert
+    tcpManagerProbe.expectMsgPF() {
+      case ok@Connect(remoteAddress, _, _, _, _) if remoteAddress == peerAddressTwo => ok
+      case _ => fail("Unexpected message received")
+    }
+
+    system.terminate()
+  }
+
+  it should "connect to the second peer using the local address peer feature" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    val tcpManagerProbe = TestProbe()
+
+    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe, None)
+
+    val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
+    val peerInfoOne = getPeerInfo(peerAddressOne)
+    val peerAddressTwo = new InetSocketAddress("55.66.77.88", 11223)
+    val featureSeq = Seq(LocalAddressPeerFeature(peerAddressTwo))
+    val peerInfoTwo = getPeerInfo(peerAddressTwo, featureSeq = featureSeq)
+
+    var activeConnections = Map.empty[InetSocketAddress, ConnectedPeer]
+    val unconfirmedConnections = Set.empty[InetSocketAddress]
+
+    activeConnections += peerAddressOne -> ConnectedPeer(
+      ConnectionId(peerAddressOne, peerAddressOne, Incoming),
+      networkControllerRef,
+      1,
+      Some(peerInfoOne)
+    )
+
+    // Act
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne)
+    peerManagerRef ! AddOrUpdatePeer(peerInfoTwo)
+    networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // Assert
+    tcpManagerProbe.expectMsgPF() {
+      case ok@Connect(remoteAddress, _, _, _, _) if remoteAddress == peerAddressTwo => ok
+      case _ => fail("Unexpected message received")
+    }
 
     system.terminate()
   }
@@ -334,7 +490,7 @@ class NetworkControllerSpec extends NetworkTests {
     tcpManagerProbe.expectMsg(Bind(networkControllerRef, settings.network.bindAddress, options = Nil))
 
     tcpManagerProbe.send(networkControllerRef, Bound(settings.network.bindAddress))
-    networkControllerRef
+    (networkControllerRef, peerManagerRef)
   }
 }
 
