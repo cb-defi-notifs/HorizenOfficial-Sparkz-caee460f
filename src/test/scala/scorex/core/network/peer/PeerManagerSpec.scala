@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import scorex.core.app.ScorexContext
 import scorex.core.network.peer.PeerManager.ReceivableMessages.RemovePeer
-import scorex.network.NetworkTests
+import scorex.core.network.NetworkTests
 
 import java.net.InetSocketAddress
 

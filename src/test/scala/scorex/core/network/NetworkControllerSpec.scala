@@ -17,7 +17,6 @@ import scorex.core.network.peer.PeerManager.ReceivableMessages.AddOrUpdatePeer
 import scorex.core.network.peer._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.LocalTimeProvider
-import scorex.network.NetworkTests
 
 import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext

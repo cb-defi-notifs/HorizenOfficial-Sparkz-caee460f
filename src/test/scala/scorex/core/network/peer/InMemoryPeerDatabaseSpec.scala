@@ -3,7 +3,7 @@ package scorex.core.network.peer
 import java.net.InetSocketAddress
 import org.scalatest.Assertion
 import scorex.core.network.Outgoing
-import scorex.network.NetworkTests
+import scorex.core.network.NetworkTests
 
 import scala.util.Random
 
