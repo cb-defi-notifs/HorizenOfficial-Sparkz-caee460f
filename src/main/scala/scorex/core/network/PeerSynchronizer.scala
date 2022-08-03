@@ -84,8 +84,16 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
 
 object PeerSynchronizerRef {
   def props(networkControllerRef: ActorRef, peerManager: ActorRef, settings: NetworkSettings,
-            featureSerializers: PeerFeature.Serializers)(implicit ec: ExecutionContext): Props =
-    Props(new PeerSynchronizer(networkControllerRef, peerManager, settings, featureSerializers))
+            featureSerializers: PeerFeature.Serializers)(implicit system: ActorSystem, ec: ExecutionContext): Props = {
+    val wrappedNetworkController = RequestTrackerRef(
+      networkControllerRef,
+      GetPeersSpec.messageCode,
+      PeersSpec.messageCode,
+      settings.getPeersInterval / 2,
+      settings.penalizeNonDelivery
+    )
+    Props(new PeerSynchronizer(wrappedNetworkController, peerManager, settings, featureSerializers))
+  }
 
   def apply(networkControllerRef: ActorRef, peerManager: ActorRef, settings: NetworkSettings,
             featureSerializers: PeerFeature.Serializers)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef =

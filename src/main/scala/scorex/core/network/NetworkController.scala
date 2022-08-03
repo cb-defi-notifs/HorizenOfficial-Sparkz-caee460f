@@ -201,6 +201,9 @@ class NetworkController(settings: NetworkSettings,
     case GetConnectedPeers =>
       sender() ! connections.values.filter(_.peerInfo.nonEmpty)
 
+    case GetFilteredConnectedPeers(strategy, version) =>
+      sender() ! filterConnections(strategy, version)
+
     case ShutdownNetwork =>
       log.info("Going to shutdown all connections & unbind port")
       filterConnections(Broadcast, Version.initial).foreach { connectedPeer =>
@@ -512,6 +515,8 @@ object NetworkController {
     case class DisconnectFrom(peer: ConnectedPeer)
 
     case class PenalizePeer(address: InetSocketAddress, penaltyType: PenaltyType)
+
+    case class GetFilteredConnectedPeers(sendingStrategy: SendingStrategy, version: Version)
 
     case object GetConnectedPeers
 
