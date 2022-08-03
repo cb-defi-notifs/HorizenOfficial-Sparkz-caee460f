@@ -242,7 +242,8 @@ class NetworkController(settings: NetworkSettings,
     val peersAddresses = mergedSeq.map(getPeerAddress)
     val randomPeerF = peerManagerRef ? RandomPeerExcluding(peersAddresses)
     randomPeerF.mapTo[Option[PeerInfo]].foreach {
-      case Some(peerInfo) => self ! ConnectTo(peerInfo)
+      case Some(peerInfo) => log.warn(s"Connecting to peer! \n active connections: $activeConnections, \n unconfirmed: $unconfirmedConnections, \n connecting to: $peerInfo ")
+        self ! ConnectTo(peerInfo)
       case None => log.warn("Could not find a peer to connect to, skipping this connectionToPeer round")
     }
   }
