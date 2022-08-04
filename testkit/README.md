@@ -1,11 +1,11 @@
-# Scorex-testkit - test kit for Scorex projects
+# Sparkz-testkit - test kit for Sparkz projects
 
-Scorex comes with a dedicated module scorex-testkit for supporting tests at different levels.
+Sparkz comes with a dedicated module sparkz-testkit for supporting tests at different levels.
 Testkit contains property tests common for all blockchains and allow to test blockchain node for them.
 
 ### Example:
 
-All test scenarios are combined in BlockchainSanity test, leaving generators to concrete blockchain implementation. This generators are implemented in [a test for the Hybrid example](https://github.com/ScorexFoundation/Scorex/blob/master/examples/src/test/scala/hybrid/HybridSanity.scala).
+All test scenarios are combined in BlockchainSanity test, leaving generators to concrete blockchain implementation. This generators are implemented in [a test for the Hybrid example](https://github.com/HorizenOfficial/Sparkz/blob/master/examples/src/test/scala/hybrid/HybridSanity.scala).
 
 ### Implemented test scenarios
 - [x] Valid block should be successfully applied to history and available by id after that.
