@@ -3,11 +3,11 @@ package examples.trimchain.modifiers
 import examples.commons.{SimpleBoxTransaction, SimpleBoxTransactionSerializer}
 import io.circe.Encoder
 import io.circe.syntax._
-import scorex.core.ModifierTypeId
-import scorex.core.block.Block
-import scorex.core.block.Block.{Timestamp, Version}
+import sparkz.core.ModifierTypeId
+import sparkz.core.block.Block
+import sparkz.core.block.Block.{Timestamp, Version}
 import scorex.util.serialization.{Reader, Writer}
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.serialization.SparkzSerializer
 import scorex.util.ModifierId
 
 import scala.annotation.tailrec
@@ -27,10 +27,10 @@ case class TBlock(header: BlockHeader, body: Seq[SimpleBoxTransaction], timestam
 
   override type M = TBlock
 
-  override def serializer: ScorexSerializer[TBlock] = TBlockSerializer
+  override def serializer: SparkzSerializer[TBlock] = TBlockSerializer
 }
 
-object TBlockSerializer extends ScorexSerializer[TBlock] {
+object TBlockSerializer extends SparkzSerializer[TBlock] {
 
   override def serialize(obj: TBlock, w: Writer): Unit = {
     w.putLong(obj.timestamp)

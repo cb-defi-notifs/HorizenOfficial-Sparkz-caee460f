@@ -1,10 +1,10 @@
 package examples.hybrid.history
 
 import examples.hybrid.blocks.{PosBlock, PowBlock}
-import scorex.core.consensus.SyncInfo
-import scorex.core.network.message.SyncInfoMessageSpec
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.consensus.SyncInfo
+import sparkz.core.network.message.SyncInfoMessageSpec
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
@@ -28,14 +28,14 @@ case class HybridSyncInfo(answer: Boolean,
 
   override type M = HybridSyncInfo
 
-  override def serializer: ScorexSerializer[HybridSyncInfo] = HybridSyncInfoSerializer
+  override def serializer: SparkzSerializer[HybridSyncInfo] = HybridSyncInfoSerializer
 }
 
 object HybridSyncInfo {
   val MaxLastPowBlocks: Byte = 50 //don't make it more than 127 without changing serialization!
 }
 
-object HybridSyncInfoSerializer extends ScorexSerializer[HybridSyncInfo] {
+object HybridSyncInfoSerializer extends SparkzSerializer[HybridSyncInfo] {
 
   import HybridSyncInfo.MaxLastPowBlocks
 

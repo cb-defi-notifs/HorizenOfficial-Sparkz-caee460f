@@ -7,11 +7,11 @@ import examples.hybrid.history.{HybridHistory, HybridSyncInfo}
 import examples.hybrid.mining.{HybridMiningSettings, HybridSettings}
 import examples.hybrid.state.HBoxStoredState
 import examples.hybrid.wallet.HBoxWallet
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.PrivateKey25519Companion
-import scorex.core.utils.{NetworkTimeProvider, ScorexEncoding}
-import scorex.core.{ModifierTypeId, NodeViewHolder, NodeViewModifier}
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.PrivateKey25519Companion
+import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
+import sparkz.core.{ModifierTypeId, NodeViewHolder, NodeViewModifier}
 import scorex.util.encode.Base58
 import scorex.crypto.signatures.PublicKey
 import scorex.util.ScorexLogging
@@ -27,7 +27,7 @@ class HybridNodeViewHolder(hybridSettings: HybridSettings,
   override type VL = HBoxWallet
   override type MP = SimpleBoxTransactionMemPool
 
-  override lazy val scorexSettings: ScorexSettings = hybridSettings.scorexSettings
+  override lazy val sparksSettings: SparkzSettings = hybridSettings.sparkzSettings
   private lazy val minerSettings: HybridMiningSettings = hybridSettings.mining
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
@@ -50,19 +50,19 @@ class HybridNodeViewHolder(hybridSettings: HybridSettings,
   override def restoreState(): Option[(HIS, MS, VL, MP)] = {
     if (HBoxWallet.exists(hybridSettings.walletSettings)) {
       Some((
-        HybridHistory.readOrGenerate(scorexSettings, minerSettings, timeProvider),
-        HBoxStoredState.readOrGenerate(scorexSettings),
+        HybridHistory.readOrGenerate(sparksSettings, minerSettings, timeProvider),
+        HBoxStoredState.readOrGenerate(sparksSettings),
         HBoxWallet.readOrGenerate(hybridSettings.walletSettings, 1),
         SimpleBoxTransactionMemPool.emptyPool))
     } else None
   }
 }
 
-object HybridNodeViewHolder extends ScorexLogging with ScorexEncoding {
+object HybridNodeViewHolder extends ScorexLogging with SparkzEncoding {
   def generateGenesisState(hybridSettings: HybridSettings,
                            timeProvider: NetworkTimeProvider):
   (HybridHistory, HBoxStoredState, HBoxWallet, SimpleBoxTransactionMemPool) = {
-    val settings: ScorexSettings = hybridSettings.scorexSettings
+    val settings: SparkzSettings = hybridSettings.sparkzSettings
     val minerSettings: HybridMiningSettings = hybridSettings.mining
 
     val GenesisAccountsNum = 50

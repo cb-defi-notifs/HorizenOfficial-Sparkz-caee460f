@@ -6,7 +6,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import scorex.core.transaction.state.PrivateKey25519Companion
+import sparkz.core.transaction.state.PrivateKey25519Companion
 
 
 class TransactionSuite extends AnyPropSpec

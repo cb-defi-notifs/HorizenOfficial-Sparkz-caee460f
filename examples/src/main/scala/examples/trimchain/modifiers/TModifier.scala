@@ -1,6 +1,6 @@
 package examples.trimchain.modifiers
 
-import scorex.core._
+import sparkz.core._
 
 
 trait TModifier extends PersistentNodeViewModifier

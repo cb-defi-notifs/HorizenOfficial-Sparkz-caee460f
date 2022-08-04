@@ -4,12 +4,12 @@ import examples.commons.{PublicKey25519NoncedBox, PublicKey25519NoncedBoxSeriali
 import examples.trimchain.modifiers.{TBlock, TModifier, UtxoSnapshot}
 import examples.trimchain.utxo.PersistentAuthenticatedUtxo.ProverType
 import examples.trimchain.utxo.{AuthenticatedUtxo, PersistentAuthenticatedUtxo}
-import scorex.core.{VersionTag, bytesToVersion}
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.{BoxStateChanges, Insertion, Removal}
+import sparkz.core.{VersionTag, bytesToVersion}
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.{BoxStateChanges, Insertion, Removal}
 import scorex.crypto.authds.avltree.batch.{Insert, Remove}
 import scorex.crypto.authds.{ADDigest, ADKey, ADValue}
-import scorex.mid.state.BoxMinimalState
+import sparkz.mid.state.BoxMinimalState
 import scorex.util.ScorexLogging
 
 import scala.util.Try

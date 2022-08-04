@@ -1,7 +1,7 @@
 package examples.spv.simulation
 
 import examples.spv.{Header, KMZProofSerializer, SpvAlgos}
-import scorex.core.transaction.state.PrivateKey25519Companion
+import sparkz.core.transaction.state.PrivateKey25519Companion
 import scorex.crypto.hash.Blake2b256
 
 object SPVSimulator extends App with SimulatorFuctions {

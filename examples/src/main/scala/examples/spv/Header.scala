@@ -3,11 +3,11 @@ package examples.spv
 import examples.spv.Constants._
 import io.circe.Encoder
 import io.circe.syntax._
-import scorex.core.block.Block
-import scorex.core.block.Block._
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.utils.ScorexEncoding
-import scorex.core.{ModifierTypeId, PersistentNodeViewModifier}
+import sparkz.core.block.Block
+import sparkz.core.block.Block._
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.utils.SparkzEncoding
+import sparkz.core.{ModifierTypeId, PersistentNodeViewModifier}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
@@ -30,10 +30,10 @@ case class Header(parentId: BlockId,
 
   override type M = Header
 
-  override def serializer: ScorexSerializer[Header] = HeaderSerializer
+  override def serializer: SparkzSerializer[Header] = HeaderSerializer
 }
 
-object Header extends ScorexEncoding {
+object Header extends SparkzEncoding {
   implicit val headerEncoder: Encoder[Header] = (h: Header) =>
     Map(
       "id" -> encoder.encodeId(h.id).asJson,
@@ -46,7 +46,7 @@ object Header extends ScorexEncoding {
     ).asJson
 }
 
-object HeaderSerializer extends ScorexSerializer[Header] {
+object HeaderSerializer extends SparkzSerializer[Header] {
 
   override def serialize(h: Header, w: Writer): Unit = {
     serializeWithoutIterlinks(h, w)

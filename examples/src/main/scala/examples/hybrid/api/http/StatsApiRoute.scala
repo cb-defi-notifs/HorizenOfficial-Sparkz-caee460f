@@ -7,9 +7,9 @@ import examples.hybrid.history.HybridHistory
 import examples.hybrid.state.HBoxStoredState
 import examples.hybrid.wallet.HBoxWallet
 import io.circe.syntax._
-import scorex.core.api.http.{ApiResponse, ApiRouteWithFullView, ApiTry}
-import scorex.core.settings.RESTApiSettings
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.api.http.{ApiResponse, ApiRouteWithFullView, ApiTry}
+import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.SparkzEncoding
 import scorex.util.ModifierId
 
 import scala.util.Try
@@ -17,7 +17,7 @@ import scala.util.Try
 case class StatsApiRoute(override val settings: RESTApiSettings, nodeViewHolderRef: ActorRef)
                         (implicit val context: ActorRefFactory)
   extends ApiRouteWithFullView[HybridHistory, HBoxStoredState, HBoxWallet, SimpleBoxTransactionMemPool]
-    with ScorexEncoding {
+    with SparkzEncoding {
 
   override val route: Route = (pathPrefix("stats")) {
     corsHandler(

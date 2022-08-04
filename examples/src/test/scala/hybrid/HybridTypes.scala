@@ -5,8 +5,8 @@ import examples.hybrid.HybridNodeViewHolder
 import examples.hybrid.blocks._
 import examples.hybrid.history.{HybridHistory, HybridSyncInfo, HybridSyncInfoMessageSpec}
 import examples.hybrid.state.HBoxStoredState
-import scorex.core.consensus.SyncInfo
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.consensus.SyncInfo
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 
 trait HybridTypes {
 

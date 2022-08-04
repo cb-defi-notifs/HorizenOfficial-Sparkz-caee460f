@@ -1,4 +1,4 @@
-name := "scorex-testkit"
+name := "sparkz-testkit"
 
 libraryDependencies ++= Seq(
   "org.scalactic" %% "scalactic" % "3.2.12",

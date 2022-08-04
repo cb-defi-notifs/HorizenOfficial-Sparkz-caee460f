@@ -7,10 +7,10 @@ import hybrid.HybridGenerators
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import scorex.core.bytesToId
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.proof.Signature25519
-import scorex.core.transaction.state.PrivateKey25519
+import sparkz.core.bytesToId
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.proof.Signature25519
+import sparkz.core.transaction.state.PrivateKey25519
 import scorex.crypto.signatures.Signature
 
 import scala.annotation.tailrec

@@ -1,14 +1,16 @@
-Scorex 2 - The modular blockchain framework [![Build Status](https://travis-ci.org/ScorexFoundation/Scorex.svg?branch=master)](https://travis-ci.org/ScorexFoundation/Scorex) [![Coverage Status](https://coveralls.io/repos/github/ScorexFoundation/Scorex/badge.svg?branch=scoverage-reports)](https://coveralls.io/github/ScorexFoundation/Scorex?branch=scoverage-reports)
-====================================================================================================================================================================================
+Sparkz - The modular blockchain framework
+- Dev : [![Build Status: dev](https://app.travis-ci.com/HorizenOfficial/Sparkz.svg?branch=dev)](https://app.travis-ci.com/HorizenOfficial/Sparkz) [![Coverage Status](https://coveralls.io/repos/github/HorizenOfficial/Sparkz/badge.svg?branch=dev)](https://coveralls.io/github/HorizenOfficial/Sparkz?branch=dev)
+- Main: [![Build Status: dev](https://app.travis-ci.com/HorizenOfficial/Sparkz.svg?branch=main)](https://app.travis-ci.com/HorizenOfficial/Sparkz) [![Coverage Status](https://coveralls.io/repos/github/HorizenOfficial/Sparkz/badge.svg?branch=main)](https://coveralls.io/github/HorizenOfficial/Sparkz?branch=main)
+===========================================================================================================================================
 
-Scorex and Scorex 2
+Sparkz
 -------------------
 
-Scorex 2 is modular blockchain framework is Scala language which allows for free and limitless experimentation with a 
+Sparkz 2 is modular blockchain framework is Scala language which allows for free and limitless experimentation with a 
 wide variety of designs. 
 
-It is a complete rewrite of Scorex framework, which can be found 
-at [https://github.com/input-output-hk/Scorex](https://github.com/input-output-hk/Scorex).
+It is a fork of Scorex framework, which can be found 
+at [https://github.com/hyperledger-labs/Scorex](https://github.com/hyperledger-labs/Scorex).
 
 Motivation
 ----------

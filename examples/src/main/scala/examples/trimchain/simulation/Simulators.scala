@@ -5,8 +5,8 @@ import examples.trimchain.core.Constants._
 import examples.trimchain.core.{Algos, Constants, StateRoot, TransactionsRoot}
 import examples.trimchain.modifiers.TBlock
 import examples.trimchain.utxo.PersistentAuthenticatedUtxo
-import scorex.core._
-import scorex.core.transaction.state.PrivateKey25519Companion
+import sparkz.core._
+import sparkz.core.transaction.state.PrivateKey25519Companion
 
 trait Simulators {
 
@@ -23,7 +23,7 @@ trait Simulators {
                     currentUtxo: InMemoryAuthenticatedUtxo,
                     miningUtxos: IndexedSeq[InMemoryAuthenticatedUtxo]): (TBlock, Seq[PublicKey25519NoncedBox], InMemoryAuthenticatedUtxo) = {
     //todo: fix, hashchain instead of Merkle tree atm
-    val txsHash = TransactionsRoot @@ hashfn(scorex.core.utils.concatBytes(txs.map(_.bytes)))
+    val txsHash = TransactionsRoot @@ hashfn(sparkz.core.utils.concatBytes(txs.map(_.bytes)))
 
     val changes = PersistentAuthenticatedUtxo.changes(txs).get
     val updUtxo = currentUtxo.applyChanges(changes, bytesToVersion(scorex.utils.Random.randomBytes())).get

@@ -5,12 +5,12 @@ import examples.commons.{Nonce, PublicKey25519NoncedBox, Value}
 import examples.spv.{Header, SpvAlgos}
 import examples.trimchain.core.Constants._
 import examples.trimchain.simulation.InMemoryAuthenticatedUtxo
-import scorex.core.block.Block._
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.{BoxStateChanges, Insertion}
+import sparkz.core.block.Block._
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.{BoxStateChanges, Insertion}
 import scorex.util.ModifierId
 import scorex.util.{bytesToId, idToBytes}
-import scorex.core.bytesToVersion
+import sparkz.core.bytesToVersion
 
 import scala.annotation.tailrec
 import scala.util.Random

@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import examples.commons.{SimpleBoxTransaction, SimpleBoxTransactionMemPool, Value}
 import examples.hybrid.history.HybridHistory
 import examples.hybrid.state.HBoxStoredState
-import scorex.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.CurrentView
 import scorex.util.ScorexLogging
 
 import scala.collection.mutable.ArrayBuffer
@@ -19,7 +19,7 @@ class SimpleBoxTransactionGenerator(viewHolderRef: ActorRef)(implicit ec: Execut
   with ScorexLogging {
 
   import SimpleBoxTransactionGenerator.ReceivableMessages._
-  import scorex.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
+  import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}
 
   private val getRequiredData: GetDataFromCurrentView[HybridHistory,
     HBoxStoredState,

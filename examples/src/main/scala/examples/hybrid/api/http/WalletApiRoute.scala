@@ -8,10 +8,10 @@ import examples.hybrid.state.HBoxStoredState
 import examples.hybrid.wallet.HBoxWallet
 import io.circe.parser._
 import io.circe.syntax._
-import scorex.core.api.http.{ApiError, ApiResponse, ApiRouteWithFullView}
-import scorex.core.settings.RESTApiSettings
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.api.http.{ApiError, ApiResponse, ApiRouteWithFullView}
+import sparkz.core.settings.RESTApiSettings
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.signatures.PublicKey
 
 import scala.util.{Failure, Success, Try}
@@ -20,9 +20,9 @@ import scala.util.{Failure, Success, Try}
 case class WalletApiRoute(override val settings: RESTApiSettings, nodeViewHolderRef: ActorRef)
                          (implicit val context: ActorRefFactory)
   extends ApiRouteWithFullView[HybridHistory, HBoxStoredState, HBoxWallet, SimpleBoxTransactionMemPool]
-    with ScorexEncoding {
+    with SparkzEncoding {
 
-  import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+  import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 
   //TODO move to settings?
   val DefaultFee: Int = 100

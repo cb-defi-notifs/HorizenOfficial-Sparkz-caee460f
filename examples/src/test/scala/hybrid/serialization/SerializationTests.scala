@@ -7,8 +7,8 @@ import hybrid.HybridGenerators
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.wallet.{WalletBox, WalletBoxSerializer}
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.wallet.{WalletBox, WalletBoxSerializer}
 
 @SuppressWarnings(Array("org.wartremover.warts.TraversableOps"))
 class SerializationTests extends AnyPropSpec

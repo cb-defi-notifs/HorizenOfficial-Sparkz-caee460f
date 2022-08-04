@@ -9,9 +9,9 @@ import examples.trimchain.core.{Algos, Constants, TicketSerializer}
 import examples.trimchain.modifiers.{BlockHeader, TBlock}
 import io.iohk.iodb.ByteArrayWrapper
 import io.iohk.iodb.Store.VersionID
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.{BoxStateChanges, Insertion}
-import scorex.core.idToVersion
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.{BoxStateChanges, Insertion}
+import sparkz.core.idToVersion
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable

@@ -2,7 +2,7 @@
 .idea
 .ensime
 .ensime_cache/
-scorex.yaml
+sparkz.yaml
 
 # Eclipse/Scala IDE files
 .classpath

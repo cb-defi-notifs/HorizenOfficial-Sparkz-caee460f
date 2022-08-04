@@ -8,14 +8,14 @@ import examples.hybrid.mining.HybridSettings
 import examples.hybrid.state.HBoxStoredState
 import org.scalacheck.rng.Seed
 import org.scalacheck.{Arbitrary, Gen}
-import scorex.core.block.Block._
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.proof.Signature25519
-import scorex.core.transaction.state._
-import scorex.core.transaction.wallet.WalletBox
+import sparkz.core.block.Block._
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.proof.Signature25519
+import sparkz.core.transaction.state._
+import sparkz.core.transaction.wallet.WalletBox
 import scorex.crypto.hash.Blake2b256
 import scorex.crypto.signatures.Signature
-import scorex.testkit.utils.{FileUtils, NoShrink}
+import sparkz.testkit.utils.{FileUtils, NoShrink}
 import scorex.util.ModifierId
 
 import scala.collection.concurrent.TrieMap

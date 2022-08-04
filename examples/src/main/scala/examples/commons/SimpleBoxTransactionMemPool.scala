@@ -1,6 +1,6 @@
 package examples.commons
 
-import scorex.core.transaction.MemoryPool
+import sparkz.core.transaction.MemoryPool
 import scorex.util.ModifierId
 
 import scala.collection.concurrent.TrieMap

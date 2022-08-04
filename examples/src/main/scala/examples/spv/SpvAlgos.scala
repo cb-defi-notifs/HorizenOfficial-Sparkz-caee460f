@@ -1,12 +1,12 @@
 package examples.spv
 
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.utils.SparkzEncoding
 import scorex.util.{ModifierId, idToBytes}
 
 import scala.annotation.tailrec
 import scala.util.Try
 
-object SpvAlgos extends ScorexEncoding {
+object SpvAlgos extends SparkzEncoding {
 
   def blockIdDifficulty(id: ModifierId): BigInt = {
     val blockTarget = BigInt(1, idToBytes(id))

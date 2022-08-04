@@ -6,13 +6,13 @@ import com.google.common.primitives.Longs
 import examples.commons._
 import examples.hybrid.blocks.{HybridBlock, PosBlock, PowBlock}
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
-import scorex.core._
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
-import scorex.core.utils.ScorexEncoding
+import sparkz.core._
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
+import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.authds._
-import scorex.mid.state.BoxMinimalState
+import sparkz.mid.state.BoxMinimalState
 import scorex.util.ScorexLogging
 
 import scala.util.{Failure, Success, Try}
@@ -23,7 +23,7 @@ case class HBoxStoredState(store: LSMStore, override val version: VersionTag) ex
     PublicKey25519NoncedBox,
     SimpleBoxTransaction,
     HybridBlock,
-    HBoxStoredState] with ScorexLogging with ScorexEncoding {
+    HBoxStoredState] with ScorexLogging with SparkzEncoding {
 
   require(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version) == version,
     s"${encoder.encodeVersion(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version))}" +
@@ -137,7 +137,7 @@ object HBoxStoredState {
     }
   }
 
-  def readOrGenerate(settings: ScorexSettings): HBoxStoredState = {
+  def readOrGenerate(settings: SparkzSettings): HBoxStoredState = {
     import settings.dataDir
     dataDir.mkdirs()
 
@@ -155,7 +155,7 @@ object HBoxStoredState {
     HBoxStoredState(stateStorage, version)
   }
 
-  def genesisState(settings: ScorexSettings, initialBlocks: Seq[HybridBlock]): HBoxStoredState = {
+  def genesisState(settings: SparkzSettings, initialBlocks: Seq[HybridBlock]): HBoxStoredState = {
     initialBlocks.foldLeft(readOrGenerate(settings)) { (state, mod) =>
       state.changes(mod).flatMap(cs => state.applyChanges(cs, idToVersion(mod.id))).get
     }

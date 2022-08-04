@@ -8,9 +8,9 @@ import examples.commons.{Nonce, PublicKey25519NoncedBox, Value}
 import examples.trimchain.modifiers.BlockHeader
 import examples.trimchain.utxo.{AuthenticatedUtxo, PersistentAuthenticatedUtxo}
 import io.iohk.iodb.LSMStore
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.{BoxStateChanges, Insertion}
-import scorex.core._
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.{BoxStateChanges, Insertion}
+import sparkz.core._
 import scorex.crypto.authds.avltree.batch.{BatchAVLVerifier, Lookup}
 import scorex.crypto.authds.{ADDigest, ADKey}
 import scorex.crypto.hash.{Blake2b256, Digest32}
@@ -42,7 +42,7 @@ object Algos extends App {
       val ids = (0 until NElementsInProof) map (elementIndex => ADKey @@ hashfn(seed ++ minerPubKey ++
         Ints.toByteArray(stateIndex) ++ Ints.toByteArray(elementIndex)))
       val proof = utxo.lookupProof(ids).get
-      seed = hashfn(scorex.core.utils.concatFixLengthBytes(ids)) //TODO do we need it?
+      seed = hashfn(sparkz.core.utils.concatFixLengthBytes(ids)) //TODO do we need it?
       proof
     }
 
@@ -94,7 +94,7 @@ object Algos extends App {
         valueLengthOpt = Some(BoxLength))
 
       ids.foreach(id => v.performOneOperation(Lookup(ADKey @@ id)).get)
-      seed = hashfn(scorex.core.utils.concatFixLengthBytes(ids)) //TODO do we need it?
+      seed = hashfn(sparkz.core.utils.concatFixLengthBytes(ids)) //TODO do we need it?
     }
 
     true
