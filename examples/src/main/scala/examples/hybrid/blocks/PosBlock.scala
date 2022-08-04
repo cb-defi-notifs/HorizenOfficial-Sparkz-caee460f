@@ -4,14 +4,14 @@ import com.google.common.primitives.Longs
 import examples.commons._
 import io.circe.Encoder
 import io.circe.syntax._
-import scorex.core.block.Block
-import scorex.core.block.Block._
+import sparkz.core.block.Block
+import sparkz.core.block.Block._
 import scorex.util.serialization._
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.transaction.proof.{Signature25519, Signature25519Serializer}
-import scorex.core.transaction.state.PrivateKey25519
-import scorex.core.utils.ScorexEncoding
-import scorex.core.{ModifierTypeId, TransactionsCarryingPersistentNodeViewModifier, idToBytes}
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.transaction.proof.{Signature25519, Signature25519Serializer}
+import sparkz.core.transaction.state.PrivateKey25519
+import sparkz.core.utils.SparkzEncoding
+import sparkz.core.{ModifierTypeId, TransactionsCarryingPersistentNodeViewModifier, idToBytes}
 import scorex.crypto.hash.Blake2b256
 import scorex.crypto.signatures.{Curve25519, Signature}
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
@@ -40,7 +40,7 @@ case class PosBlock(override val parentId: BlockId, //PoW block
   override def toString: String = s"PoSBlock(${this.asJson.noSpaces})"
 }
 
-object PosBlockSerializer extends ScorexSerializer[PosBlock] with ScorexEncoding {
+object PosBlockSerializer extends SparkzSerializer[PosBlock] with SparkzEncoding {
 
   override def serialize(b: PosBlock, w: Writer): Unit = {
     w.putBytes(idToBytes(b.parentId))
@@ -71,9 +71,9 @@ object PosBlockSerializer extends ScorexSerializer[PosBlock] with ScorexEncoding
   }
 }
 
-object PosBlock extends ScorexEncoding {
+object PosBlock extends SparkzEncoding {
   val MaxBlockSize = 512 * 1024 //512K
-  val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 4.toByte
+  val ModifierTypeId: ModifierTypeId = sparkz.core.ModifierTypeId @@ 4.toByte
 
   implicit val posBlockEncoder: Encoder[PosBlock] = (psb: PosBlock) => {
     Map(

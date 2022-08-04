@@ -7,15 +7,15 @@ import examples.hybrid.blocks._
 import examples.hybrid.history.{HybridHistory, HybridSyncInfo, HybridSyncInfoMessageSpec}
 import examples.hybrid.mining._
 import examples.hybrid.wallet.SimpleBoxTransactionGeneratorRef
-import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.core.api.http.{ApiRoute, NodeViewApiRoute, PeersApiRoute, UtilsApiRoute}
-import scorex.core.app.Application
-import scorex.core.network.message.MessageSpec
-import scorex.core.network.{NodeViewSynchronizerRef, PeerFeature}
-import scorex.core.serialization.{ScorexSerializer, SerializerRegistry}
-import scorex.core.serialization.SerializerRegistry.SerializerRecord
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.Transaction
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.api.http.{ApiRoute, NodeViewApiRoute, PeersApiRoute, UtilsApiRoute}
+import sparkz.core.app.Application
+import sparkz.core.network.message.MessageSpec
+import sparkz.core.network.{NodeViewSynchronizerRef, PeerFeature}
+import sparkz.core.serialization.{SparkzSerializer, SerializerRegistry}
+import sparkz.core.serialization.SerializerRegistry.SerializerRecord
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.Transaction
 
 import scala.concurrent.duration._
 import scala.io.Source
@@ -30,7 +30,7 @@ class HybridApp(val settingsFilename: String) extends Application {
   override type NVHT = HybridNodeViewHolder
 
   private val hybridSettings = HybridSettings.read(Some(settingsFilename))
-  implicit override lazy val settings: ScorexSettings = HybridSettings.read(Some(settingsFilename)).scorexSettings
+  implicit override lazy val settings: SparkzSettings = HybridSettings.read(Some(settingsFilename)).sparkzSettings
 
   log.debug(s"Starting application with settings \n$settings")
 
@@ -72,7 +72,7 @@ class HybridApp(val settingsFilename: String) extends Application {
 }
 
 object HybridApp extends App {
-  def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
+  def modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
     Map(PosBlock.ModifierTypeId -> PosBlockSerializer,
       PowBlock.ModifierTypeId -> PowBlockSerializer,
       Transaction.ModifierTypeId -> SimpleBoxTransactionSerializer)

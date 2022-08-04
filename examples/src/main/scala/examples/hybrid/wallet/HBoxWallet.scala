@@ -8,11 +8,11 @@ import examples.hybrid.blocks.HybridBlock
 import examples.hybrid.mining.WalletSettings
 import examples.hybrid.state.HBoxStoredState
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
-import scorex.core._
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion, PrivateKey25519Serializer}
-import scorex.core.transaction.wallet.{BoxWallet, BoxWalletTransaction, WalletBox, WalletBoxSerializer}
-import scorex.core.utils.ScorexEncoding
+import sparkz.core._
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion, PrivateKey25519Serializer}
+import sparkz.core.transaction.wallet.{BoxWallet, BoxWalletTransaction, WalletBox, WalletBoxSerializer}
+import sparkz.core.utils.SparkzEncoding
 import scorex.util.encode.Base58
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
@@ -21,7 +21,7 @@ import scala.util.Try
 
 case class HBoxWallet(seed: Array[Byte], store: LSMStore)
   extends BoxWallet[PublicKey25519Proposition, SimpleBoxTransaction, HybridBlock, HBoxWallet]
-    with ScorexLogging with ScorexEncoding {
+    with ScorexLogging with SparkzEncoding {
 
   override type S = PrivateKey25519
   override type PI = PublicKey25519Proposition
@@ -149,7 +149,7 @@ object HBoxWallet {
 }
 
 
-object GenesisStateGenerator extends App with ScorexEncoding {
+object GenesisStateGenerator extends App with SparkzEncoding {
   private val w1 = HBoxWallet(Base58.decode("minerNode1").get, new LSMStore(new File("/tmp/w1")))
   private val w2 = HBoxWallet(Base58.decode("minerNode2").get, new LSMStore(new File("/tmp/w2")))
   private val w3 = HBoxWallet(Base58.decode("minerNode3").get, new LSMStore(new File("/tmp/w3")))

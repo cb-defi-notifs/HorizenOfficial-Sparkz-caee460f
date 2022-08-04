@@ -8,15 +8,15 @@ import examples.hybrid.blocks._
 import examples.hybrid.mining.HybridMiningSettings
 import examples.hybrid.validation.{DifficultyBlockValidator, ParentBlockValidator, SemanticBlockValidator}
 import io.iohk.iodb.LSMStore
-import scorex.core.block.{Block, BlockValidator}
-import scorex.core.consensus.History._
-import scorex.core.consensus.ModifierSemanticValidity._
-import scorex.core.consensus._
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.utils.{NetworkTimeProvider, ScorexEncoding}
-import scorex.core.validation.RecoverableModifierError
-import scorex.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.block.{Block, BlockValidator}
+import sparkz.core.consensus.History._
+import sparkz.core.consensus.ModifierSemanticValidity._
+import sparkz.core.consensus._
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
+import sparkz.core.validation.RecoverableModifierError
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -32,7 +32,7 @@ class HybridHistory(val storage: HistoryStorage,
                     validators: Seq[BlockValidator[HybridBlock]],
                     statsLogger: Option[FileLogger],
                     timeProvider: NetworkTimeProvider)
-  extends History[HybridBlock, HybridSyncInfo, HybridHistory] with ScorexLogging with ScorexEncoding {
+  extends History[HybridBlock, HybridSyncInfo, HybridHistory] with ScorexLogging with SparkzEncoding {
 
   import HybridHistory._
 
@@ -498,7 +498,7 @@ class HybridHistory(val storage: HistoryStorage,
 object HybridHistory extends ScorexLogging {
   val DifficultyRecalcPeriod: Int = 20
 
-  def readOrGenerate(settings: ScorexSettings, minerSettings: HybridMiningSettings, timeProvider: NetworkTimeProvider): HybridHistory = {
+  def readOrGenerate(settings: SparkzSettings, minerSettings: HybridMiningSettings, timeProvider: NetworkTimeProvider): HybridHistory = {
     readOrGenerate(settings.dataDir, settings.logDir, minerSettings, timeProvider)
   }
 

@@ -1,9 +1,9 @@
 package examples.spv
 
-import scorex.core._
+import sparkz.core._
 import scorex.util.serialization.{Reader, Writer}
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.utils.SparkzEncoding
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -21,7 +21,7 @@ case class KMZProof(m: Int, k: Int, prefixProofs: Seq[Seq[Header]], suffix: Seq[
   }
 }
 
-object KMZProofSerializer extends ScorexSerializer[KMZProof] with ScorexEncoding {
+object KMZProofSerializer extends SparkzSerializer[KMZProof] with SparkzEncoding {
 
   override def serialize(obj: KMZProof, w: Writer): Unit = {
 

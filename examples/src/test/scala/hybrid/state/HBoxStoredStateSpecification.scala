@@ -6,7 +6,7 @@ import hybrid.HybridGenerators
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import scorex.core.transaction.state.{Insertion, Removal}
+import sparkz.core.transaction.state.{Insertion, Removal}
 import scorex.testkit.properties.state.StateTests
 
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))

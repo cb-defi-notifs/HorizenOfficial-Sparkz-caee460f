@@ -6,9 +6,9 @@ import hybrid.HybridGenerators
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.proof.{Signature25519, Signature25519Serializer}
-import scorex.core.transaction.state.PrivateKey25519Companion
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.proof.{Signature25519, Signature25519Serializer}
+import sparkz.core.transaction.state.PrivateKey25519Companion
 import scorex.util.encode.Base58
 import scorex.crypto.hash.Sha256
 import scorex.crypto.signatures.{PublicKey, Signature}

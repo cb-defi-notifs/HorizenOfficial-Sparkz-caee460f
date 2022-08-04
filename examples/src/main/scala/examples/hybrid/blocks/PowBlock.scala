@@ -4,13 +4,13 @@ import examples.commons.SimpleBoxTransaction
 import examples.hybrid.mining.HybridMiningSettings
 import io.circe.Encoder
 import io.circe.syntax._
-import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.core.block.Block
-import scorex.core.block.Block._
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.block.Block
+import sparkz.core.block.Block._
 import scorex.util.serialization._
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
+import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 import scorex.util.Extensions._
@@ -22,7 +22,7 @@ class PowBlockHeader(
                       val nonce: Long,
                       val brothersCount: Int,
                       val brothersHash: Array[Byte],
-                      val generatorProposition: PublicKey25519Proposition) extends ScorexEncoding {
+                      val generatorProposition: PublicKey25519Proposition) extends SparkzEncoding {
 
 
   import PowBlockHeader._
@@ -36,7 +36,7 @@ class PowBlockHeader(
     s"nonce: $nonce)"
 }
 
-object PowBlockHeaderSerializer extends ScorexSerializer[PowBlockHeader] {
+object PowBlockHeaderSerializer extends SparkzSerializer[PowBlockHeader] {
 
   override def serialize(h: PowBlockHeader, w: Writer): Unit = {
      w.putBytes(idToBytes(h.parentId))
@@ -98,7 +98,7 @@ case class PowBlock(override val parentId: BlockId,
   override def transactions: Seq[SimpleBoxTransaction] = Seq()
 }
 
-object PowBlockSerializer extends ScorexSerializer[PowBlock] {
+object PowBlockSerializer extends SparkzSerializer[PowBlock] {
 
   def brotherBytes(brothers: Seq[PowBlockHeader]): Array[Byte] = {
     val w = new VLQByteStringWriter
@@ -131,8 +131,8 @@ object PowBlockSerializer extends ScorexSerializer[PowBlock] {
   }
 }
 
-object PowBlock extends ScorexEncoding {
-  val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
+object PowBlock extends SparkzEncoding {
+  val ModifierTypeId: ModifierTypeId = sparkz.core.ModifierTypeId @@ 3.toByte
 
   implicit val powBlockEncoder: Encoder[PowBlock] = (pb: PowBlock) => {
     Map(

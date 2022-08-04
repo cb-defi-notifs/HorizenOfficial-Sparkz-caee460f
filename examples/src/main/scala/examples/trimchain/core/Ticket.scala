@@ -3,8 +3,8 @@ package examples.trimchain.core
 import io.circe.Encoder
 import io.circe.syntax._
 import scorex.util.serialization.{Reader, Writer}
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.authds.SerializedAdProof
 import scorex.crypto.signatures.Curve25519
 
@@ -16,7 +16,7 @@ case class Ticket(minerKey: Array[Byte], partialProofs: Seq[SerializedAdProof]) 
   override def toString: String = this.asJson.noSpaces
 }
 
-object Ticket extends ScorexEncoding {
+object Ticket extends SparkzEncoding {
   implicit val ticketEncoder: Encoder[Ticket] = (t: Ticket) =>
     Map(
       "minerKey" -> encoder.encode(t.minerKey).asJson,
@@ -24,7 +24,7 @@ object Ticket extends ScorexEncoding {
     ).asJson
 }
 
-object TicketSerializer extends ScorexSerializer[Ticket] {
+object TicketSerializer extends SparkzSerializer[Ticket] {
 
   val MinerKeySize: Int = Curve25519.KeyLength
 

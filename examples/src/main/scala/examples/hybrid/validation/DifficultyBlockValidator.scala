@@ -3,13 +3,13 @@ package examples.hybrid.validation
 import examples.hybrid.blocks.{HybridBlock, PosBlock, PowBlock}
 import examples.hybrid.history.HistoryStorage
 import examples.hybrid.mining.{HybridMiningSettings, PosForger}
-import scorex.core.block.BlockValidator
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.block.BlockValidator
+import sparkz.core.utils.SparkzEncoding
 
 import scala.util.Try
 
 class DifficultyBlockValidator(settings: HybridMiningSettings, storage: HistoryStorage)
-  extends BlockValidator[HybridBlock] with ScorexEncoding {
+  extends BlockValidator[HybridBlock] with SparkzEncoding {
 
   def validate(block: HybridBlock): Try[Unit] = block match {
     case b: PowBlock => checkPoWConsensusRules(b)

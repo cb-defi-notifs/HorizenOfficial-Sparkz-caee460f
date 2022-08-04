@@ -6,8 +6,8 @@ import examples.commons.SimpleBoxTransactionMemPool
 import examples.hybrid.HybridNodeViewHolder
 import examples.hybrid.wallet.HBoxWallet
 import io.iohk.iodb.ByteArrayWrapper
-import scorex.core._
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core._
+import sparkz.core.utils.NetworkTimeProvider
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 trait NodeViewHolderGenerators {
   this: ModifierGenerators with StateGenerators with HistoryGenerators with HybridTypes =>
 
-  class NodeViewHolderForTests(h: HT, s: ST) extends HybridNodeViewHolder(settings, new NetworkTimeProvider(settings.scorexSettings.ntp)) {
+  class NodeViewHolderForTests(h: HT, s: ST) extends HybridNodeViewHolder(settings, new NetworkTimeProvider(settings.sparkzSettings.ntp)) {
 
     override protected def genesisState: (HIS, MS, VL, MP) = {
       @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))

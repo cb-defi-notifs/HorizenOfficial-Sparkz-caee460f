@@ -4,8 +4,8 @@ import examples.commons.{Nonce, PublicKey25519NoncedBox, Value}
 import examples.hybrid.state.HBoxStoredState
 import io.iohk.iodb.LSMStore
 import org.scalacheck.Gen
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.{BoxStateChanges, Insertion, PrivateKey25519Companion}
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.{BoxStateChanges, Insertion, PrivateKey25519Companion}
 import scorex.testkit.generators.CoreGenerators
 
 import scala.util.Random

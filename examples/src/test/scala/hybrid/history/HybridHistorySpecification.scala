@@ -6,9 +6,9 @@ import org.scalacheck.Gen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import scorex.core.consensus.History.{Older, HistoryComparisonResult, Equal, Younger}
-import scorex.core.utils.ScorexEncoding
-import scorex.core.ModifierTypeId
+import sparkz.core.consensus.History.{Older, HistoryComparisonResult, Equal, Younger}
+import sparkz.core.utils.SparkzEncoding
+import sparkz.core.ModifierTypeId
 import scorex.util.ModifierId
 
 @SuppressWarnings(Array("org.wartremover.warts.TraversableOps", "org.wartremover.warts.OptionPartial"))
@@ -16,7 +16,7 @@ class HybridHistorySpecification extends AnyPropSpec
   with ScalaCheckPropertyChecks
   with Matchers
   with HybridGenerators
-  with ScorexEncoding {
+  with SparkzEncoding {
 
   var history: HybridHistory = historyGen.sample.get
 

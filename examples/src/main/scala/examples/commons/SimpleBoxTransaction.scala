@@ -5,15 +5,15 @@ import examples.hybrid.wallet.HBoxWallet
 import io.circe.Encoder
 import io.circe.syntax._
 import io.iohk.iodb.ByteArrayWrapper
-import scorex.util.serialization.{VLQByteBufferWriter, _}
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.transaction.BoxTransaction
-import scorex.core.transaction.account.PublicKeyNoncedBox
-import scorex.core.transaction.box.BoxUnlocker
-import scorex.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
-import scorex.core.transaction.proof.{Proof, Signature25519, Signature25519Serializer}
-import scorex.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion}
-import scorex.core.utils.ScorexEncoding
+import scorex.util.serialization._
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.transaction.BoxTransaction
+import sparkz.core.transaction.account.PublicKeyNoncedBox
+import sparkz.core.transaction.box.BoxUnlocker
+import sparkz.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
+import sparkz.core.transaction.proof.{Proof, Signature25519, Signature25519Serializer}
+import sparkz.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion}
+import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.authds.ADKey
 import scorex.crypto.hash.Blake2b256
 import scorex.crypto.signatures.Signature
@@ -87,7 +87,7 @@ case class SimpleBoxTransaction(from: IndexedSeq[(PublicKey25519Proposition, Non
 }
 
 
-object SimpleBoxTransaction extends ScorexEncoding {
+object SimpleBoxTransaction extends SparkzEncoding {
 
   implicit val simpleBoxEncoder: Encoder[SimpleBoxTransaction] = (sbe: SimpleBoxTransaction) =>
     Map(
@@ -156,7 +156,7 @@ object SimpleBoxTransaction extends ScorexEncoding {
   }
 }
 
-object SimpleBoxTransactionSerializer extends ScorexSerializer[SimpleBoxTransaction] {
+object SimpleBoxTransactionSerializer extends SparkzSerializer[SimpleBoxTransaction] {
 
   override def serialize(m: SimpleBoxTransaction, w: Writer): Unit = {
     w.putULong(m.fee)
