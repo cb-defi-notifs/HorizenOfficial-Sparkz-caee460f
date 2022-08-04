@@ -6,8 +6,8 @@ import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.PersistentNodeViewModifier
 import sparkz.core.transaction.state.MinimalState
-import scorex.testkit.TestkitHelpers
-import scorex.testkit.generators.{CoreGenerators, SemanticallyInvalidModifierProducer, SemanticallyValidModifierProducer}
+import sparkz.testkit.TestkitHelpers
+import sparkz.testkit.generators.{CoreGenerators, SemanticallyInvalidModifierProducer, SemanticallyValidModifierProducer}
 import sparkz.core.PersistentNodeViewModifier
 import sparkz.testkit.generators.{SemanticallyInvalidModifierProducer, SemanticallyValidModifierProducer}
 

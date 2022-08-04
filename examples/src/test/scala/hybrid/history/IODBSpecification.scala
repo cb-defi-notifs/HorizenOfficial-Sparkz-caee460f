@@ -9,7 +9,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Outcome, propspec}
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.utils.SparkzEncoding
-import scorex.testkit.utils.FileUtils
+import sparkz.testkit.utils.FileUtils
 import scorex.util.ModifierId
 
 @SuppressWarnings(Array("org.wartremover.warts.TraversableOps"))

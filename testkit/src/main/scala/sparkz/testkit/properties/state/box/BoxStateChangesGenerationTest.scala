@@ -5,9 +5,9 @@ import sparkz.core.transaction.BoxTransaction
 import sparkz.core.transaction.box.Box
 import sparkz.core.transaction.box.proposition.Proposition
 import sparkz.core.transaction.state.Insertion
-import scorex.mid.state.BoxMinimalState
-import scorex.testkit.TestkitHelpers
-import scorex.testkit.generators.SemanticallyValidModifierProducer
+import sparkz.mid.state.BoxMinimalState
+import sparkz.testkit.TestkitHelpers
+import sparkz.testkit.generators.SemanticallyValidModifierProducer
 import sparkz.core.PersistentNodeViewModifier
 
 trait BoxStateChangesGenerationTest[P <: Proposition,

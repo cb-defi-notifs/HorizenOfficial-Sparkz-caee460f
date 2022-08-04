@@ -9,7 +9,7 @@ import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChanges, Insertion, Removal}
 import scorex.crypto.authds.avltree.batch.{Insert, Remove}
 import scorex.crypto.authds.{ADDigest, ADKey, ADValue}
-import scorex.mid.state.BoxMinimalState
+import sparkz.mid.state.BoxMinimalState
 import scorex.util.ScorexLogging
 
 import scala.util.Try

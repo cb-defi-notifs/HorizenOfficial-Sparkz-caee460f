@@ -5,7 +5,7 @@ import sparkz.core.consensus.{History, SyncInfo}
 import sparkz.core.transaction.box.proposition.Proposition
 import sparkz.core.transaction.state.MinimalState
 import sparkz.core.transaction.{MemoryPool, Transaction}
-import scorex.testkit.properties.mempool.MempoolFilterPerformanceTest
+import sparkz.testkit.properties.mempool.MempoolFilterPerformanceTest
 
 /**
   * Performance test for implementations

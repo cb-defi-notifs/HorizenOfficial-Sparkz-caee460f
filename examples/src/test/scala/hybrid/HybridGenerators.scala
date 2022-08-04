@@ -15,7 +15,7 @@ import sparkz.core.transaction.state._
 import sparkz.core.transaction.wallet.WalletBox
 import scorex.crypto.hash.Blake2b256
 import scorex.crypto.signatures.Signature
-import scorex.testkit.utils.{FileUtils, NoShrink}
+import sparkz.testkit.utils.{FileUtils, NoShrink}
 import scorex.util.ModifierId
 
 import scala.collection.concurrent.TrieMap

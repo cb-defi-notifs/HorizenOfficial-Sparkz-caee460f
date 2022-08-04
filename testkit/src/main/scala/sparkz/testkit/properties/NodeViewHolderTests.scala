@@ -4,6 +4,7 @@ import akka.actor._
 import akka.testkit.TestProbe
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
+import scorex.util.ScorexLogging
 import sparkz.ObjectGenerators
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedModifier, ModifiersFromRemote}
@@ -13,13 +14,8 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.transaction.state.MinimalState
 import sparkz.core.transaction.wallet.Vault
 import sparkz.core.transaction.{MemoryPool, Transaction}
-import scorex.testkit.generators._
-import scorex.testkit.utils.AkkaFixture
-import scorex.util.ScorexLogging
-import sparkz.ObjectGenerators
-import sparkz.core.NodeViewHolder.CurrentView
-import sparkz.core.PersistentNodeViewModifier
-import sparkz.testkit.generators.{CustomModifierProducer, ModifierProducerTemplateItem, SemanticallyInvalidModifierProducer, SynInvalid, TotallyValidModifierProducer, Valid}
+import sparkz.testkit.generators._
+import sparkz.testkit.utils.AkkaFixture
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

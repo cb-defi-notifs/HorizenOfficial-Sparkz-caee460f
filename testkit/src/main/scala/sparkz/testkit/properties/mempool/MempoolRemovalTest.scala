@@ -7,8 +7,8 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.{PersistentNodeViewModifier, TransactionsCarryingPersistentNodeViewModifier}
 import sparkz.core.consensus.{History, SyncInfo}
 import sparkz.core.transaction.{MemoryPool, Transaction}
-import scorex.testkit.TestkitHelpers
-import scorex.testkit.generators.ArbitraryTransactionsCarryingModifierProducer
+import sparkz.testkit.TestkitHelpers
+import sparkz.testkit.generators.ArbitraryTransactionsCarryingModifierProducer
 import scorex.util.ScorexLogging
 
 trait MempoolRemovalTest[

@@ -10,7 +10,7 @@ import sparkz.core.versionToId
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.PrivateKey25519
 import scorex.crypto.hash.Blake2b256
-import scorex.testkit.generators.{CoreGenerators, ModifierProducerTemplateItem, SynInvalid, Valid}
+import sparkz.testkit.generators.{CoreGenerators, ModifierProducerTemplateItem, SynInvalid, Valid}
 import scorex.util.{ModifierId, bytesToId}
 
 import scala.collection.mutable

@@ -14,7 +14,7 @@ import sparkz.core.network._
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.testkit.generators.CoreGenerators
+import sparkz.testkit.generators.CoreGenerators
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

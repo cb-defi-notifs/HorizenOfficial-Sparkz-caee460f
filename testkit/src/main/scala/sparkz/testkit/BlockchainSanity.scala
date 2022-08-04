@@ -5,12 +5,12 @@ import sparkz.core.consensus.{History, SyncInfo}
 import sparkz.core.transaction.box.Box
 import sparkz.core.transaction.box.proposition.Proposition
 import sparkz.core.transaction.{BoxTransaction, MemoryPool}
-import scorex.mid.state.BoxMinimalState
-import scorex.testkit.generators.AllModifierProducers
-import scorex.testkit.properties._
-import scorex.testkit.properties.mempool.{MempoolFilterPerformanceTest, MempoolRemovalTest, MempoolTransactionsTest}
-import scorex.testkit.properties.state.StateApplicationTest
-import scorex.testkit.properties.state.box.{BoxStateApplyChangesTest, BoxStateChangesGenerationTest, BoxStateRollbackTest}
+import sparkz.mid.state.BoxMinimalState
+import sparkz.testkit.generators.AllModifierProducers
+import sparkz.testkit.properties._
+import sparkz.testkit.properties.mempool.{MempoolFilterPerformanceTest, MempoolRemovalTest, MempoolTransactionsTest}
+import sparkz.testkit.properties.state.StateApplicationTest
+import sparkz.testkit.properties.state.box.{BoxStateApplyChangesTest, BoxStateChangesGenerationTest, BoxStateRollbackTest}
 
 /**
   * The idea of this class is to get some generators and test some situations, common for all blockchains

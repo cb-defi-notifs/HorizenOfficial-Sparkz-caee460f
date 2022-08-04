@@ -2,7 +2,7 @@ package hybrid
 
 import io.iohk.iodb.{LSMStore, QuickStore}
 import org.scalacheck.Gen
-import scorex.testkit.utils.FileUtils
+import sparkz.testkit.utils.FileUtils
 
 trait StoreGenerators extends FileUtils {
 

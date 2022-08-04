@@ -14,7 +14,7 @@ import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.authds.avltree.batch.{BatchAVLProver, Insert, Lookup, Remove}
 import scorex.crypto.authds.{ADDigest, ADKey, ADValue, SerializedAdProof}
 import scorex.crypto.hash.{Blake2b256, Digest32}
-import scorex.mid.state.BoxMinimalState
+import sparkz.mid.state.BoxMinimalState
 import scorex.util.ScorexLogging
 
 import scala.util.{Random, Success, Try}

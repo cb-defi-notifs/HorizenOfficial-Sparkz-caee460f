@@ -4,7 +4,7 @@ import examples.commons.{Nonce, SimpleBoxTransaction, Value}
 import org.scalacheck.Gen
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.PrivateKey25519
-import scorex.testkit.generators.CoreGenerators
+import sparkz.testkit.generators.CoreGenerators
 
 trait ExamplesCommonGenerators extends CoreGenerators {
   lazy val nonceGen: Gen[Nonce] = positiveLongGen.map(a => Nonce @@ a)

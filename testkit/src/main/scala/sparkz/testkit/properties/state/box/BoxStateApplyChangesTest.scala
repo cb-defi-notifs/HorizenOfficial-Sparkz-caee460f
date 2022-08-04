@@ -6,7 +6,7 @@ import sparkz.core.transaction.BoxTransaction
 import sparkz.core.transaction.box.Box
 import sparkz.core.transaction.box.proposition.Proposition
 import sparkz.core.transaction.state.BoxStateChanges
-import scorex.mid.state.BoxMinimalState
+import sparkz.mid.state.BoxMinimalState
 
 import scala.util.Random
 

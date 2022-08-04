@@ -7,7 +7,7 @@ import examples.hybrid.state.HBoxStoredState
 import examples.hybrid.wallet.HBoxWallet
 import org.scalacheck.Gen
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.testkit.{BlockchainPerformance, BlockchainSanity}
+import sparkz.testkit.{BlockchainPerformance, BlockchainSanity}
 
 
 class HybridSanity extends BlockchainSanity[PublicKey25519Proposition,

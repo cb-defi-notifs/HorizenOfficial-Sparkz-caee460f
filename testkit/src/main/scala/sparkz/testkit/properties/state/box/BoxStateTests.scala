@@ -4,8 +4,8 @@ import sparkz.core.PersistentNodeViewModifier
 import sparkz.core.transaction.BoxTransaction
 import sparkz.core.transaction.box.Box
 import sparkz.core.transaction.box.proposition.Proposition
-import scorex.mid.state.BoxMinimalState
-import scorex.testkit.properties.state.StateTests
+import sparkz.mid.state.BoxMinimalState
+import sparkz.testkit.properties.state.StateTests
 
 
 trait BoxStateTests[P <: Proposition,

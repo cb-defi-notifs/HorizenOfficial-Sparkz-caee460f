@@ -8,8 +8,8 @@ import sparkz.core.PersistentNodeViewModifier
 import sparkz.core.consensus.{History, SyncInfo}
 import sparkz.core.consensus.ModifierSemanticValidity.Valid
 import sparkz.core.transaction.Transaction
-import scorex.testkit.TestkitHelpers
-import scorex.testkit.generators.SyntacticallyTargetedModifierProducer
+import sparkz.testkit.TestkitHelpers
+import sparkz.testkit.generators.SyntacticallyTargetedModifierProducer
 import scorex.util.ScorexLogging
 
 

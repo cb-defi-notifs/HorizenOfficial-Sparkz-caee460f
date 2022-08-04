@@ -6,9 +6,9 @@ import sparkz.core.transaction.box.Box
 import sparkz.core.transaction.box.proposition.Proposition
 import sparkz.core.transaction.state._
 import sparkz.core.{PersistentNodeViewModifier, TransactionsCarryingPersistentNodeViewModifier, VersionTag, idToVersion}
-import scorex.mid.state.BoxMinimalState
-import scorex.testkit.TestkitHelpers
-import scorex.testkit.generators.SemanticallyValidTransactionsCarryingModifier
+import sparkz.mid.state.BoxMinimalState
+import sparkz.testkit.TestkitHelpers
+import sparkz.testkit.generators.SemanticallyValidTransactionsCarryingModifier
 
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 trait BoxStateRollbackTest[P <: Proposition,

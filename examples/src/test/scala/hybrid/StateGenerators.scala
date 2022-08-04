@@ -6,7 +6,7 @@ import io.iohk.iodb.LSMStore
 import org.scalacheck.Gen
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChanges, Insertion, PrivateKey25519Companion}
-import scorex.testkit.generators.CoreGenerators
+import sparkz.testkit.generators.CoreGenerators
 
 import scala.util.Random
 

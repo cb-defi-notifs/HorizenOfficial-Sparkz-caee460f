@@ -12,7 +12,7 @@ import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.authds._
-import scorex.mid.state.BoxMinimalState
+import sparkz.mid.state.BoxMinimalState
 import scorex.util.ScorexLogging
 
 import scala.util.{Failure, Success, Try}

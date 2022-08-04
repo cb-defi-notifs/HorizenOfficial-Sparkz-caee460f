@@ -19,9 +19,9 @@ import scorex.util.serialization._
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.transaction.state.MinimalState
 import sparkz.core.transaction.{MemoryPool, Transaction}
-import scorex.testkit.generators.{SyntacticallyTargetedModifierProducer, TotallyValidModifierProducer}
-import scorex.testkit.utils.AkkaFixture
 import scorex.util.ScorexLogging
+import sparkz.testkit.generators.{SyntacticallyTargetedModifierProducer, TotallyValidModifierProducer}
+import sparkz.testkit.utils.AkkaFixture
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
