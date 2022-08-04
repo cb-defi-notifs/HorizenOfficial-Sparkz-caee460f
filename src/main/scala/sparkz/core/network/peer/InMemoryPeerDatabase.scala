@@ -14,6 +14,8 @@ import scala.concurrent.duration._
 final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimeProvider)
   extends PeerDatabase with ScorexLogging {
 
+  private val safeInterval = settings.penaltySafeInterval.toMillis
+
   private var peers = Map.empty[InetSocketAddress, (PeerInfo, TimeProvider.Time)]
 
   /**
@@ -113,19 +115,24 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     */
   def penalize(socketAddress: InetSocketAddress, penaltyType: PenaltyType): Boolean =
     Option(socketAddress.getAddress).exists { address =>
-      val currentTime = timeProvider.time()
-      val safeInterval = settings.penaltySafeInterval.toMillis
-      val (penaltyScoreAcc, lastPenaltyTs) = penaltyBook.getOrElse(address, (0, 0L))
-      val applyPenalty = currentTime - lastPenaltyTs - safeInterval > 0 || penaltyType.isPermanent
-      val newPenaltyScore =
-        if (applyPenalty) penaltyScoreAcc + penaltyScore(penaltyType)
-        else penaltyScoreAcc
-      if (newPenaltyScore > settings.penaltyScoreThreshold) true
+      val (newPenaltyScore, penaltyTs) = penaltyBook.get(address) match {
+        case Some((penaltyScoreAcc, lastPenaltyTs)) =>
+          val currentTime = timeProvider.time()
+          if (currentTime - lastPenaltyTs - safeInterval > 0 || penaltyType.isPermanent)
+            (penaltyScoreAcc + penaltyScore(penaltyType), timeProvider.time())
+          else
+            (penaltyScoreAcc, lastPenaltyTs)
+        case None =>
+          (penaltyScore(penaltyType), timeProvider.time())
+      }
+      if (newPenaltyScore > settings.penaltyScoreThreshold)
+        true
       else {
-        penaltyBook += address -> (newPenaltyScore -> timeProvider.time())
+        penaltyBook += address -> (newPenaltyScore -> penaltyTs)
         false
       }
     }
+
 
   /**
     * Currently accumulated penalty score for a given address.
