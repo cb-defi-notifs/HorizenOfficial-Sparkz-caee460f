@@ -31,7 +31,7 @@ import scala.util.Try
   */
 class NetworkController(settings: NetworkSettings,
                         peerManagerRef: ActorRef,
-                        scorexContext: SparkzContext,
+                        sparkzContext: SparkzContext,
                         tcpManager: ActorRef
                        )(implicit ec: ExecutionContext) extends Actor with ScorexLogging {
 
@@ -73,7 +73,7 @@ class NetworkController(settings: NetworkSettings,
   //check own declared address for validity
   validateDeclaredAddress()
 
-  log.info(s"Declared address: ${scorexContext.externalNodeAddress}")
+  log.info(s"Declared address: ${sparkzContext.externalNodeAddress}")
 
   //bind to listen incoming connections
   tcpManager ! Bind(self, bindAddress, options = Nil, pullMode = false)
@@ -98,7 +98,7 @@ class NetworkController(settings: NetworkSettings,
       context stop self
   }
 
-  private def networkTime(): Time = scorexContext.timeProvider.time()
+  private def networkTime(): Time = sparkzContext.timeProvider.time()
 
   private def businessLogic: Receive = {
     //a message coming in from another peer
@@ -313,7 +313,7 @@ class NetworkController(settings: NetworkSettings,
     }
     val isLocal = connectionId.remoteAddress.getAddress.isSiteLocalAddress ||
       connectionId.remoteAddress.getAddress.isLoopbackAddress
-    val mandatoryFeatures = scorexContext.features :+ mySessionIdFeature
+    val mandatoryFeatures = sparkzContext.features :+ mySessionIdFeature
     val peerFeatures = if (isLocal) {
       val la = new InetSocketAddress(connectionId.localAddress.getAddress, settings.bindAddress.getPort)
       val localAddrFeature = LocalAddressPeerFeature(la)
@@ -329,7 +329,7 @@ class NetworkController(settings: NetworkSettings,
     val connectionDescription = ConnectionDescription(connection, connectionId, selfAddressOpt, peerFeatures)
 
     val handlerProps: Props = PeerConnectionHandlerRef.props(settings, self, peerManagerRef,
-      scorexContext, connectionDescription)
+      sparkzContext, connectionDescription)
 
     val handler = context.actorOf(handlerProps) // launch connection handler
     context.watch(handler)
@@ -407,7 +407,7 @@ class NetworkController(settings: NetworkSettings,
     * Checks the node owns the address
     */
   private def isSelf(peerAddress: InetSocketAddress): Boolean = {
-    NetworkUtils.isSelf(peerAddress, bindAddress, scorexContext.externalNodeAddress)
+    NetworkUtils.isSelf(peerAddress, bindAddress, sparkzContext.externalNodeAddress)
   }
 
   /**
@@ -423,9 +423,9 @@ class NetworkController(settings: NetworkSettings,
         Some(localAddr)
 
       case (None, Some(declaredAddress))
-        if scorexContext.externalNodeAddress.exists(_.getAddress == declaredAddress.getAddress) =>
+        if sparkzContext.externalNodeAddress.exists(_.getAddress == declaredAddress.getAddress) =>
 
-        scorexContext.upnpGateway.flatMap(_.getLocalAddressForExternalPort(declaredAddress.getPort))
+        sparkzContext.upnpGateway.flatMap(_.getLocalAddressForExternalPort(declaredAddress.getPort))
 
       case _ => peer.peerSpec.declaredAddress
     }
@@ -439,7 +439,7 @@ class NetworkController(settings: NetworkSettings,
     */
   private def getNodeAddressForPeer(localSocketAddress: InetSocketAddress) = {
     val localAddr = localSocketAddress.getAddress
-    scorexContext.externalNodeAddress match {
+    sparkzContext.externalNodeAddress match {
       case Some(extAddr) =>
         Some(extAddr)
 
@@ -465,7 +465,7 @@ class NetworkController(settings: NetworkSettings,
           val myAddress = InetAddress.getAllByName(myHost)
 
           val listenAddresses = NetworkUtils.getListenAddresses(bindAddress)
-          val upnpAddress = scorexContext.upnpGateway.map(_.externalAddress)
+          val upnpAddress = sparkzContext.upnpGateway.map(_.externalAddress)
 
           val valid = listenAddresses.exists(myAddress.contains) || upnpAddress.exists(myAddress.contains)
 
@@ -538,39 +538,39 @@ object NetworkController {
 object NetworkControllerRef {
   def props(settings: NetworkSettings,
             peerManagerRef: ActorRef,
-            scorexContext: SparkzContext,
+            sparkzContext: SparkzContext,
             tcpManager: ActorRef)(implicit ec: ExecutionContext): Props = {
-    Props(new NetworkController(settings, peerManagerRef, scorexContext, tcpManager))
+    Props(new NetworkController(settings, peerManagerRef, sparkzContext, tcpManager))
   }
 
   def apply(settings: NetworkSettings,
             peerManagerRef: ActorRef,
-            scorexContext: SparkzContext)
+            sparkzContext: SparkzContext)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     system.actorOf(
-      props(settings, peerManagerRef, scorexContext, IO(Tcp))
+      props(settings, peerManagerRef, sparkzContext, IO(Tcp))
     )
   }
 
   def apply(name: String,
             settings: NetworkSettings,
             peerManagerRef: ActorRef,
-            scorexContext: SparkzContext,
+            sparkzContext: SparkzContext,
             tcpManager: ActorRef)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     system.actorOf(
-      props(settings, peerManagerRef, scorexContext, tcpManager),
+      props(settings, peerManagerRef, sparkzContext, tcpManager),
       name)
   }
 
   def apply(name: String,
             settings: NetworkSettings,
             peerManagerRef: ActorRef,
-            scorexContext: SparkzContext)
+            sparkzContext: SparkzContext)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
 
     system.actorOf(
-      props(settings, peerManagerRef, scorexContext, IO(Tcp)),
+      props(settings, peerManagerRef, sparkzContext, IO(Tcp)),
       name)
   }
 

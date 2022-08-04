@@ -56,7 +56,7 @@ object ApiClient extends App {
   private val settings = SparkzSettings.read(Some(settingsFilename))
   private val apiClient = new ApiClient(settings.restApi)
 
-  println("Welcome to the Scorex command-line client...")
+  println("Welcome to the Sparkz command-line client...")
   Iterator.continually(StdIn.readLine()).takeWhile(!_.equals("quit")).foreach { command =>
     println(s"[$command RESULT] " + apiClient.executeCommand(command))
   }

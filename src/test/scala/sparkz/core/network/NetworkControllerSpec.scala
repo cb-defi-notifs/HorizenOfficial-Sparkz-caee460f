@@ -474,13 +474,13 @@ class NetworkControllerSpec extends NetworkTests {
 
     val peersSpec: PeersSpec = new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects)
     val messageSpecs = Seq(GetPeersSpec, peersSpec)
-    val scorexContext = SparkzContext(messageSpecs, Seq.empty, upnp, timeProvider, externalAddr)
+    val sparkzContext = SparkzContext(messageSpecs, Seq.empty, upnp, timeProvider, externalAddr)
 
-    val peerManagerRef = PeerManagerRef(settings, scorexContext)
+    val peerManagerRef = PeerManagerRef(settings, sparkzContext)
 
     val networkControllerRef: ActorRef = NetworkControllerRef(
       "networkController", settings.network,
-      peerManagerRef, scorexContext, tcpManagerProbe.testActor)
+      peerManagerRef, sparkzContext, tcpManagerProbe.testActor)
 
     val peerSynchronizer: ActorRef = PeerSynchronizerRef("PeerSynchronizer",
       networkControllerRef, peerManagerRef, settings.network, featureSerializers)

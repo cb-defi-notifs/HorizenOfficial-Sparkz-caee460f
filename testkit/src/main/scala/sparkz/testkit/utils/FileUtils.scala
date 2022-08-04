@@ -8,7 +8,7 @@ trait FileUtils {
 
   protected val randomPrefixLength = 10
 
-  val basePath: Path = java.nio.file.Files.createTempDirectory(s"scorex-${System.nanoTime()}")
+  val basePath: Path = java.nio.file.Files.createTempDirectory(s"sparkz-${System.nanoTime()}")
 
   sys.addShutdownHook {
     remove(basePath)

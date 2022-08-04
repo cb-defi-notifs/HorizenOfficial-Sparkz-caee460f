@@ -13,7 +13,7 @@ import sparkz.core.PersistentNodeViewModifier
 import sparkz.core.transaction.box.proposition.{ProofOfKnowledgeProposition, Proposition}
 
 /**
-  * TODO WalletBox is not used in Scorex and should be moved to `mid` layer.
+  * TODO WalletBox is not used in Sparkz and should be moved to `mid` layer.
   * It may be used in systems where a box does not contain a link to a corresponding transaction,
   * e.g. could be useful for developments of the Twinscoin protocol and wallet.
   *

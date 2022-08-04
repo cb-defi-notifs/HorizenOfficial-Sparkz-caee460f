@@ -14,11 +14,11 @@ import scala.util.Random
   * Peer manager takes care of peers connected and in process, and also chooses a random peer to connect
   * Must be singleton
   */
-class PeerManager(settings: SparkzSettings, scorexContext: SparkzContext) extends Actor with ScorexLogging {
+class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext) extends Actor with ScorexLogging {
 
   import PeerManager.ReceivableMessages._
 
-  private val peerDatabase = new InMemoryPeerDatabase(settings.network, scorexContext.timeProvider)
+  private val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider)
   private val knownPeersSet: Set[InetSocketAddress] = settings.network.knownPeers.toSet
 
   if (peerDatabase.isEmpty) {
@@ -72,7 +72,7 @@ class PeerManager(settings: SparkzSettings, scorexContext: SparkzContext) extend
       }
 
     case get: GetPeers[_] =>
-      sender() ! get.choose(peerDatabase.knownPeers, peerDatabase.blacklistedPeers, scorexContext)
+      sender() ! get.choose(peerDatabase.knownPeers, peerDatabase.blacklistedPeers, sparkzContext)
   }
 
   private def apiInterface: Receive = {
@@ -89,7 +89,7 @@ class PeerManager(settings: SparkzSettings, scorexContext: SparkzContext) extend
     * Given a peer's address, returns `true` if the peer is the same is this node.
     */
   private def isSelf(peerAddress: InetSocketAddress): Boolean = {
-    NetworkUtils.isSelf(peerAddress, settings.network.bindAddress, scorexContext.externalNodeAddress)
+    NetworkUtils.isSelf(peerAddress, settings.network.bindAddress, sparkzContext.externalNodeAddress)
   }
 
   private def isSelf(peerSpec: PeerSpec): Boolean = {
@@ -125,7 +125,7 @@ object PeerManager {
     trait GetPeers[T] {
       def choose(knownPeers: Map[InetSocketAddress, PeerInfo],
                  blacklistedPeers: Seq[InetAddress],
-                 scorexContext: SparkzContext): T
+                 sparkzContext: SparkzContext): T
     }
 
     /**
@@ -137,7 +137,7 @@ object PeerManager {
 
       override def choose(knownPeers: Map[InetSocketAddress, PeerInfo],
                           blacklistedPeers: Seq[InetAddress],
-                          sc: SparkzContext): Seq[PeerInfo] = {
+                          sparkzContext: SparkzContext): Seq[PeerInfo] = {
         val recentlySeenNonBlacklisted = knownPeers.values.toSeq
           .filter { p =>
             (p.connectionType.isDefined || p.lastHandshake > 0) &&
@@ -151,14 +151,14 @@ object PeerManager {
 
       override def choose(knownPeers: Map[InetSocketAddress, PeerInfo],
                           blacklistedPeers: Seq[InetAddress],
-                          sc: SparkzContext): Map[InetSocketAddress, PeerInfo] = knownPeers
+                          sparkzContext: SparkzContext): Map[InetSocketAddress, PeerInfo] = knownPeers
     }
 
     case class RandomPeerExcluding(excludedPeers: Seq[Option[InetSocketAddress]]) extends GetPeers[Option[PeerInfo]] {
 
       override def choose(knownPeers: Map[InetSocketAddress, PeerInfo],
                           blacklistedPeers: Seq[InetAddress],
-                          sc: SparkzContext): Option[PeerInfo] = {
+                          sparkzContext: SparkzContext): Option[PeerInfo] = {
         val candidates = knownPeers.values.filterNot { p =>
           excludedPeers.contains(p.peerSpec.address) ||
             blacklistedPeers.exists(addr => p.peerSpec.address.map(_.getAddress).contains(addr))
@@ -172,7 +172,7 @@ object PeerManager {
 
       override def choose(knownPeers: Map[InetSocketAddress, PeerInfo],
                           blacklistedPeers: Seq[InetAddress],
-                          scorexContext: SparkzContext): Seq[InetAddress] = blacklistedPeers
+                          sparkzContext: SparkzContext): Seq[InetAddress] = blacklistedPeers
     }
 
   }
@@ -181,18 +181,18 @@ object PeerManager {
 
 object PeerManagerRef {
 
-  def props(settings: SparkzSettings, scorexContext: SparkzContext): Props = {
-    Props(new PeerManager(settings, scorexContext))
+  def props(settings: SparkzSettings, sparkzContext: SparkzContext): Props = {
+    Props(new PeerManager(settings, sparkzContext))
   }
 
-  def apply(settings: SparkzSettings, scorexContext: SparkzContext)
+  def apply(settings: SparkzSettings, sparkzContext: SparkzContext)
            (implicit system: ActorSystem): ActorRef = {
-    system.actorOf(props(settings, scorexContext))
+    system.actorOf(props(settings, sparkzContext))
   }
 
-  def apply(name: String, settings: SparkzSettings, scorexContext: SparkzContext)
+  def apply(name: String, settings: SparkzSettings, sparkzContext: SparkzContext)
            (implicit system: ActorSystem): ActorRef = {
-    system.actorOf(props(settings, scorexContext), name)
+    system.actorOf(props(settings, sparkzContext), name)
   }
 
 }

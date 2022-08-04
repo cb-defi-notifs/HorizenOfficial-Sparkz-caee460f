@@ -75,7 +75,7 @@ trait Application extends ScorexLogging {
     }
   }
 
-  val scorexContext = SparkzContext(
+  val sparkzContext = SparkzContext(
     messageSpecs = basicSpecs ++ additionalMessageSpecs,
     features = features,
     upnpGateway = upnpGateway,
@@ -83,10 +83,10 @@ trait Application extends ScorexLogging {
     externalNodeAddress = externalSocketAddress
   )
 
-  val peerManagerRef = PeerManagerRef(settings, scorexContext)
+  val peerManagerRef = PeerManagerRef(settings, sparkzContext)
 
   val networkControllerRef: ActorRef = NetworkControllerRef(
-    "networkController", settings.network, peerManagerRef, scorexContext)
+    "networkController", settings.network, peerManagerRef, sparkzContext)
 
   val peerSynchronizer: ActorRef = PeerSynchronizerRef("PeerSynchronizer",
     networkControllerRef, peerManagerRef, settings.network, featureSerializers)

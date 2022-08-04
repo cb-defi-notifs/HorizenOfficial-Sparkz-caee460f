@@ -58,7 +58,7 @@ class UPnPGatewayImpl(gateway: GatewayDevice) extends UPnPGateway with ScorexLog
 
   override def addPort(port: Int): Unit = {
     try {
-      if (gateway.addPortMapping(port, port, localAddress.getHostAddress, "TCP", "Scorex")) {
+      if (gateway.addPortMapping(port, port, localAddress.getHostAddress, "TCP", "Sparkz")) {
         log.debug("Mapped port [" + externalAddress.getHostAddress + "]:" + port)
       } else {
         log.debug("Unable to map port " + port)
