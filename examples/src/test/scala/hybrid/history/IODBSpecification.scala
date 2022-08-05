@@ -6,19 +6,19 @@ import hybrid.HybridGenerators
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
 import org.scalacheck.Gen
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.{fixture, Outcome}
+import org.scalatest.{Outcome, propspec}
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import scorex.core.utils.ScorexEncoding
-import scorex.testkit.utils.FileUtils
+import sparkz.core.utils.SparkzEncoding
+import sparkz.testkit.utils.FileUtils
 import scorex.util.ModifierId
 
 @SuppressWarnings(Array("org.wartremover.warts.TraversableOps"))
-class IODBSpecification extends fixture.PropSpec
+class IODBSpecification extends propspec.FixtureAnyPropSpec
   with ScalaCheckPropertyChecks
   with Matchers
   with HybridGenerators
   with FileUtils
-  with ScorexEncoding {
+  with SparkzEncoding {
 
   type FixtureParam = LSMStore
 

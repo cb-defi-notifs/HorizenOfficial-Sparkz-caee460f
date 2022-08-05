@@ -1,7 +1,7 @@
 package examples.spv
 
 import scorex.util.serialization.{Reader, Writer}
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.serialization.SparkzSerializer
 import scorex.util.ModifierId
 
 import scala.annotation.tailrec
@@ -64,7 +64,7 @@ case class KLS16Proof(m: Int,
 
 }
 
-object KLS16ProofSerializer extends ScorexSerializer[KLS16Proof] {
+object KLS16ProofSerializer extends SparkzSerializer[KLS16Proof] {
 
   override def serialize(obj: KLS16Proof, w: Writer): Unit = {
     // TODO: fixme, What should we do if `obj.suffix` is empty?

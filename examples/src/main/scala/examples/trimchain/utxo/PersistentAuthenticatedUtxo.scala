@@ -6,15 +6,15 @@ import examples.commons._
 import examples.trimchain.modifiers.{BlockHeader, TBlock, TModifier, UtxoSnapshot}
 import examples.trimchain.utxo.PersistentAuthenticatedUtxo.ProverType
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
-import scorex.core._
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
-import scorex.core.utils.ScorexEncoding
+import sparkz.core._
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
+import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.authds.avltree.batch.{BatchAVLProver, Insert, Lookup, Remove}
 import scorex.crypto.authds.{ADDigest, ADKey, ADValue, SerializedAdProof}
 import scorex.crypto.hash.{Blake2b256, Digest32}
-import scorex.mid.state.BoxMinimalState
+import sparkz.mid.state.BoxMinimalState
 import scorex.util.ScorexLogging
 
 import scala.util.{Random, Success, Try}
@@ -54,7 +54,7 @@ case class PersistentAuthenticatedUtxo(store: LSMStore,
     PublicKey25519NoncedBox,
     SimpleBoxTransaction,
     TModifier,
-    PersistentAuthenticatedUtxo] with AuthenticatedUtxo with ScorexLogging with ScorexEncoding {
+    PersistentAuthenticatedUtxo] with AuthenticatedUtxo with ScorexLogging with SparkzEncoding {
 
   import PublicKey25519NoncedBox.{BoxKeyLength, BoxLength}
 
@@ -208,7 +208,7 @@ object PersistentAuthenticatedUtxo {
     }
   }
 
-  def readOrGenerate(settings: ScorexSettings): PersistentAuthenticatedUtxo = {
+  def readOrGenerate(settings: SparkzSettings): PersistentAuthenticatedUtxo = {
     settings.dataDir.mkdirs()
 
     val iFile = new File(s"${settings.dataDir.getAbsolutePath}/state")
@@ -226,7 +226,7 @@ object PersistentAuthenticatedUtxo {
     PersistentAuthenticatedUtxo(stateStorage, stateStorage.getAll().size, None, version)
   }
 
-  def genesisState(settings: ScorexSettings, initialBlocks: Seq[TModifier]): PersistentAuthenticatedUtxo = {
+  def genesisState(settings: SparkzSettings, initialBlocks: Seq[TModifier]): PersistentAuthenticatedUtxo = {
     initialBlocks.foldLeft(readOrGenerate(settings)) { (state, mod) =>
       state.changes(mod).flatMap(cs => state.applyChanges(cs, idToVersion(mod.id))).get
     }

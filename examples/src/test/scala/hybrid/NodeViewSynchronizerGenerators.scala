@@ -8,13 +8,13 @@ import examples.hybrid.HybridApp
 import examples.hybrid.blocks.{PosBlock, PosBlockSerializer, PowBlock, PowBlockSerializer}
 import examples.hybrid.history.HybridSyncInfoMessageSpec
 import io.iohk.iodb.ByteArrayWrapper
-import scorex.core._
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, ChangedMempool}
-import scorex.core.network._
+import sparkz.core._
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, ChangedMempool}
+import sparkz.core.network._
 import scorex.util.serialization.{Reader, Writer}
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.utils.NetworkTimeProvider
-import scorex.testkit.generators.CoreGenerators
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.utils.NetworkTimeProvider
+import sparkz.testkit.generators.CoreGenerators
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -28,13 +28,13 @@ trait NodeViewSynchronizerGenerators {
       NodeViewSynchronizerRef.props[TX, HSI, SIS, PM, HT, MP](networkControllerRef,
         viewHolderRef,
         HybridSyncInfoMessageSpec,
-        settings.scorexSettings.network,
-        new NetworkTimeProvider(settings.scorexSettings.ntp),
+        settings.sparkzSettings.network,
+        new NetworkTimeProvider(settings.sparkzSettings.ntp),
         HybridApp.modifierSerializers)
   }
 
   def nodeViewSynchronizer(implicit system: ActorSystem):
-  (ActorRef, HSI, PM, TX, ConnectedPeer, TestProbe, TestProbe, TestProbe, TestProbe, ScorexSerializer[PM]) = {
+  (ActorRef, HSI, PM, TX, ConnectedPeer, TestProbe, TestProbe, TestProbe, TestProbe, SparkzSerializer[PM]) = {
     @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
     val h = historyGen.sample.get
     @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
@@ -53,7 +53,7 @@ trait NodeViewSynchronizerGenerators {
     ref ! ChangedHistory(h)
     ref ! ChangedMempool(mempool)
     val m = totallyValidModifier(h, s)
-    val modSerializer = new ScorexSerializer[PM] {
+    val modSerializer = new SparkzSerializer[PM] {
       override def serialize(obj: PM, w: Writer): Unit = {
         obj match {
           case block: PowBlock => PowBlockSerializer.serialize(block, w)

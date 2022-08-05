@@ -7,10 +7,10 @@ import examples.hybrid.history.HybridHistory
 import examples.hybrid.state.HBoxStoredState
 import examples.hybrid.util.Cancellable
 import examples.hybrid.wallet.HBoxWallet
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.block.Block.BlockId
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.block.Block.BlockId
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -24,11 +24,11 @@ import scala.util.Random
   * and stops on a new PoW block found (when PoS ref is unknown)
   */
 class PowMiner(viewHolderRef: ActorRef, settings: HybridMiningSettings)(implicit ec: ExecutionContext)
-  extends Actor with ScorexLogging with ScorexEncoding {
+  extends Actor with ScorexLogging with SparkzEncoding {
 
   import PowMiner.ReceivableMessages._
   import PowMiner._
-  import scorex.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedModifier}
+  import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedModifier}
 
 
   private var cancellableOpt: Option[Cancellable] = None

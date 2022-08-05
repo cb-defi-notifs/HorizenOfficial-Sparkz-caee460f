@@ -6,16 +6,16 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import net.ceedubs.ficus.readers.ValueReader
-import scorex.core.bytesToId
-import scorex.core.settings.ScorexSettings.readConfigFromPath
-import scorex.core.settings._
+import sparkz.core.bytesToId
+import sparkz.core.settings.SparkzSettings.readConfigFromPath
+import sparkz.core.settings._
 import scorex.util.ScorexLogging
 
 import scala.concurrent.duration._
 
 case class HybridSettings(mining: HybridMiningSettings,
                           walletSettings: WalletSettings,
-                          scorexSettings: ScorexSettings)
+                          sparkzSettings: SparkzSettings)
 
 case class WalletSettings(seed: String,
                           password: String,
@@ -33,7 +33,7 @@ case class HybridMiningSettings(offlineGeneration: Boolean,
 
 object HybridSettings extends ScorexLogging with SettingsReaders {
   def read(userConfigPath: Option[String]): HybridSettings = {
-    fromConfig(readConfigFromPath(userConfigPath, "scorex"))
+    fromConfig(readConfigFromPath(userConfigPath, "sparkz"))
   }
 
   implicit val networkSettingsValueReader: ValueReader[HybridSettings] =
@@ -41,10 +41,10 @@ object HybridSettings extends ScorexLogging with SettingsReaders {
 
   private def fromConfig(config: Config): HybridSettings = {
     log.info(config.toString)
-    val walletSettings = config.as[WalletSettings]("scorex.wallet")
-    val miningSettings = config.as[HybridMiningSettings]("scorex.miner")
-    val scorexSettings = config.as[ScorexSettings]("scorex")
-    HybridSettings(miningSettings, walletSettings, scorexSettings)
+    val walletSettings = config.as[WalletSettings]("sparkz.wallet")
+    val miningSettings = config.as[HybridMiningSettings]("sparkz.miner")
+    val sparkzSettings = config.as[SparkzSettings]("sparkz")
+    HybridSettings(miningSettings, walletSettings, sparkzSettings)
   }
 }
 

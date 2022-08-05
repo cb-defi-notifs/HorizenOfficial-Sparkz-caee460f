@@ -3,10 +3,10 @@ package examples.trimchain.modifiers
 import examples.trimchain.core._
 import io.circe.Encoder
 import io.circe.syntax._
-import scorex.core.ModifierTypeId
+import sparkz.core.ModifierTypeId
 import scorex.util.serialization.{Reader, Writer}
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.utils.SparkzEncoding
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 //TODO compact proof of ticket in header
@@ -30,7 +30,7 @@ case class BlockHeader(override val parentId: ModifierId,
   override lazy val serializer = BlockHeaderSerializer
 }
 
-object BlockHeader extends ScorexEncoding {
+object BlockHeader extends SparkzEncoding {
   implicit val blockHeaderEncoder: Encoder[BlockHeader] = (bh: BlockHeader) =>
     Map(
       "id" -> encoder.encodeId(bh.id).asJson,
@@ -42,7 +42,7 @@ object BlockHeader extends ScorexEncoding {
     ).asJson
 }
 
-object BlockHeaderSerializer extends ScorexSerializer[BlockHeader] {
+object BlockHeaderSerializer extends SparkzSerializer[BlockHeader] {
   private val ds = Constants.hashfn.DigestSize
 
   override def serialize(obj: BlockHeader, w: Writer): Unit = {

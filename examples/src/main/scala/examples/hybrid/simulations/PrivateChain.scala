@@ -8,9 +8,9 @@ import examples.hybrid.mining.{HybridSettings, PosForger, PowMiner}
 import examples.hybrid.state.HBoxStoredState
 import examples.hybrid.util.FileFunctions
 import examples.hybrid.wallet.HBoxWallet
-import scorex.core.block.Block.BlockId
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.utils.{NetworkTimeProvider, ScorexEncoding}
+import sparkz.core.block.Block.BlockId
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
 import scorex.util.encode.Base58
 import scorex.crypto.signatures.PublicKey
 import scorex.util.ScorexLogging
@@ -24,7 +24,7 @@ import scala.util.Try
 /**
   * Private chain attack simulation
   */
-object PrivateChain extends App with ScorexLogging with ScorexEncoding {
+object PrivateChain extends App with ScorexLogging with SparkzEncoding {
 
   val proposition: PublicKey25519Proposition = PublicKey25519Proposition(PublicKey @@ scorex.utils.Random.randomBytes(32))
 
@@ -57,7 +57,7 @@ object PrivateChain extends App with ScorexLogging with ScorexEncoding {
   }
 
   private val hybridSettings = HybridSettings.read(Some("settings.conf"))
-  implicit lazy val settings = hybridSettings.scorexSettings
+  implicit lazy val settings = hybridSettings.sparkzSettings
   lazy val miningSettings = hybridSettings.mining
 
   def timeSpent(adversarialStakePercent: Int, hashesPerSecond: Int): Long = {

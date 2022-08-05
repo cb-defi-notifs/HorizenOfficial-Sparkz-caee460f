@@ -1,6 +1,6 @@
 import scala.util.Try
 
-name := "scorex-core"
+name := "sparkz-core"
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.12",
@@ -19,31 +19,33 @@ lazy val commonSettings = Seq(
     Wart.JavaSerializable,
     Wart.Serializable,
     Wart.OptionPartial),
-  organization := "org.scorexfoundation",
+  organization := "io.horizen",
+  organizationName := "Zen Blockchain Foundation",
+  version := "2.0.0-RC7",
   licenses := Seq("CC0" -> url("https://creativecommons.org/publicdomain/zero/1.0/legalcode")),
-  homepage := Some(url("https://github.com/ScorexFoundation/Scorex")),
-  pomExtra :=
+  homepage := Some(url("https://github.com/HorizenOfficial/Sparkz")),
+  pomExtra := (
+      <scm>
+        <url>https://github.com/HorizenOfficial/Sparkz</url>
+        <connection>scm:git:git@github.com:HorizenOfficial/Sparkz.git</connection>
+      </scm>
       <developers>
         <developer>
-          <id>kushti</id>
-          <name>Alexander Chepurnoy</name>
-          <url>http://chepurnoy.org/</url>
+          <id>HorizenOfficial</id>
+          <name>Zen Blockchain Foundation</name>
+          <url>https://github.com/HorizenOfficial</url>
         </developer>
-        <developer>
-          <id>catena2w</id>
-          <name>catena</name>
-          <url>https://github.com/catena2w</url>
-        </developer>
-      </developers>,
+      </developers>
+  ),
   publishMavenStyle := true,
   publishArtifact in Test := false,
   publishTo := sonatypePublishToBundle.value,
   fork := true // otherwise, "java.net.SocketException: maximum number of DatagramSockets reached"
 )
 
-val circeVersion = "0.13.0"
-val akkaVersion = "2.6.10"
-val akkaHttpVersion = "10.2.1"
+val circeVersion = "0.14.2"
+val akkaVersion = "2.6.19"
+val akkaHttpVersion = "10.2.9"
 
 val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
@@ -53,35 +55,35 @@ val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-protobuf" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "org.bitlet" % "weupnp" % "0.1.4",
-  "commons-net" % "commons-net" % "3.6"
+  "commons-net" % "commons-net" % "3.8.0"
 )
 
 val apiDependencies = Seq(
   "io.circe" %% "circe-core" % circeVersion,
   "io.circe" %% "circe-generic" % circeVersion,
   "io.circe" %% "circe-parser" % circeVersion,
-  "de.heikoseeberger" %% "akka-http-circe" % "1.20.0"
+  "de.heikoseeberger" %% "akka-http-circe" % "1.39.2"
 )
 
 val loggingDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.3.0-alpha4"
+  "ch.qos.logback" % "logback-classic" % "1.3.0-alpha16"
 )
 
-val scorexUtil = "org.scorexfoundation" %% "scorex-util" % "0.1.8"
+val scorexUtil = "org.scorexfoundation" %% "scorex-util" % "0.1.6"
 
 val testingDependencies = Seq(
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
-  "org.scalactic" %% "scalactic" % "3.0.3" % "test",
-  "org.scalatest" %% "scalatest" % "3.1.1" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.14.+",
+  "org.scalactic" %% "scalactic" % "3.2.12" % "test",
+  "org.scalatest" %% "scalatest" % "3.2.12" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.16.0",
   "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2" % Test,
-  scorexUtil, (scorexUtil % Test).classifier("tests")
+  "org.scorexfoundation" %% "scorex-util" % "0.1.6" % Test classifier "tests"
 )
 
 libraryDependencies ++= Seq(
-  "com.iheart" %% "ficus" % "1.4.2",
-  "org.scorexfoundation" %% "scrypto" % "2.1.10",
+  "com.iheart" %% "ficus" % "1.5.2",
+  "org.scorexfoundation" %% "scrypto" % "2.1.7",
   scorexUtil
 ) ++ networkDependencies ++ apiDependencies ++ loggingDependencies ++ testingDependencies
 
@@ -109,12 +111,12 @@ lazy val examples = Project(id = "examples", base = file(s"examples"))
   .dependsOn(basics, testkit)
   .settings(commonSettings: _*)
 
-lazy val basics = Project(id = "scorex", base = file("."))
+lazy val basics = Project(id = "sparkz", base = file("."))
   .settings(commonSettings: _*)
 
 credentials ++= (for {
-  username <- Option(System.getenv().get("SONATYPE_USERNAME"))
-  password <- Option(System.getenv().get("SONATYPE_PASSWORD"))
+  username <- Option(System.getenv().get("CONTAINER_OSSRH_JIRA_USERNAME"))
+  password <- Option(System.getenv().get("CONTAINER_OSSRH_JIRA_PASSWORD"))
 } yield Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", username, password)).toSeq
 
 
@@ -122,16 +124,7 @@ credentials ++= (for {
 // signing is done by sbt-pgp plugin
 // how to generate a key - https://central.sonatype.org/pages/working-with-pgp-signatures.html
 // how to export a key and use it with Travis - https://docs.scala-lang.org/overviews/contributors/index.html#export-your-pgp-key-pair
-pgpPublicRing := file("ci/pubring.asc")
-pgpSecretRing := file("ci/secring.asc")
-pgpPassphrase := sys.env.get("PGP_PASSPHRASE").map(_.toArray)
-usePgpKeyHex("D78982639AD538EF361DEC6BF264D529385A0333")
+pgpPassphrase := sys.env.get("CONTAINER_GPG_PASSPHRASE").map(_.toArray)
 
 //FindBugs settings
-
 findbugsReportType := Some(FindbugsReport.PlainHtml)
-
-// prefix version with "-SNAPSHOT" for builds without a git tag
-dynverSonatypeSnapshots in ThisBuild := true
-// use "-" instead of default "+"
-dynverSeparator in ThisBuild := "-"

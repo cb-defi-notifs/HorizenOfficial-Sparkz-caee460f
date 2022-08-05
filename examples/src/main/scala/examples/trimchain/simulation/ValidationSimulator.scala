@@ -4,9 +4,9 @@ import com.google.common.primitives.{Ints, Longs}
 import examples.commons.{Nonce, PublicKey25519NoncedBox, Value}
 import examples.trimchain.core.Constants._
 import examples.trimchain.core.{Algos, Constants}
-import scorex.core.idToVersion
-import scorex.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.core.transaction.state.{BoxStateChanges, Insertion}
+import sparkz.core.idToVersion
+import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
+import sparkz.core.transaction.state.{BoxStateChanges, Insertion}
 import scorex.crypto.authds.ADDigest
 
 object ValidationSimulator extends App with Simulators {

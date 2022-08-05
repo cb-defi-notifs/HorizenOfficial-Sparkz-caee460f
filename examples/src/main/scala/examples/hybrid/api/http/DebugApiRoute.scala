@@ -8,10 +8,10 @@ import examples.hybrid.history.HybridHistory
 import examples.hybrid.state.HBoxStoredState
 import examples.hybrid.wallet.HBoxWallet
 import io.circe.syntax._
-import scorex.core.bytesToId
-import scorex.core.api.http.{ApiResponse, ApiRouteWithFullView}
-import scorex.core.settings.RESTApiSettings
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.bytesToId
+import sparkz.core.api.http.{ApiResponse, ApiRouteWithFullView}
+import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.SparkzEncoding
 
 import scala.util.Try
 
@@ -19,7 +19,7 @@ import scala.util.Try
 case class DebugApiRoute(override val settings: RESTApiSettings, nodeViewHolderRef: ActorRef)
                         (implicit val context: ActorRefFactory)
   extends ApiRouteWithFullView[HybridHistory, HBoxStoredState, HBoxWallet, SimpleBoxTransactionMemPool] 
-    with ScorexEncoding {
+    with SparkzEncoding {
 
   override val route: Route = (pathPrefix("debug")) {
     corsHandler(

@@ -2,7 +2,7 @@
 .idea
 .ensime
 .ensime_cache/
-scorex.yaml
+sparkz.yaml
 
 # Eclipse/Scala IDE files
 .classpath
@@ -17,6 +17,11 @@ scorex.yaml
 
 # scala build folders
 target
+project/project/
+
+# cache dirs
+.ivy2/
+.sbt/
 
 # dotfiles
 .dockerignore
@@ -29,9 +34,7 @@ Dockerfile
 *.log
 
 # db files
-
 *.data
-
 
 # for temporary experiments
 sheet.scala

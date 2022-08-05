@@ -1,7 +1,7 @@
-# Scorex Example: Twinscoin
+# Sparkz Example: Twinscoin
 
 
-Currently, Scorex's distribution contains one example of blockchain system built on top of Scorex: **TwinsCoin**.
+Currently, Sparkz's distribution contains one example of blockchain system built on top of Sparkz: **TwinsCoin**.
 
 Twinscoin is a hybrid Proof-of-Work(PoW) and Proof-of-Stake(PoS) cryptocurrency with 
 1:1 correspondence between PoW and PoS blocks. The main goal is to protect the hybrid 

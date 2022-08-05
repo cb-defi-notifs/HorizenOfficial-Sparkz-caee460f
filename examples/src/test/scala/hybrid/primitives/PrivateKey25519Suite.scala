@@ -5,7 +5,7 @@ import hybrid.HybridGenerators
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import scorex.core.transaction.state.PrivateKey25519Companion
+import sparkz.core.transaction.state.PrivateKey25519Companion
 
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 class PrivateKey25519Suite extends AnyPropSpec
