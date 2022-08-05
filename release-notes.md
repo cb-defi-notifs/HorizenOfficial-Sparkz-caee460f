@@ -7,8 +7,7 @@
 * rename Scorex -> Sparkz
 * update lib versions to latest, check and fix vulnerabilities
 * KnownPeers should never be discarded
-* exclude unconfirmedConnections and already active connections
-* DnsClient lookup flow implementation
+* exclude unconfirmedConnections and already active connections when selecting a new candidate peer to connect to
 * akka, akkaHttp and circe updated to latest version.
 * add SessionIdPeerFeature
 * updating last seen & dropping inactive connections
