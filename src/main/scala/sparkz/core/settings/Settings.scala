@@ -54,7 +54,18 @@ case class NetworkSettings(nodeName: String,
                            storedPeersLimit: Int,
                            temporalBanDuration: FiniteDuration,
                            penaltySafeInterval: FiniteDuration,
-                           penaltyScoreThreshold: Int)
+                           penaltyScoreThreshold: Int,
+                           messageDelays: MessageDelays
+                          )
+
+case class MessageDelays(
+                          GetPeersSpec: Long = 0,
+                          PeerSpec: Long = 0,
+                          Transaction: Long = 0,
+                          Block: Long = 0,
+                          RequestModifierSpec: Long = 0,
+                          ModifiersSpec: Long = 0
+                        )
 
 case class SparkzSettings(dataDir: File,
                           logDir: File,
