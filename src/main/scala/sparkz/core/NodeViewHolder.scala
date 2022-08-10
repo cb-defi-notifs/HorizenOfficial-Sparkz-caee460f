@@ -10,6 +10,8 @@ import sparkz.core.transaction.state.{MinimalState, TransactionValidation}
 import sparkz.core.transaction.wallet.Vault
 import sparkz.core.utils.SparkzEncoding
 import scorex.util.ScorexLogging
+
+import java.time.{Duration, LocalDateTime}
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
@@ -83,6 +85,7 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
 
   protected def txModify(tx: TX): Unit = {
     //todo: async validation?
+    val startValidationTime = LocalDateTime.now()
     val errorOpt: Option[Throwable] = minimalState() match {
       case txValidator: TransactionValidation[TX] =>
         txValidator.validate(tx) match {
@@ -91,6 +94,14 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
         }
       case _ => None
     }
+
+    val endValidationTime = LocalDateTime.now()
+    val validationDuration = Duration.between(startValidationTime, endValidationTime)
+    val min = validationDuration.toMinutes
+    val sec = validationDuration.toSeconds
+    val millis = validationDuration.toMillis
+    val nanos = validationDuration.toNanos
+    log.info(s"TPS-TESTS: tx validation performed before inserting into mempool in sparkz txModify completed in $min':$sec'':$millis:$nanos")
 
     errorOpt match {
       case None =>
