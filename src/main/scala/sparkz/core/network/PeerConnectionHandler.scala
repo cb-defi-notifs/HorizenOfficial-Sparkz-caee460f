@@ -4,6 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props, SupervisorS
 import akka.io.Tcp
 import akka.io.Tcp._
 import akka.util.{ByteString, CompactByteString}
+import scorex.util.ScorexLogging
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.{Handshaked, PenalizePeer}
 import sparkz.core.network.PeerConnectionHandler.ReceivableMessages
@@ -12,11 +13,12 @@ import sparkz.core.network.message.{HandshakeSpec, MessageSerializer}
 import sparkz.core.network.peer.{PeerInfo, PenaltyType}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
-import scorex.util.ScorexLogging
+import sparkz.core.utils.TpsUtils
 
 import scala.annotation.tailrec
 import scala.collection.immutable.TreeMap
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationLong
 import scala.util.{Failure, Success}
 
 class PeerConnectionHandler(val settings: NetworkSettings,
@@ -146,7 +148,11 @@ class PeerConnectionHandler(val settings: NetworkSettings,
     case msg: message.Message[_] =>
       log.info("Send message " + msg.spec + " to " + connectionId)
       outMessagesCounter += 1
-      connection ! Write(messageSerializer.serialize(msg), ReceivableMessages.Ack(outMessagesCounter))
+      val delay = TpsUtils.addDelay(msg, settings.messageDelays)
+      context.system.scheduler.scheduleOnce(
+        delay.millis,
+        () => connection ! Write(messageSerializer.serialize(msg), ReceivableMessages.Ack(outMessagesCounter))
+      )
 
     case CommandFailed(Write(msg, ReceivableMessages.Ack(id))) =>
       log.warn(s"Failed to write ${msg.length} bytes to $connectionId, switching to buffering mode")
@@ -227,14 +233,34 @@ class PeerConnectionHandler(val settings: NetworkSettings,
 
   private def writeFirst(): Unit = {
     outMessagesBuffer.headOption.foreach { case (id, msg) =>
-      connection ! Write(msg, ReceivableMessages.Ack(id))
+      val msgDeserialized = messageSerializer.deserialize(msg, None)
+
+      val delay = msgDeserialized match {
+        case Success(Some(message)) => TpsUtils.addDelay(message, settings.messageDelays)
+        case _ => 0
+      }
+
+      context.system.scheduler.scheduleOnce(
+        delay.millis,
+        () => connection ! Write(msg, ReceivableMessages.Ack(id))
+      )
     }
   }
 
   // Write into the wire all the buffered messages we have for the peer with no ACK
   private def pushAllWithNoAck(): Unit = {
     outMessagesBuffer.foreach { case (_, msg) =>
-      connection ! Write(msg, NoAck)
+      val msgDeserialized = messageSerializer.deserialize(msg, None)
+
+      val delay = msgDeserialized match {
+        case Success(Some(message)) => TpsUtils.addDelay(message, settings.messageDelays)
+        case _ => 0
+      }
+
+      context.system.scheduler.scheduleOnce(
+        delay.millis,
+        () => connection ! Write(msg, NoAck)
+      )
     }
   }
 
