@@ -2,14 +2,12 @@
 ---------
 * CI/CD implementation
 * Delivery Tracker - limit requests map per peer
-* add multiple fields to the /connectedPeer endpoint response
 * add request tracker actor
 * add upper bound limit for peers database
 * rename Scorex -> Sparkz
 * update lib versions to latest, check and fix vulnerabilities
 * KnownPeers should never be discarded
-* exclude unconfirmedConnections and already active connections
-* DnsClient lookup flow implementation
+* exclude unconfirmedConnections and already active connections when selecting a new candidate peer to connect to
 * akka, akkaHttp and circe updated to latest version.
 * add SessionIdPeerFeature
 * updating last seen & dropping inactive connections
@@ -35,16 +33,16 @@
 
 2.0.0-RC3
 ---------
-* *MinimalState* interface simplification: *validate()* puled away from the basic trait 
+* *MinimalState* interface simplification: *validate()* puled away from the basic trait
 * *maxRollback* field added to *MinimalState*
-* No *transactions* field with an optional value in *PersistentNodeViewModifier*, 
-use *TransactionsCarryingPersistentNodeViewModifier* descendant for modifiers with transactions.
+* No *transactions* field with an optional value in *PersistentNodeViewModifier*,
+  use *TransactionsCarryingPersistentNodeViewModifier* descendant for modifiers with transactions.
 * Non-exhaustive pattern-matching fix in *NodeViewholder.pmodModify()*
 * Simplification of type parameters in many classes around the whole codebase
 * *FastCryptographicHash* removed
 * Some obsolete code removed, such as *temp/mining* folder, *ScoreObserver* class
 * Scrypto 2.0.0
-* Using tagged types instead of *Array[Byte]*, *suppertagged* microframework is used for that 
+* Using tagged types instead of *Array[Byte]*, *suppertagged* microframework is used for that
 
 2.0.0-RC2
 ---------
@@ -68,21 +66,21 @@ use *TransactionsCarryingPersistentNodeViewModifier* descendant for modifiers wi
 --------
 
 * IODB dependency upgraded to 0.2.+
-* TwinsChain example massively improved, README on it has been added 
-(see "examples" folder)
+* TwinsChain example massively improved, README on it has been added
+  (see "examples" folder)
 * akka-http dependency removed, Swagger updated
 
 
 2.0.0-M3
 --------
 
-Serialization have been reworked throughout the core to be consistent 
+Serialization have been reworked throughout the core to be consistent
 (see the new Serializer interface).
 
 Handshake timeout implemented: (p2p/handshakeTimeout in settings.json)
-Agent name and version have been moved to settings.json 
+Agent name and version have been moved to settings.json
 ("agent" and "version" settings)
- 
+
 Hybrid chain example got bugfixing and new tests.
 
 
