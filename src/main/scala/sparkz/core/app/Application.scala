@@ -35,7 +35,7 @@ trait Application extends ScorexLogging {
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
 
   protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName)
-  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
 
   protected val features: Seq[PeerFeature]
   protected val additionalMessageSpecs: Seq[MessageSpec[_]]
