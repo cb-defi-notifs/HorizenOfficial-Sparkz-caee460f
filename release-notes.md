@@ -1,3 +1,9 @@
+2.0.0-RC8
+---------
+* Application execution context name fixed.
+* Peers penalization flow fix: do not increment safe interval in case of repeated penalties. 
+
+
 2.0.0-RC7
 ---------
 * CI/CD implementation

@@ -5,6 +5,7 @@ import org.scalatest.Assertion
 import sparkz.core.network.Outgoing
 import sparkz.core.network.NetworkTests
 
+import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 class InMemoryPeerDatabaseSpec extends NetworkTests {
@@ -14,7 +15,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
   private val storedPeersLimit = 10
 
   private def withDb(test: InMemoryPeerDatabase => Assertion): Assertion =
-    test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = storedPeersLimit), timeProvider))
+    test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds), timeProvider))
 
   "new DB" should "be empty" in {
     withDb { db =>
@@ -192,11 +193,37 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
     }
   }
 
-  private def generatePeers(ammount: Int) = {
+  it should "not update penalty timestamp on consecutive violations during safeInterval" in {
+    withDb { db =>
+      // penalty interval is 1 second
+      // 1. ~0.0 -> first penalty  - applied
+      // 2. ~0.0 -> second penalty - not applied
+      // 3. ~0.6 -> third penalty  - not applied and not updating timestamp
+      // 4. ~1.2 -> fourth penalty - applied
+      val address = new InetSocketAddress("192.168.31.1", 7280)
+      val penalty = PenaltyType.SpamPenalty
+      // ==1==
+      db.penalize(address, penalty)
+      db.penaltyScore(address) shouldBe penalty.penaltyScore
+      // ==2==
+      db.penalize(address, penalty)
+      db.penaltyScore(address) shouldBe penalty.penaltyScore
+      // ==3==
+      Thread.sleep(600)
+      db.penalize(address, penalty)
+      db.penaltyScore(address) shouldBe penalty.penaltyScore
+      // ==4==
+      Thread.sleep(600)
+      db.penalize(address, penalty)
+      db.penaltyScore(address) shouldBe penalty.penaltyScore * 2
+    }
+  }
+
+  private def generatePeers(amount: Int) = {
     val random = Random
     val base = (1 to 3).map(_ => random.nextInt(256)).mkString(".")
     var counter = 1
-    (1 to ammount).map { _ =>
+    (1 to amount).map { _ =>
       val host = base + counter
       counter += 1
       getPeerInfo(
