@@ -5,6 +5,7 @@ import akka.io.Tcp._
 import akka.io.{IO, Tcp}
 import akka.pattern.ask
 import akka.util.Timeout
+import scorex.util.ScorexLogging
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.Internal.ConnectionToPeer
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{DisconnectedPeer, HandshakedPeer}
@@ -15,9 +16,6 @@ import sparkz.core.network.peer._
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.TimeProvider.Time
 import sparkz.core.utils.{NetworkUtils, TimeProvider}
-import scorex.util.ScorexLogging
-import sparkz.core.app.SparkzContext
-import sparkz.core.settings.NetworkSettings
 
 import java.net._
 import scala.concurrent.ExecutionContext
@@ -311,8 +309,7 @@ class NetworkController(settings: NetworkSettings,
           s"New outgoing connection to ${connectionId.remoteAddress} established (bound to local ${connectionId.localAddress})"
       }
     }
-    val isLocal = connectionId.remoteAddress.getAddress.isSiteLocalAddress ||
-      connectionId.remoteAddress.getAddress.isLoopbackAddress
+    val isLocal = NetworkUtils.isLocalAddress(connectionId.remoteAddress.getAddress)
     val mandatoryFeatures = sparkzContext.features :+ mySessionIdFeature
     val peerFeatures = if (isLocal) {
       val la = new InetSocketAddress(connectionId.localAddress.getAddress, settings.bindAddress.getPort)
@@ -444,12 +441,11 @@ class NetworkController(settings: NetworkSettings,
         Some(extAddr)
 
       case None =>
-        if (!localAddr.isSiteLocalAddress && !localAddr.isLoopbackAddress
-          && localSocketAddress.getPort == settings.bindAddress.getPort) {
+        if (!NetworkUtils.isLocalAddress(localAddr) && localSocketAddress.getPort == settings.bindAddress.getPort) {
           Some(localSocketAddress)
         } else {
           val listenAddrs = NetworkUtils.getListenAddresses(settings.bindAddress)
-            .filterNot(addr => addr.getAddress.isSiteLocalAddress || addr.getAddress.isLoopbackAddress)
+            .filterNot(addr => NetworkUtils.isLocalAddress(addr.getAddress))
 
           listenAddrs.find(addr => localAddr == addr.getAddress).orElse(listenAddrs.headOption)
         }
