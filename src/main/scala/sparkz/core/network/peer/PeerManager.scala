@@ -9,6 +9,7 @@ import scorex.util.ScorexLogging
 
 import java.net.{InetAddress, InetSocketAddress}
 import scala.util.Random
+import java.security.SecureRandom
 
 /**
   * Peer manager takes care of peers connected and in process, and also chooses a random peer to connect
@@ -155,6 +156,7 @@ object PeerManager {
     }
 
     case class RandomPeerExcluding(excludedPeers: Seq[Option[InetSocketAddress]]) extends GetPeers[Option[PeerInfo]] {
+      private val secureRandom = new SecureRandom()
 
       override def choose(knownPeers: Map[InetSocketAddress, PeerInfo],
                           blacklistedPeers: Seq[InetAddress],
@@ -163,7 +165,7 @@ object PeerManager {
           excludedPeers.contains(p.peerSpec.address) ||
             blacklistedPeers.exists(addr => p.peerSpec.address.map(_.getAddress).contains(addr))
         }.toSeq
-        if (candidates.nonEmpty) Some(candidates(Random.nextInt(candidates.size)))
+        if (candidates.nonEmpty) Some(candidates(secureRandom.nextInt(candidates.size)))
         else None
       }
     }
