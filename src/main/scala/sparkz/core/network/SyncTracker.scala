@@ -76,7 +76,7 @@ class SyncTracker(nvsRef: ActorRef,
     }
 
     lastSyncSentTime.find(_._1.connectionId.remoteAddress == remote) match {
-      case Some((peer, _)) => statuses -= peer
+      case Some((peer, _)) => lastSyncSentTime -= peer
       case None => log.warn(s"Trying to clear last sync time for $remote, but it is not found")
     }
   }
