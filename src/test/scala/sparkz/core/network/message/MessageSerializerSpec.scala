@@ -6,6 +6,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.network.MaliciousBehaviorException
 
+import scala.util.Failure
+
 
 class MessageSerializerSpec extends AnyFlatSpec with Matchers {
   private val specs = Seq(GetPeersSpec)
@@ -17,7 +19,6 @@ class MessageSerializerSpec extends AnyFlatSpec with Matchers {
     withSerializer { messageSerializer =>
       val message = Message[Unit](GetPeersSpec, Right(Unit), None)
       val bytes = messageSerializer.serialize(message)
-      println(bytes)
       inside(messageSerializer.deserialize(bytes, None).get) {
         case Some(Message(spec, Left(_), None)) =>
           spec shouldBe GetPeersSpec
@@ -31,6 +32,20 @@ class MessageSerializerSpec extends AnyFlatSpec with Matchers {
       val maliciousBytesString = ByteString(1, 2, 3, 4, 1, 0, 0, 0, 21)
 
       an[MaliciousBehaviorException] should be thrownBy messageSerializer.deserialize(maliciousBytesString, None).get
+    }
+  }
+
+  it should "throw exception if magic bytes doesn't match" in {
+    withSerializer { messageSerializer =>
+      val otherSerializer = new MessageSerializer(specs, Array(4, 3, 2, 1), 20)
+      val message = Message[Unit](GetPeersSpec, Right(Unit), None)
+      val bytes = messageSerializer.serialize(message)
+      val parsedMessage = otherSerializer.deserialize(bytes, None)
+      an[MaliciousBehaviorException] should be thrownBy parsedMessage.get
+      parsedMessage match {
+        case Failure(exception) => exception.getMessage should include("Wrong magic bytes")
+        case _ => fail("Unexpected test behaviour")
+      }
     }
   }
 }

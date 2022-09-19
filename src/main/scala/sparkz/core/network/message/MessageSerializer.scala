@@ -40,6 +40,10 @@ class MessageSerializer(specs: Seq[MessageSpec[_]], magicBytes: Array[Byte], mes
     } else {
       val it = byteString.iterator
       val magic = it.getBytes(MagicLength)
+      //peer is from another network
+      if (!java.util.Arrays.equals(magic, magicBytes)) {
+        throw MaliciousBehaviorException(s"Wrong magic bytes, expected ${magicBytes.mkString}, got ${magic.mkString} in : ${byteString.utf8String}")
+      }
       val msgCode = it.getByte
       val length = it.getInt
 
@@ -51,10 +55,6 @@ class MessageSerializer(specs: Seq[MessageSpec[_]], magicBytes: Array[Byte], mes
       if (length != 0 && byteString.length < length + HeaderLength + ChecksumLength) {
         None
       } else {
-        //peer is from another network
-        if (!java.util.Arrays.equals(magic, magicBytes)) {
-          throw MaliciousBehaviorException(s"Wrong magic bytes, expected ${magicBytes.mkString}, got ${magic.mkString} in : ${byteString.utf8String}")
-        }
         val spec = specsMap.getOrElse(msgCode, throw new Error(s"No message handler found for $msgCode"))
         val msgData = if (length > 0) {
           val checksum = it.getBytes(ChecksumLength)
