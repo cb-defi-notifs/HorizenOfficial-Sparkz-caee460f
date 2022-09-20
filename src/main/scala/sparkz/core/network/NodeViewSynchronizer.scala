@@ -411,7 +411,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
         @tailrec
         def sendByParts(mods: Seq[(ModifierId, Array[Byte])]): Unit = {
-          var size = 5 //message type id + message size
+          var size = Message.HeaderLength + Message.ChecksumLength // message header (magic length + 5) + message checksum
           val batch = mods.takeWhile { case (_, modBytes) =>
             size += NodeViewModifier.ModifierIdSize + 4 + modBytes.length
             size < networkSettings.maxPacketSize
