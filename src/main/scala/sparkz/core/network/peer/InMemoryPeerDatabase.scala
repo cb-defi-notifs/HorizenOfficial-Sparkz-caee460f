@@ -1,10 +1,10 @@
 package sparkz.core.network.peer
 
 import java.net.{InetAddress, InetSocketAddress}
-
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.TimeProvider
 import scorex.util.ScorexLogging
+import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
 
 import scala.concurrent.duration._
 
@@ -119,11 +119,11 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
         case Some((penaltyScoreAcc, lastPenaltyTs)) =>
           val currentTime = timeProvider.time()
           if (currentTime - lastPenaltyTs - safeInterval > 0 || penaltyType.isPermanent)
-            (penaltyScoreAcc + penaltyScore(penaltyType), timeProvider.time())
+            (penaltyScoreAcc + penaltyType.penaltyScore, timeProvider.time())
           else
             (penaltyScoreAcc, lastPenaltyTs)
         case None =>
-          (penaltyScore(penaltyType), timeProvider.time())
+          (penaltyType.penaltyScore, timeProvider.time())
       }
       if (newPenaltyScore > settings.penaltyScoreThreshold)
         true
@@ -148,21 +148,9 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     stillBanned
   }
 
-  private def penaltyScore(penaltyType: PenaltyType): Int =
-    penaltyType match {
-      case PenaltyType.NonDeliveryPenalty =>
-        PenaltyType.NonDeliveryPenalty.penaltyScore
-      case PenaltyType.MisbehaviorPenalty =>
-        PenaltyType.MisbehaviorPenalty.penaltyScore
-      case PenaltyType.SpamPenalty =>
-        PenaltyType.SpamPenalty.penaltyScore
-      case PenaltyType.PermanentPenalty =>
-        PenaltyType.PermanentPenalty.penaltyScore
-    }
-
   private def penaltyDuration(penalty: PenaltyType): Long =
     penalty match {
-      case PenaltyType.NonDeliveryPenalty | PenaltyType.MisbehaviorPenalty | PenaltyType.SpamPenalty =>
+      case PenaltyType.NonDeliveryPenalty | PenaltyType.MisbehaviorPenalty | PenaltyType.SpamPenalty | _: DisconnectPenalty =>
         settings.temporalBanDuration.toMillis
       case PenaltyType.PermanentPenalty =>
         (360 * 10).days.toMillis

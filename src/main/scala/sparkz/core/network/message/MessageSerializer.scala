@@ -1,7 +1,6 @@
 package sparkz.core.network.message
 
 import java.nio.ByteOrder
-
 import akka.util.ByteString
 import sparkz.core.network.{ConnectedPeer, MaliciousBehaviorException}
 import scorex.crypto.hash.Blake2b256
@@ -45,8 +44,12 @@ class MessageSerializer(specs: Seq[MessageSpec[_]], magicBytes: Array[Byte], mes
         throw MaliciousBehaviorException(s"Wrong magic bytes, expected ${magicBytes.mkString}, got ${magic.mkString} in : ${byteString.utf8String}")
       }
       val msgCode = it.getByte
-      val length = it.getInt
+      val spec = specsMap.getOrElse(
+        msgCode,
+        throw MaliciousBehaviorException(s"No message handler found for $msgCode")
+      )
 
+      val length = it.getInt
       //peer is trying to cause buffer overflow or breaking the parsing
       if (length < 0 || length > messageLengthBytesLimit) {
         throw MaliciousBehaviorException("Data length is negative or it's beyond the allowed threshold!")
@@ -55,7 +58,6 @@ class MessageSerializer(specs: Seq[MessageSpec[_]], magicBytes: Array[Byte], mes
       if (length != 0 && byteString.length < length + HeaderLength + ChecksumLength) {
         None
       } else {
-        val spec = specsMap.getOrElse(msgCode, throw new Error(s"No message handler found for $msgCode"))
         val msgData = if (length > 0) {
           val checksum = it.getBytes(ChecksumLength)
           val data = it.getBytes(length)
