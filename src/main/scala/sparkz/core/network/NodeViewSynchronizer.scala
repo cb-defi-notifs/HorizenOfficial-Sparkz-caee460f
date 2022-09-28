@@ -59,7 +59,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
   protected val maxRequestedPerPeer: Int = networkSettings.maxRequestedPerPeer
   protected val invSpec = new InvSpec(networkSettings.maxInvObjects)
   protected val requestModifierSpec = new RequestModifierSpec(networkSettings.maxInvObjects)
-  protected val modifiersSpec = new ModifiersSpec(networkSettings.maxPacketSize)
+  protected val modifiersSpec = new ModifiersSpec(networkSettings.maxModifiersSpecMessageSize)
 
   protected val msgHandlers: PartialFunction[(MessageSpec[_], _, ConnectedPeer), Unit] = {
     case (_: SIS@unchecked, data: SI@unchecked, remote) => processSync(data, remote)
@@ -411,10 +411,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
         @tailrec
         def sendByParts(mods: Seq[(ModifierId, Array[Byte])]): Unit = {
-          var size = 5 //message type id + message size
+          var size = Message.HeaderLength + Message.ChecksumLength // message header (magic length + 5) + message checksum
           val batch = mods.takeWhile { case (_, modBytes) =>
             size += NodeViewModifier.ModifierIdSize + 4 + modBytes.length
-            size < networkSettings.maxPacketSize
+            size < networkSettings.maxModifiersSpecMessageSize
           }
           peer.handlerRef ! Message(modifiersSpec, Right(ModifiersData(modType, batch.toMap)), None)
           val remaining = mods.drop(batch.length)
