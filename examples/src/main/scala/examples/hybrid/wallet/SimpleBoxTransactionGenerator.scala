@@ -5,7 +5,7 @@ import examples.commons.{SimpleBoxTransaction, SimpleBoxTransactionMemPool, Valu
 import examples.hybrid.history.HybridHistory
 import examples.hybrid.state.HBoxStoredState
 import sparkz.core.NodeViewHolder.CurrentView
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
@@ -16,7 +16,7 @@ import scala.util.{Failure, Random, Success, Try}
   * Generator of SimpleBoxTransaction inside a wallet
   */
 class SimpleBoxTransactionGenerator(viewHolderRef: ActorRef)(implicit ec: ExecutionContext) extends Actor
-  with ScorexLogging {
+  with SparkzLogging {
 
   import SimpleBoxTransactionGenerator.ReceivableMessages._
   import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedTransaction}

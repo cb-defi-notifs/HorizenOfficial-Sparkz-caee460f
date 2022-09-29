@@ -3,7 +3,7 @@ package sparkz.core.transaction.state
 import sparkz.core.transaction.box.Box
 import sparkz.core.transaction.box.proposition.Proposition
 import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.authds._
+import sparkz.crypto.authds._
 import sparkz.core.transaction.box.proposition.Proposition
 
 abstract class BoxStateChangeOperation[P <: Proposition, BX <: Box[P]]

@@ -13,7 +13,7 @@ import sparkz.core.transaction.wallet.Vault
 import sparkz.core.transaction.{MemoryPool, Transaction}
 import sparkz.core.utils.SparkzEncoding
 import sparkz.core.PersistentNodeViewModifier
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
@@ -82,13 +82,13 @@ case class NodeViewApiRoute[TX <: Transaction]
         serializerReg.toJson(clazz, t)
       })
 
-      val serializationErrors = txAsJson.filter(_.isLeft).toList
+      val serializationErrors = txAsJson.collect { case Left(e) => e }.toList
       if (serializationErrors.nonEmpty)
-        ApiError(serializationErrors.map(_.left.get))
+        ApiError(serializationErrors)
       else
         ApiResponse(
           "size" -> mpd.size.asJson,
-          "transactions" -> txAsJson.map(_.right.get).asJson
+          "transactions" -> txAsJson.collect{ case Right(j) => j }.asJson
         )
     }
   }

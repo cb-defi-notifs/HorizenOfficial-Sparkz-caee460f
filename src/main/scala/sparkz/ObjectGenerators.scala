@@ -12,9 +12,9 @@ import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion}
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-import scorex.crypto.signatures.Curve25519
-import scorex.util.serialization._
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.crypto.signatures.Curve25519
+import sparkz.util.serialization._
+import sparkz.util.{ModifierId, bytesToId}
 
 trait ObjectGenerators {
 

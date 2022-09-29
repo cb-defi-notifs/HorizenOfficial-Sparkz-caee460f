@@ -1,11 +1,11 @@
 package sparkz.core.transaction.proof
 
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.PrivateKey25519
 import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.signatures.{Curve25519, Signature}
+import sparkz.crypto.signatures.{Curve25519, Signature}
 
 /**
   * @param signature 25519 signature

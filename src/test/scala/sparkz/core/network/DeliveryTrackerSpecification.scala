@@ -10,8 +10,8 @@ import sparkz.core.consensus.ContainsModifiers
 import sparkz.core.network.ModifiersStatus._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.{PersistentNodeViewModifier, ModifierTypeId}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{bytesToId, ModifierId}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{bytesToId, ModifierId}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext.Implicits.global

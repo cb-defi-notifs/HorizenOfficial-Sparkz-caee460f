@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Route
 import io.circe.Json
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 
 case class UtilsApiRoute(override val settings: RESTApiSettings)(implicit val context: ActorRefFactory)

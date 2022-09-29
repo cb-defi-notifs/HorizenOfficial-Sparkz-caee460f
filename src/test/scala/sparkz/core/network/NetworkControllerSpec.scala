@@ -19,9 +19,11 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.LocalTimeProvider
 
 import java.net.{InetAddress, InetSocketAddress}
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
+@nowarn("msg=deprecated")
 class NetworkControllerSpec extends NetworkTests {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -29,7 +31,7 @@ class NetworkControllerSpec extends NetworkTests {
   private val featureSerializers = Map(LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer)
 
   "A NetworkController" should "send local address on handshake when peer and node address are in localhost" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
     val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
@@ -48,7 +50,7 @@ class NetworkControllerSpec extends NetworkTests {
   }
 
   it should "send local address on handshake when the peer are in local network" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
     val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
@@ -66,7 +68,7 @@ class NetworkControllerSpec extends NetworkTests {
   }
 
   it should "not send local address on handshake when the peer is external" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
     val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
@@ -85,7 +87,7 @@ class NetworkControllerSpec extends NetworkTests {
   }
 
   it should "send declared address when node and peer are public" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
@@ -106,7 +108,7 @@ class NetworkControllerSpec extends NetworkTests {
   }
 
   it should "send known public peers" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
@@ -127,14 +129,14 @@ class NetworkControllerSpec extends NetworkTests {
     testPeer2.receiveHandshake
     testPeer2.sendHandshake(Some(peer2Addr), None)
 
-    testPeer1.sendGetPeers
+    testPeer1.sendGetPeers()
     testPeer1.receivePeers.flatMap(_.declaredAddress) should contain theSameElementsAs Seq(peer1Addr, peer2Addr)
 
     system.terminate()
   }
 
   it should "send known local peers" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
@@ -158,14 +160,14 @@ class NetworkControllerSpec extends NetworkTests {
     testPeer2.receiveHandshake
     testPeer2.sendHandshake(Some(peer2DeclaredAddr), Some(peer2LocalAddr))
 
-    testPeer1.sendGetPeers
+    testPeer1.sendGetPeers()
     testPeer1.receivePeers.flatMap(_.localAddressOpt) should contain theSameElementsAs Seq(peer1LocalAddr, peer2LocalAddr)
 
     system.terminate()
   }
 
   it should "not send known local address of peer when node is not in local network" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
@@ -188,14 +190,14 @@ class NetworkControllerSpec extends NetworkTests {
     testPeer2.receiveHandshake
     testPeer2.sendHandshake(Some(peer2DeclaredAddr), None)
 
-    testPeer2.sendGetPeers
+    testPeer2.sendGetPeers()
     testPeer2.receivePeers should not contain peer1LocalAddr
 
     system.terminate()
   }
 
   it should "receive external address from UPnP gateway" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
@@ -209,7 +211,6 @@ class NetworkControllerSpec extends NetworkTests {
     val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe, Some(upnp))
 
     val testPeer1 = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
-    val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
     val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
     testPeer1.connect(peer1LocalAddr, nodeAddr)
     val handshakeFromPeer1 = testPeer1.receiveHandshake
@@ -220,7 +221,7 @@ class NetworkControllerSpec extends NetworkTests {
   }
 
   it should "connect to local address of peer received from UPnP Gateway" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
@@ -234,7 +235,7 @@ class NetworkControllerSpec extends NetworkTests {
       InetAddress.getByName("192.169.1.11")
     ) { _ => Some(knownPeerLocalAddress) }
 
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe, Some(upnp))
+    val (_: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe, Some(upnp))
 
     import scala.concurrent.duration._
     val connectAddr = tcpManagerProbe.expectMsgPF(10.seconds) {
@@ -247,7 +248,7 @@ class NetworkControllerSpec extends NetworkTests {
   }
 
   it should "not connect to itself" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
@@ -264,7 +265,7 @@ class NetworkControllerSpec extends NetworkTests {
     testPeer.sendHandshake(None, Some(peerLocalAddress))
     testPeer.sendPeers(Seq(getPeerInfo(nodeLocalAddress).peerSpec))
 
-    testPeer.sendGetPeers
+    testPeer.sendGetPeers()
     val peers = testPeer.receivePeers
 
     peers.flatMap(_.address) should contain theSameElementsAs Seq(peerLocalAddress)
@@ -272,7 +273,7 @@ class NetworkControllerSpec extends NetworkTests {
   }
 
   it should "update last-seen on getting message from peer" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
     val p = TestProbe("p")(system)
 
@@ -579,7 +580,7 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
     * Send GetPeers message to node
     */
   def sendGetPeers(): Unit = {
-    val msg = Message[Unit](GetPeersSpec, Right(Unit), None)
+    val msg = Message[Unit](GetPeersSpec, Right(()), None)
     sendMessage(msg)
   }
 

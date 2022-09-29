@@ -1,18 +1,18 @@
 package sparkz.core.network
 
 import java.net.InetSocketAddress
-
 import akka.actor.{ActorContext, ActorRef, Cancellable}
 import sparkz.core.consensus.History
 import sparkz.core.network.NodeViewSynchronizer.Events.{BetterNeighbourAppeared, NoBetterNeighbour}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SendLocalSyncInfo
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.TimeProvider
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
+import scala.annotation.nowarn
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration._
 
 /**
   * SyncTracker caches the peers' statuses (i.e. whether they are ahead or behind this node)
@@ -20,7 +20,7 @@ import scala.concurrent.duration.{FiniteDuration, _}
 class SyncTracker(nvsRef: ActorRef,
                   context: ActorContext,
                   networkSettings: NetworkSettings,
-                  timeProvider: TimeProvider)(implicit ec: ExecutionContext) extends ScorexLogging {
+                  timeProvider: TimeProvider)(implicit ec: ExecutionContext) extends SparkzLogging {
 
   import History._
   import sparkz.core.utils.TimeProvider.Time
@@ -93,8 +93,8 @@ class SyncTracker(nvsRef: ActorRef,
     lastSyncSentTime.filter(t => (timeProvider.time() - t._2).millis > maxInterval()).keys.toSeq
 
 
-  def peersByStatus: Map[HistoryComparisonResult, Iterable[ConnectedPeer]] =
-    statuses.groupBy(_._2).mapValues(_.keys).view.force
+  @nowarn def peersByStatus: Map[HistoryComparisonResult, Iterable[ConnectedPeer]] =
+    statuses.groupBy(_._2).mapValues(_.keys).toMap
 
   private def numOfSeniors(): Int = statuses.count(_._2 == Older)
 
@@ -114,7 +114,7 @@ class SyncTracker(nvsRef: ActorRef,
         val elders = statuses.filter(_._2 == Older).keys.toIndexedSeq
         val nonOutdated =
           (if (elders.nonEmpty) elders(scala.util.Random.nextInt(elders.size)) +: unknowns else unknowns) ++ forks
-        nonOutdated.filter(p => (timeProvider.time() - lastSyncSentTime.getOrElse(p, 0L)).millis >= minInterval)
+        nonOutdated.filter(p => (timeProvider.time() - lastSyncSentTime.getOrElse(p, 0L)).millis >= minInterval())
       }
 
     peers.foreach(updateLastSyncSentTime)

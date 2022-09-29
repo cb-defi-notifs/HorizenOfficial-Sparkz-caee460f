@@ -1,11 +1,11 @@
 package sparkz.core.transaction.box.proposition
 
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.state.PrivateKey25519
 import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.hash.Blake2b256
-import scorex.crypto.signatures.{Curve25519, PublicKey, Signature}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.crypto.signatures.{Curve25519, PublicKey, Signature}
 
 import scala.util.{Failure, Success, Try}
 

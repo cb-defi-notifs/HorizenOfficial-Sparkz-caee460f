@@ -3,7 +3,7 @@ package examples.trimchain.modifiers
 import examples.trimchain.utxo.PersistentAuthenticatedUtxo
 import sparkz.core.ModifierTypeId
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 class UtxoSnapshot(override val parentId: ModifierId,
                    header: BlockHeader,

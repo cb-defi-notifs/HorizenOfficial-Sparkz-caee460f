@@ -13,11 +13,11 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{NodeViewHolder, PersistentNodeViewModifier}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.ExecutionContext
 
-trait Application extends ScorexLogging {
+trait Application extends SparkzLogging {
 
   import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
@@ -106,7 +106,7 @@ trait Application extends ScorexLogging {
 
     //on unexpected shutdown
     Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run() {
+      override def run(): Unit = {
         log.error("Unexpected shutdown")
         stopAll()
       }

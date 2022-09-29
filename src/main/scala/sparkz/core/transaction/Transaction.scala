@@ -1,8 +1,8 @@
 package sparkz.core.transaction
 
 import sparkz.core.{EphemerealNodeViewModifier, ModifierTypeId}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, bytesToId}
 
 
 /**

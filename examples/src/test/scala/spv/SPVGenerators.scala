@@ -3,7 +3,7 @@ package spv
 import commons.ExamplesCommonGenerators
 import examples.spv._
 import org.scalacheck.{Arbitrary, Gen}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 trait SPVGenerators extends ExamplesCommonGenerators {
 

@@ -5,12 +5,12 @@ import examples.hybrid.blocks.{PosBlock, PowBlock}
 import examples.hybrid.mining.HybridMiningSettings
 import sparkz.core.network.NodeViewSynchronizer.Events.{BetterNeighbourAppeared, NoBetterNeighbour, NodeViewSynchronizerEvent}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{NodeViewHolderEvent, RollbackFailed, SemanticallySuccessfulModifier}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 class HLocalInterface(viewHolderRef: ActorRef,
                       powMinerRef: ActorRef,
                       posForgerRef: ActorRef,
-                      minerSettings: HybridMiningSettings) extends Actor with ScorexLogging {
+                      minerSettings: HybridMiningSettings) extends Actor with SparkzLogging {
 
   import examples.hybrid.mining.PosForger.ReceivableMessages.{StartForging, StopForging}
   import examples.hybrid.mining.PowMiner.ReceivableMessages.{MineBlock, StartMining, StopMining}

@@ -12,7 +12,7 @@ import sparkz.core.api.http.{ApiError, ApiResponse, ApiRouteWithFullView}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.signatures.PublicKey
+import sparkz.crypto.signatures.PublicKey
 
 import scala.util.{Failure, Success, Try}
 

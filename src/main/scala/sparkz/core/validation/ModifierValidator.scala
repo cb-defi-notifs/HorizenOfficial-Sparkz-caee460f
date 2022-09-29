@@ -1,9 +1,10 @@
 package sparkz.core.validation
 
+import sparkz.util.ModifierId
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.utils.SparkzEncoder
 import sparkz.core.validation.ValidationResult._
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.util.{Failure, Success, Try}
 
@@ -100,22 +101,22 @@ case class ValidationState[T](result: ValidationResult[T], settings: ValidationS
   /** Validate the first argument equals the second. This should not be used with `ModifierId` of type `Array[Byte]`.
     * The `error` callback will be provided with detail on argument values for better reporting
     */
-  def validateEquals[A](id: Short, given: => A, expected: => A): ValidationState[T] = {
-    pass((given, expected) match {
+  def validateEquals[A](id: Short, actual: => A, expected: => A): ValidationState[T] = {
+    pass((actual, expected) match {
       case _ if !settings.isActive(id) => result
       case (a: Array[_], b: Array[_]) if a sameElements b => result
-      case (_: Array[_], _) => settings.getError(id, s"Given: $given, expected: $expected. Use validateEqualIds when comparing Arrays")
-      case _ if given == expected => result
-      case _ => settings.getError(id, s"Given: $given, expected $expected")
+      case (_: Array[_], _) => settings.getError(id, s"Given: $actual, expected: $expected. Use validateEqualIds when comparing Arrays")
+      case _ if actual == expected => result
+      case _ => settings.getError(id, s"Given: $actual, expected $expected")
     })
   }
 
   /** Validate the `id`s are equal. The `error` callback will be provided with detail on argument values
     */
-  def validateEqualIds(id: Short, given: => ModifierId, expected: => ModifierId): ValidationState[T] = {
+  def validateEqualIds(id: Short, actual: => ModifierId, expected: => ModifierId): ValidationState[T] = {
     pass {
-      if (!settings.isActive(id) || given == expected) result
-      else settings.getError(id, s"Given: ${e.encodeId(given)}, expected ${e.encodeId(expected)}")
+      if (!settings.isActive(id) || actual == expected) result
+      else settings.getError(id, s"Given: ${e.encodeId(actual)}, expected ${e.encodeId(expected)}")
     }
   }
 

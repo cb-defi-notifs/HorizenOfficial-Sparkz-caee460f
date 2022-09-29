@@ -1,7 +1,7 @@
 package sparkz.core.app
 
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
-import scorex.util.serialization._
+import sparkz.util.serialization._
 
 /**
   * Version of p2p protocol. Node can only process messages of it's version or lower.

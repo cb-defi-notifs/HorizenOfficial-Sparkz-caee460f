@@ -9,7 +9,7 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.consensus.History.{Older, HistoryComparisonResult, Equal, Younger}
 import sparkz.core.utils.SparkzEncoding
 import sparkz.core.ModifierTypeId
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 @SuppressWarnings(Array("org.wartremover.warts.TraversableOps", "org.wartremover.warts.OptionPartial"))
 class HybridHistorySpecification extends AnyPropSpec

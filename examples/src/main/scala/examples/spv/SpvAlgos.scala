@@ -1,7 +1,7 @@
 package examples.spv
 
 import sparkz.core.utils.SparkzEncoding
-import scorex.util.{ModifierId, idToBytes}
+import sparkz.util.{ModifierId, idToBytes}
 
 import scala.annotation.tailrec
 import scala.util.Try

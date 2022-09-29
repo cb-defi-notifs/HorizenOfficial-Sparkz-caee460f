@@ -6,16 +6,16 @@ import io.circe.Encoder
 import io.circe.syntax._
 import sparkz.core.block.Block
 import sparkz.core.block.Block._
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.proof.{Signature25519, Signature25519Serializer}
 import sparkz.core.transaction.state.PrivateKey25519
 import sparkz.core.utils.SparkzEncoding
 import sparkz.core.{ModifierTypeId, TransactionsCarryingPersistentNodeViewModifier, idToBytes}
-import scorex.crypto.hash.Blake2b256
-import scorex.crypto.signatures.{Curve25519, Signature}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
-import scorex.util.Extensions._
+import sparkz.crypto.hash.Blake2b256
+import sparkz.crypto.signatures.{Curve25519, Signature}
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
+import sparkz.util.Extensions._
 
 case class PosBlock(override val parentId: BlockId, //PoW block
                     override val timestamp: Block.Timestamp,
@@ -24,7 +24,7 @@ case class PosBlock(override val parentId: BlockId, //PoW block
                     attachment: Array[Byte],
                     signature: Signature25519
                    ) extends HybridBlock
-  with TransactionsCarryingPersistentNodeViewModifier[SimpleBoxTransaction] with ScorexLogging {
+  with TransactionsCarryingPersistentNodeViewModifier[SimpleBoxTransaction] with SparkzLogging {
 
   override type M = PosBlock
 

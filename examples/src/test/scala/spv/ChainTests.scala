@@ -8,9 +8,9 @@ import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion}
-import scorex.crypto.hash
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
+import sparkz.crypto.hash
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.ModifierId
 
 @SuppressWarnings(Array("org.wartremover.warts.TraversableOps"))
 class ChainTests extends AnyPropSpec

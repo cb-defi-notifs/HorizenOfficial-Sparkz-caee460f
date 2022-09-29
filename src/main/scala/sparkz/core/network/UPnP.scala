@@ -3,10 +3,10 @@ package sparkz.core.network
 import java.net.{InetAddress, InetSocketAddress}
 import org.bitlet.weupnp.{GatewayDevice, GatewayDiscover, PortMappingEntry}
 import sparkz.core.settings.NetworkSettings
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.settings.NetworkSettings
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 trait UPnPGateway {
   def localAddress: InetAddress
@@ -16,7 +16,7 @@ trait UPnPGateway {
   def getLocalAddressForExternalPort(extrenalPort: Int):Option[InetSocketAddress]
 }
 
-object UPnP extends ScorexLogging {
+object UPnP extends SparkzLogging {
   def getValidGateway(settings: NetworkSettings): Option[UPnPGateway] = {
     try {
       log.info("Looking for UPnP gateway device...")
@@ -47,7 +47,7 @@ object UPnP extends ScorexLogging {
   }
 }
 
-class UPnPGatewayImpl(gateway: GatewayDevice) extends UPnPGateway with ScorexLogging {
+class UPnPGatewayImpl(gateway: GatewayDevice) extends UPnPGateway with SparkzLogging {
 
   override val localAddress: InetAddress = gateway.getLocalAddress
   override val externalAddress: InetAddress = InetAddress.getByName(gateway.getExternalIPAddress)

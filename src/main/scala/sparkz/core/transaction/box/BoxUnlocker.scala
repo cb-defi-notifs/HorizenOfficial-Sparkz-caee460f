@@ -3,7 +3,7 @@ package sparkz.core.transaction.box
 import sparkz.core.transaction.box.proposition.Proposition
 import sparkz.core.transaction.proof.Proof
 import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.authds.ADKey
+import sparkz.crypto.authds.ADKey
 import sparkz.core.transaction.box.proposition.Proposition
 import sparkz.core.transaction.proof.Proof
 

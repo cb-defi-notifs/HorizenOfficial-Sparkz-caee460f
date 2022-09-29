@@ -6,7 +6,7 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.consensus.{SyncInfo, History, HistoryReader, ModifierSemanticValidity}
 import sparkz.core.consensus.History.ModifierIds
 import sparkz.core.serialization.SparkzSerializer
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 import scala.util.Try
 
@@ -15,9 +15,9 @@ class DefaultModifiersCacheSpecification extends AnyPropSpec
   with Matchers {
 
   private class FakeModifier extends PersistentNodeViewModifier {
-    override def parentId: scorex.util.ModifierId = ???
+    override def parentId: sparkz.util.ModifierId = ???
     override val modifierTypeId: ModifierTypeId = ModifierTypeId @@ (0: Byte)
-    override def id: scorex.util.ModifierId = ???
+    override def id: sparkz.util.ModifierId = ???
     override type M = this.type
     override def serializer: SparkzSerializer[FakeModifier.this.type] = ???
   }
@@ -31,9 +31,9 @@ class DefaultModifiersCacheSpecification extends AnyPropSpec
   private class FakeHr extends HistoryReader[FakeModifier, FakeSyncInfo] {
     override def isEmpty: Boolean = ???
     override def applicableTry(modifier: FakeModifier): Try[Unit] = ???
-    override def modifierById(modifierId: scorex.util.ModifierId): Option[FakeModifier] = ???
-    override def isSemanticallyValid(modifierId: scorex.util.ModifierId): ModifierSemanticValidity = ???
-    override def openSurfaceIds(): Seq[scorex.util.ModifierId] = ???
+    override def modifierById(modifierId: sparkz.util.ModifierId): Option[FakeModifier] = ???
+    override def isSemanticallyValid(modifierId: sparkz.util.ModifierId): ModifierSemanticValidity = ???
+    override def openSurfaceIds(): Seq[sparkz.util.ModifierId] = ???
     override def continuationIds(info: FakeSyncInfo, size: Int): ModifierIds = ???
     override def syncInfo: FakeSyncInfo = ???
     override def compare(other: FakeSyncInfo): History.HistoryComparisonResult = ???

@@ -2,14 +2,14 @@ package examples.trimchain.core
 
 import io.circe.Encoder
 import io.circe.syntax._
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.authds.SerializedAdProof
-import scorex.crypto.signatures.Curve25519
+import sparkz.crypto.authds.SerializedAdProof
+import sparkz.crypto.signatures.Curve25519
 
 import scala.annotation.tailrec
-import scorex.util.Extensions._
+import sparkz.util.Extensions._
 
 case class Ticket(minerKey: Array[Byte], partialProofs: Seq[SerializedAdProof]) {
 

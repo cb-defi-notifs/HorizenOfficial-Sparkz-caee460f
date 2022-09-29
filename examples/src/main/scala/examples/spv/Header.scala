@@ -8,8 +8,8 @@ import sparkz.core.block.Block._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.utils.SparkzEncoding
 import sparkz.core.{ModifierTypeId, PersistentNodeViewModifier}
-import scorex.util.serialization.{Reader, Writer}
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.util.serialization.{Reader, Writer}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.annotation.tailrec
 

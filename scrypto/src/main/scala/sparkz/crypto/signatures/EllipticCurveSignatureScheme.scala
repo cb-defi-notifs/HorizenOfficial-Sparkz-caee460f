@@ -1,0 +1,3 @@
+package sparkz.crypto.signatures
+
+trait EllipticCurveSignatureScheme extends SigningFunctions

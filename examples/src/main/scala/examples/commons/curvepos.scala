@@ -2,7 +2,7 @@ package examples
 
 import io.iohk.iodb.ByteArrayWrapper
 import sparkz.core.{VersionTag, versionToBytes}
-import scorex.util.{ModifierId, idToBytes}
+import sparkz.util.{ModifierId, idToBytes}
 import supertagged.TaggedType
 
 package object commons {

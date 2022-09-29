@@ -5,8 +5,8 @@ import examples.commons.SimpleBoxTransaction
 import examples.trimchain.core._
 import examples.trimchain.modifiers.{BlockHeader, TBlock}
 import org.scalacheck.{Arbitrary, Gen}
-import scorex.util.ModifierId
-import scorex.crypto.authds.SerializedAdProof
+import sparkz.util.ModifierId
+import sparkz.crypto.authds.SerializedAdProof
 
 trait TrimchainGenerators extends ExamplesCommonGenerators {
 

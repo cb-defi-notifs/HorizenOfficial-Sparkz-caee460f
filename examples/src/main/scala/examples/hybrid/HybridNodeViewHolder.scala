@@ -12,9 +12,9 @@ import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.PrivateKey25519Companion
 import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
 import sparkz.core.{ModifierTypeId, NodeViewHolder, NodeViewModifier}
-import scorex.util.encode.Base58
-import scorex.crypto.signatures.PublicKey
-import scorex.util.ScorexLogging
+import sparkz.util.encode.Base58
+import sparkz.crypto.signatures.PublicKey
+import sparkz.util.SparkzLogging
 
 
 class HybridNodeViewHolder(hybridSettings: HybridSettings,
@@ -58,7 +58,7 @@ class HybridNodeViewHolder(hybridSettings: HybridSettings,
   }
 }
 
-object HybridNodeViewHolder extends ScorexLogging with SparkzEncoding {
+object HybridNodeViewHolder extends SparkzLogging with SparkzEncoding {
   def generateGenesisState(hybridSettings: HybridSettings,
                            timeProvider: NetworkTimeProvider):
   (HybridHistory, HBoxStoredState, HBoxWallet, SimpleBoxTransactionMemPool) = {

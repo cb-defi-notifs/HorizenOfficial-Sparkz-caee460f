@@ -1,13 +1,13 @@
 package examples.spv
 
 import sparkz.core._
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.utils.SparkzEncoding
 
 import scala.annotation.tailrec
 import scala.util.Try
-import scorex.util.Extensions._
+import sparkz.util.Extensions._
 
 case class KMZProof(m: Int, k: Int, prefixProofs: Seq[Seq[Header]], suffix: Seq[Header]) {
   lazy val valid: Try[Unit] = Try {

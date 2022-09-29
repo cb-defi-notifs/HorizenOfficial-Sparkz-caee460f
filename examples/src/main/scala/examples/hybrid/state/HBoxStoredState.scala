@@ -11,9 +11,9 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.authds._
+import sparkz.crypto.authds._
 import sparkz.mid.state.BoxMinimalState
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.{Failure, Success, Try}
 
@@ -23,7 +23,7 @@ case class HBoxStoredState(store: LSMStore, override val version: VersionTag) ex
     PublicKey25519NoncedBox,
     SimpleBoxTransaction,
     HybridBlock,
-    HBoxStoredState] with ScorexLogging with SparkzEncoding {
+    HBoxStoredState] with SparkzLogging with SparkzEncoding {
 
   require(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version) == version,
     s"${encoder.encodeVersion(store.lastVersionID.map(w => bytesToVersion(w.data)).getOrElse(version))}" +

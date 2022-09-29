@@ -7,14 +7,14 @@ import examples.hybrid.mining.{HybridMiningSettings, PosForger}
 import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
 import sparkz.core.consensus.ModifierSemanticValidity
 import sparkz.core.consensus.ModifierSemanticValidity.{Absent, Unknown}
-import scorex.crypto.hash.Sha256
-import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
+import sparkz.crypto.hash.Sha256
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 
 import scala.util.{Failure, Random, Try}
 
 //TODO: why we are using IODB if there's no rollback?
 class HistoryStorage(storage: LSMStore,
-                     settings: HybridMiningSettings) extends ScorexLogging {
+                     settings: HybridMiningSettings) extends SparkzLogging {
 
   private val bestPowIdKey = ByteArrayWrapper(Array.fill(storage.keySize)(-1: Byte))
   private val bestPosIdKey = ByteArrayWrapper(Array.fill(storage.keySize)(-2: Byte))

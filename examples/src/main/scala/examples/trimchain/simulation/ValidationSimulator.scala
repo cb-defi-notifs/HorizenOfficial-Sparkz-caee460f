@@ -7,7 +7,7 @@ import examples.trimchain.core.{Algos, Constants}
 import sparkz.core.idToVersion
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChanges, Insertion}
-import scorex.crypto.authds.ADDigest
+import sparkz.crypto.authds.ADDigest
 
 object ValidationSimulator extends App with Simulators {
 

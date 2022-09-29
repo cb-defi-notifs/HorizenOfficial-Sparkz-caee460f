@@ -9,9 +9,9 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.proof.{Signature25519, Signature25519Serializer}
 import sparkz.core.transaction.state.PrivateKey25519Companion
-import scorex.util.encode.Base58
-import scorex.crypto.hash.Sha256
-import scorex.crypto.signatures.{PublicKey, Signature}
+import sparkz.util.encode.Base58
+import sparkz.crypto.hash.Sha256
+import sparkz.crypto.signatures.{PublicKey, Signature}
 
 @SuppressWarnings(Array("org.wartremover.warts.TraversableOps"))
 class SimpleBoxTransactionSpecification extends AnyPropSpec

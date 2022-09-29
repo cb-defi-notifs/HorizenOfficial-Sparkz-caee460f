@@ -6,9 +6,9 @@ import io.circe.syntax._
 import sparkz.core.ModifierTypeId
 import sparkz.core.block.Block
 import sparkz.core.block.Block.{Timestamp, Version}
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.annotation.tailrec
 

@@ -6,10 +6,10 @@ import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.account.PublicKeyNoncedBox
 import sparkz.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
 import sparkz.core.utils.SparkzEncoding
-import scorex.util.encode.Base16
-import scorex.crypto.hash.Blake2b256
-import scorex.crypto.signatures.Curve25519
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.encode.Base16
+import sparkz.crypto.hash.Blake2b256
+import sparkz.crypto.signatures.Curve25519
+import sparkz.util.serialization.{Reader, Writer}
 
 case class PublicKey25519NoncedBox(override val proposition: PublicKey25519Proposition,
                                    override val nonce: Nonce,

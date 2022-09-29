@@ -11,10 +11,10 @@ import io.iohk.iodb.LSMStore
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChanges, Insertion}
 import sparkz.core._
-import scorex.crypto.authds.avltree.batch.{BatchAVLVerifier, Lookup}
-import scorex.crypto.authds.{ADDigest, ADKey}
-import scorex.crypto.hash.{Blake2b256, Digest32}
-import scorex.crypto.signatures.{Curve25519, PublicKey}
+import sparkz.crypto.authds.avltree.batch.{BatchAVLVerifier, Lookup}
+import sparkz.crypto.authds.{ADDigest, ADKey}
+import sparkz.crypto.hash.{Blake2b256, Digest32}
+import sparkz.crypto.signatures.{Curve25519, PublicKey}
 
 import scala.util.{Failure, Random, Success, Try}
 

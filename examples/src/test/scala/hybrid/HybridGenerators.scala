@@ -13,10 +13,10 @@ import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.proof.Signature25519
 import sparkz.core.transaction.state._
 import sparkz.core.transaction.wallet.WalletBox
-import scorex.crypto.hash.Blake2b256
-import scorex.crypto.signatures.Signature
+import sparkz.crypto.hash.Blake2b256
+import sparkz.crypto.signatures.Signature
 import sparkz.testkit.utils.{FileUtils, NoShrink}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration._

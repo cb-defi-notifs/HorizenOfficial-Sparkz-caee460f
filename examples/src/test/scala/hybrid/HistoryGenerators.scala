@@ -6,7 +6,7 @@ import examples.hybrid.mining.HybridSettings
 import org.scalacheck.Gen
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.utils.NetworkTimeProvider
-import scorex.crypto.signatures.PublicKey
+import sparkz.crypto.signatures.PublicKey
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

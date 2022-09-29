@@ -4,10 +4,10 @@ import examples.trimchain.core._
 import io.circe.Encoder
 import io.circe.syntax._
 import sparkz.core.ModifierTypeId
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.utils.SparkzEncoding
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 //TODO compact proof of ticket in header
 case class BlockHeader(override val parentId: ModifierId,

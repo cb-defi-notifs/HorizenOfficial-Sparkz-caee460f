@@ -15,7 +15,7 @@ class MessageSerializerSpec extends AnyFlatSpec with Matchers {
 
   "Message Serializer" should "be consistent" in {
     withSerializer { messageSerializer =>
-      val message = Message[Unit](GetPeersSpec, Right(Unit), None)
+      val message = Message[Unit](GetPeersSpec, Right(()), None)
       val bytes = messageSerializer.serialize(message)
       println(bytes)
       inside(messageSerializer.deserialize(bytes, None).get) {

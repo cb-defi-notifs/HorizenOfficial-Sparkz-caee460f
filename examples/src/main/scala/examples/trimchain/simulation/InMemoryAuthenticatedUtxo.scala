@@ -7,10 +7,10 @@ import examples.trimchain.utxo.{AuthenticatedUtxo, PersistentAuthenticatedUtxo}
 import sparkz.core.{VersionTag, bytesToVersion}
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChanges, Insertion, Removal}
-import scorex.crypto.authds.avltree.batch.{Insert, Remove}
-import scorex.crypto.authds.{ADDigest, ADKey, ADValue}
+import sparkz.crypto.authds.avltree.batch.{Insert, Remove}
+import sparkz.crypto.authds.{ADDigest, ADKey, ADValue}
 import sparkz.mid.state.BoxMinimalState
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.Try
 
@@ -23,7 +23,7 @@ case class InMemoryAuthenticatedUtxo(size: Int, proverOpt: Option[ProverType], o
       PublicKey25519NoncedBox,
       SimpleBoxTransaction,
       TModifier,
-      InMemoryAuthenticatedUtxo] with AuthenticatedUtxo with ScorexLogging {
+      InMemoryAuthenticatedUtxo] with AuthenticatedUtxo with SparkzLogging {
 
   import PublicKey25519NoncedBox.{BoxKeyLength, BoxLength}
 

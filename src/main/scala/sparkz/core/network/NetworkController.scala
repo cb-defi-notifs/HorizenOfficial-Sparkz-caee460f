@@ -5,7 +5,6 @@ import akka.io.Tcp._
 import akka.io.{IO, Tcp}
 import akka.pattern.ask
 import akka.util.Timeout
-import scorex.util.ScorexLogging
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.Internal.ConnectionToPeer
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{DisconnectedPeer, HandshakedPeer}
@@ -16,6 +15,7 @@ import sparkz.core.network.peer._
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.TimeProvider.Time
 import sparkz.core.utils.{NetworkUtils, TimeProvider}
+import sparkz.util.SparkzLogging
 
 import java.net._
 import scala.concurrent.ExecutionContext
@@ -31,7 +31,7 @@ class NetworkController(settings: NetworkSettings,
                         peerManagerRef: ActorRef,
                         sparkzContext: SparkzContext,
                         tcpManager: ActorRef
-                       )(implicit ec: ExecutionContext) extends Actor with ScorexLogging {
+                       )(implicit ec: ExecutionContext) extends Actor with SparkzLogging {
 
   import NetworkController.ReceivableMessages._
   import PeerConnectionHandler.ReceivableMessages.CloseConnection
@@ -463,7 +463,7 @@ class NetworkController(settings: NetworkSettings,
           val listenAddresses = NetworkUtils.getListenAddresses(bindAddress)
           val upnpAddress = sparkzContext.upnpGateway.map(_.externalAddress)
 
-          val valid = listenAddresses.exists(myAddress.contains) || upnpAddress.exists(myAddress.contains)
+          val valid = listenAddresses.exists(addr => myAddress.contains(addr.getAddress)) || upnpAddress.exists(myAddress.contains)
 
           if (!valid) {
             log.error(

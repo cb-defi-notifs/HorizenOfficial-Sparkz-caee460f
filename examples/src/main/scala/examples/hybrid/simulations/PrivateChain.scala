@@ -11,9 +11,9 @@ import examples.hybrid.wallet.HBoxWallet
 import sparkz.core.block.Block.BlockId
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
-import scorex.util.encode.Base58
-import scorex.crypto.signatures.PublicKey
-import scorex.util.ScorexLogging
+import sparkz.util.encode.Base58
+import sparkz.crypto.signatures.PublicKey
+import sparkz.util.SparkzLogging
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,7 +24,7 @@ import scala.util.Try
 /**
   * Private chain attack simulation
   */
-object PrivateChain extends App with ScorexLogging with SparkzEncoding {
+object PrivateChain extends App with SparkzLogging with SparkzEncoding {
 
   val proposition: PublicKey25519Proposition = PublicKey25519Proposition(PublicKey @@ scorex.utils.Random.randomBytes(32))
 

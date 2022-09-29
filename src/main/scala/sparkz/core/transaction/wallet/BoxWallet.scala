@@ -1,6 +1,6 @@
 package sparkz.core.transaction.wallet
 
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.{NodeViewModifier, PersistentNodeViewModifier}
 import sparkz.core.transaction.Transaction
@@ -8,7 +8,7 @@ import sparkz.core.transaction.box.Box
 import sparkz.core.transaction.box.proposition.{ProofOfKnowledgeProposition, Proposition}
 import sparkz.core.transaction.state.Secret
 import sparkz.core.utils.SparkzEncoding
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 import sparkz.core.PersistentNodeViewModifier
 import sparkz.core.transaction.box.proposition.{ProofOfKnowledgeProposition, Proposition}
 

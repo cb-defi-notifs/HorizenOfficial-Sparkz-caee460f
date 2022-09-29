@@ -10,7 +10,7 @@ import org.scalatest.{Outcome, propspec}
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.utils.SparkzEncoding
 import sparkz.testkit.utils.FileUtils
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 @SuppressWarnings(Array("org.wartremover.warts.TraversableOps"))
 class IODBSpecification extends propspec.FixtureAnyPropSpec

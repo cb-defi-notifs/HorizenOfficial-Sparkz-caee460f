@@ -11,7 +11,7 @@ import io.iohk.iodb.ByteArrayWrapper
 import sparkz.core._
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, ChangedMempool}
 import sparkz.core.network._
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.testkit.generators.CoreGenerators

@@ -17,8 +17,8 @@ import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
@@ -32,7 +32,7 @@ class HybridHistory(val storage: HistoryStorage,
                     validators: Seq[BlockValidator[HybridBlock]],
                     statsLogger: Option[FileLogger],
                     timeProvider: NetworkTimeProvider)
-  extends History[HybridBlock, HybridSyncInfo, HybridHistory] with ScorexLogging with SparkzEncoding {
+  extends History[HybridBlock, HybridSyncInfo, HybridHistory] with SparkzLogging with SparkzEncoding {
 
   import HybridHistory._
 
@@ -495,7 +495,7 @@ class HybridHistory(val storage: HistoryStorage,
 }
 
 
-object HybridHistory extends ScorexLogging {
+object HybridHistory extends SparkzLogging {
   val DifficultyRecalcPeriod: Int = 20
 
   def readOrGenerate(settings: SparkzSettings, minerSettings: HybridMiningSettings, timeProvider: NetworkTimeProvider): HybridHistory = {

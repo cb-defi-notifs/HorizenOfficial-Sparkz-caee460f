@@ -1,6 +1,6 @@
 package examples.spv
 
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 object Constants {
   val hashfn: Blake2b256.type = Blake2b256

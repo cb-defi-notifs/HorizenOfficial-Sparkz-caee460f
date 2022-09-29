@@ -9,7 +9,7 @@ import sparkz.core.transaction._
 import sparkz.core.transaction.state.{MinimalState, TransactionValidation}
 import sparkz.core.transaction.wallet.Vault
 import sparkz.core.utils.SparkzEncoding
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
@@ -25,7 +25,7 @@ import scala.util.{Failure, Success, Try}
   * @tparam PMOD
   */
 trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
-  extends Actor with ScorexLogging with SparkzEncoding {
+  extends Actor with SparkzLogging with SparkzEncoding {
 
   import NodeViewHolder.ReceivableMessages._
   import NodeViewHolder._
@@ -84,7 +84,7 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
   protected def txModify(tx: TX): Unit = {
     //todo: async validation?
     val errorOpt: Option[Throwable] = minimalState() match {
-      case txValidator: TransactionValidation[TX] =>
+      case txValidator: TransactionValidation[TX @unchecked] =>
         txValidator.validate(tx) match {
           case Success(_) => None
           case Failure(e) => Some(e)
@@ -142,7 +142,7 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
   }
 
   protected def extractTransactions(mod: PMOD): Seq[TX] = mod match {
-    case tcm: TransactionsCarryingPersistentNodeViewModifier[TX] => tcm.transactions
+    case tcm: TransactionsCarryingPersistentNodeViewModifier[TX @unchecked] => tcm.transactions
     case _ => Seq()
   }
 
@@ -156,14 +156,14 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
     memPool.putWithoutCheck(rolledBackTxs).filter { tx =>
       !appliedTxs.exists(t => t.id == tx.id) && {
         state match {
-          case v: TransactionValidation[TX] => v.validate(tx).isSuccess
+          case v: TransactionValidation[TX @unchecked] => v.validate(tx).isSuccess
           case _ => true
         }
       }
     }
   }
 
-  private def trimChainSuffix(suffix: IndexedSeq[PMOD], rollbackPoint: scorex.util.ModifierId): IndexedSeq[PMOD] = {
+  private def trimChainSuffix(suffix: IndexedSeq[PMOD], rollbackPoint: sparkz.util.ModifierId): IndexedSeq[PMOD] = {
     val idx = suffix.indexWhere(_.id == rollbackPoint)
     if (idx == -1) IndexedSeq() else suffix.drop(idx)
   }
@@ -319,7 +319,7 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
     * Publish `ModifiersProcessingResult` message with all just applied and removed from cache modifiers.
     */
   protected def processRemoteModifiers: Receive = {
-    case ModifiersFromRemote(mods: Seq[PMOD]) =>
+    case ModifiersFromRemote(mods: Seq[PMOD @unchecked]) =>
       mods.foreach(m => modifiersCache.put(m.id, m))
 
       log.debug(s"Cache size before: ${modifiersCache.size}")
@@ -343,7 +343,7 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
   }
 
   protected def transactionsProcessing: Receive = {
-    case newTxs: NewTransactions[TX] =>
+    case newTxs: NewTransactions[TX @unchecked] =>
       newTxs.txs.foreach(txModify)
     case EliminateTransactions(ids) =>
       val updatedPool = memoryPool().filter(tx => !ids.contains(tx.id))
@@ -355,7 +355,7 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
   }
 
   protected def processLocallyGeneratedModifiers: Receive = {
-    case lm: LocallyGeneratedModifier[PMOD] =>
+    case lm: LocallyGeneratedModifier[PMOD @unchecked] =>
       log.info(s"Got locally generated modifier ${lm.pmod.encodedId} of type ${lm.pmod.modifierTypeId}")
       pmodModify(lm.pmod)
   }
@@ -408,7 +408,7 @@ object NodeViewHolder {
 
     case class LocallyGeneratedModifier[PMOD <: PersistentNodeViewModifier](pmod: PMOD)
 
-    case class EliminateTransactions(ids: Seq[scorex.util.ModifierId])
+    case class EliminateTransactions(ids: Seq[sparkz.util.ModifierId])
 
   }
 

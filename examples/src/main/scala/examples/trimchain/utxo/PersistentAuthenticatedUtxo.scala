@@ -11,11 +11,11 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
 import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.authds.avltree.batch.{BatchAVLProver, Insert, Lookup, Remove}
-import scorex.crypto.authds.{ADDigest, ADKey, ADValue, SerializedAdProof}
-import scorex.crypto.hash.{Blake2b256, Digest32}
+import sparkz.crypto.authds.avltree.batch.{BatchAVLProver, Insert, Lookup, Remove}
+import sparkz.crypto.authds.{ADDigest, ADKey, ADValue, SerializedAdProof}
+import sparkz.crypto.hash.{Blake2b256, Digest32}
 import sparkz.mid.state.BoxMinimalState
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.{Random, Success, Try}
 
@@ -54,7 +54,7 @@ case class PersistentAuthenticatedUtxo(store: LSMStore,
     PublicKey25519NoncedBox,
     SimpleBoxTransaction,
     TModifier,
-    PersistentAuthenticatedUtxo] with AuthenticatedUtxo with ScorexLogging with SparkzEncoding {
+    PersistentAuthenticatedUtxo] with AuthenticatedUtxo with SparkzLogging with SparkzEncoding {
 
   import PublicKey25519NoncedBox.{BoxKeyLength, BoxLength}
 

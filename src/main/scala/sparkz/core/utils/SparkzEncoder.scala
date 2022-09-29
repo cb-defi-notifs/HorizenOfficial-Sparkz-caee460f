@@ -1,8 +1,8 @@
 package sparkz.core.utils
 
 import sparkz.core.VersionTag
-import scorex.util.ModifierId
-import scorex.util.encode.{Base16, BytesEncoder}
+import sparkz.util.ModifierId
+import sparkz.util.encode.{Base16, BytesEncoder}
 
 import scala.util.Try
 

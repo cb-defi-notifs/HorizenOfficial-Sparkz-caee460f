@@ -4,7 +4,7 @@ import java.nio.ByteOrder
 
 import akka.util.ByteString
 import sparkz.core.network.{ConnectedPeer, MaliciousBehaviorException}
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 import scala.util.Try
 
 

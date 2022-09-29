@@ -8,8 +8,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % "2.6.19"
 )
 
-fork in Test := true
+Test / fork := true
 
-javaOptions in Test ++= Seq("-Xmx2G")
+Test / javaOptions ++= Seq("-Xmx2G")
 
-parallelExecution in Test := false
+Test / parallelExecution := false

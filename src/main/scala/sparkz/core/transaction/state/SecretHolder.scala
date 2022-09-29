@@ -1,11 +1,11 @@
 package sparkz.core.transaction.state
 
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.transaction.box._
 import sparkz.core.transaction.box.proposition.{ProofOfKnowledgeProposition, PublicKey25519Proposition}
 import sparkz.core.transaction.proof.{ProofOfKnowledge, Signature25519}
-import scorex.crypto.signatures.{Curve25519, PrivateKey, PublicKey}
+import sparkz.crypto.signatures.{Curve25519, PrivateKey, PublicKey}
 
 trait Secret extends BytesSerializable {
   self =>

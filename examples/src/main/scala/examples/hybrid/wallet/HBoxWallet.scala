@@ -13,15 +13,15 @@ import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion, PrivateKey25519Serializer}
 import sparkz.core.transaction.wallet.{BoxWallet, BoxWalletTransaction, WalletBox, WalletBoxSerializer}
 import sparkz.core.utils.SparkzEncoding
-import scorex.util.encode.Base58
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ScorexLogging
+import sparkz.util.encode.Base58
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.SparkzLogging
 
 import scala.util.Try
 
 case class HBoxWallet(seed: Array[Byte], store: LSMStore)
   extends BoxWallet[PublicKey25519Proposition, SimpleBoxTransaction, HybridBlock, HBoxWallet]
-    with ScorexLogging with SparkzEncoding {
+    with SparkzLogging with SparkzEncoding {
 
   override type S = PrivateKey25519
   override type PI = PublicKey25519Proposition

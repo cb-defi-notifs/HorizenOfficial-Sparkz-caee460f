@@ -38,7 +38,10 @@ class SerializerRegistrySpec extends AnyFlatSpec with Matchers {
 
     val result = reg.toJson(clazz, c)
     result.isRight shouldBe true
-    result.right.get shouldBe Try(humanEnc.apply(c.asInstanceOf[Human])).getOrElse(animalEnc.apply(c.asInstanceOf[Animal]))
+    result match {
+      case Right(a) => a shouldBe Try(humanEnc.apply(c.asInstanceOf[Human])).getOrElse(animalEnc.apply(c.asInstanceOf[Animal]))
+      case _ => fail("toJson should return Right")
+    }
   }
 
 
