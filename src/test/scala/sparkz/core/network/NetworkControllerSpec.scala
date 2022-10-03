@@ -194,65 +194,13 @@ class NetworkControllerSpec extends NetworkTests {
     system.terminate()
   }
 
-  it should "receive external address from UPnP gateway" in {
-    implicit val system = ActorSystem()
-
-    val tcpManagerProbe = TestProbe()
-
-    val gatewayAddr = InetAddress.getByName("88.44.33.11")
-    val upnp = DummyUPnPGateway(
-      gatewayAddr,
-      InetAddress.getByName("192.169.1.11")
-    ) { _ => None }
-
-    val nodeAddr = new InetSocketAddress(gatewayAddr, settings.network.bindAddress.getPort)
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe, Some(upnp))
-
-    val testPeer1 = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
-    val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
-    val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
-    testPeer1.connect(peer1LocalAddr, nodeAddr)
-    val handshakeFromPeer1 = testPeer1.receiveHandshake
-    handshakeFromPeer1.peerSpec.declaredAddress.value.getAddress should be(InetAddress.getByName("88.44.33.11"))
-    handshakeFromPeer1.peerSpec.declaredAddress.value.getPort should be(settings.network.bindAddress.getPort)
-
-    system.terminate()
-  }
-
-  it should "connect to local address of peer received from UPnP Gateway" in {
-    implicit val system = ActorSystem()
-
-    val tcpManagerProbe = TestProbe()
-
-    val knownPeerLocalAddress = new InetSocketAddress("192.168.1.56", 12345)
-    val knownPeerExternalAddress = new InetSocketAddress("88.44.33.11", 4567)
-
-    val settings2 = settings.copy(network = settings.network.copy(knownPeers = Seq(knownPeerExternalAddress)))
-
-    val upnp = DummyUPnPGateway(
-      InetAddress.getByName("88.44.33.11"),
-      InetAddress.getByName("192.169.1.11")
-    ) { _ => Some(knownPeerLocalAddress) }
-
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe, Some(upnp))
-
-    import scala.concurrent.duration._
-    val connectAddr = tcpManagerProbe.expectMsgPF(10.seconds) {
-      case Tcp.Connect(addr, _, _, _, _) => addr
-    }
-
-    connectAddr should be(knownPeerLocalAddress)
-
-    system.terminate()
-  }
-
   it should "not connect to itself" in {
     implicit val system = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
     val nodeAddr = new InetSocketAddress("127.0.0.1", settings.network.bindAddress.getPort)
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe, None)
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
     val testPeer = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
 
     val peerLocalAddress = new InetSocketAddress("192.168.1.2", settings.network.bindAddress.getPort)
@@ -311,7 +259,7 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
-    val (networkControllerRef, peerManager) = createNetworkController(settings, tcpManagerProbe, None)
+    val (networkControllerRef, peerManager) = createNetworkController(settings, tcpManagerProbe)
 
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
@@ -336,7 +284,7 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
-    val (networkControllerRef, peerManager) = createNetworkController(settings, tcpManagerProbe, None)
+    val (networkControllerRef, peerManager) = createNetworkController(settings, tcpManagerProbe)
 
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
@@ -362,7 +310,7 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
-    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe, None)
+    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe)
 
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
@@ -392,7 +340,7 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
-    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe, None)
+    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe)
 
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
@@ -428,7 +376,7 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
-    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe, None)
+    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe)
 
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
@@ -467,14 +415,13 @@ class NetworkControllerSpec extends NetworkTests {
   /**
     * Create NetworkControllerActor
     */
-  private def createNetworkController(settings: SparkzSettings, tcpManagerProbe: TestProbe, upnp: Option[UPnPGateway] = None)(implicit system: ActorSystem) = {
+  private def createNetworkController(settings: SparkzSettings, tcpManagerProbe: TestProbe)(implicit system: ActorSystem) = {
     val timeProvider = LocalTimeProvider
     val externalAddr = settings.network.declaredAddress
-      .orElse(upnp.map(u => new InetSocketAddress(u.externalAddress, settings.network.bindAddress.getPort)))
 
     val peersSpec: PeersSpec = new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects)
     val messageSpecs = Seq(GetPeersSpec, peersSpec)
-    val sparkzContext = SparkzContext(messageSpecs, Seq.empty, upnp, timeProvider, externalAddr)
+    val sparkzContext = SparkzContext(messageSpecs, Seq.empty, timeProvider, externalAddr)
 
     val peerManagerRef = PeerManagerRef(settings, sparkzContext)
 
@@ -490,26 +437,6 @@ class NetworkControllerSpec extends NetworkTests {
 
     tcpManagerProbe.send(networkControllerRef, Bound(settings.network.bindAddress))
     (networkControllerRef, peerManagerRef)
-  }
-}
-
-/**
-  * Stub for UpNP gateway
-  *
-  * @param externalAddress        - WAN gateway address
-  * @param localAddress           - LAN getaway address
-  * @param getLocalAddrForExtPort - lambda function for returns LAN address for given WAN port
-  */
-case class DummyUPnPGateway(override val externalAddress: InetAddress,
-                            override val localAddress: InetAddress)
-                           (getLocalAddrForExtPort: Int => Option[InetSocketAddress]) extends UPnPGateway {
-
-  override def addPort(port: Int): Unit = {}
-
-  override def deletePort(port: Int): Unit = {}
-
-  override def getLocalAddressForExternalPort(externalPort: Int): Option[InetSocketAddress] = {
-    getLocalAddrForExtPort(externalPort)
   }
 }
 
