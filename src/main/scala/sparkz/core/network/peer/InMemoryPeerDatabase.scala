@@ -113,7 +113,7 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     *
     * @return - `true` if penalty threshold is reached, `false` otherwise.
     */
-  def penalize(socketAddress: InetSocketAddress, penaltyType: PenaltyType): Boolean =
+  def peerPenaltyScoreOverThreshold(socketAddress: InetSocketAddress, penaltyType: PenaltyType): Boolean =
     Option(socketAddress.getAddress).exists { address =>
       val (newPenaltyScore, penaltyTs) = penaltyBook.get(address) match {
         case Some((penaltyScoreAcc, lastPenaltyTs)) =>

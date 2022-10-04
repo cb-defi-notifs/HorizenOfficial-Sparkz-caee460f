@@ -32,6 +32,7 @@ object PenaltyType {
   }
 
   case class DisconnectPenalty(networkSettings: NetworkSettings) extends PenaltyType {
-    override val penaltyScore: Int = networkSettings.penaltyScoreThreshold
+    // We want to ban right away a peer with this penalty: +1 to go beyond the threshold
+    override val penaltyScore: Int = networkSettings.penaltyScoreThreshold + 1
   }
 }
