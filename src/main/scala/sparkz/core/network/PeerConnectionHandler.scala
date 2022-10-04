@@ -4,6 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props, SupervisorS
 import akka.io.Tcp
 import akka.io.Tcp._
 import akka.util.{ByteString, CompactByteString}
+import scorex.util.ScorexLogging
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.{Handshaked, PenalizePeer}
 import sparkz.core.network.PeerConnectionHandler.ReceivableMessages
@@ -12,7 +13,6 @@ import sparkz.core.network.message.{HandshakeSpec, MessageSerializer}
 import sparkz.core.network.peer.{PeerInfo, PenaltyType}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
-import scorex.util.ScorexLogging
 
 import scala.annotation.tailrec
 import scala.collection.immutable.TreeMap
@@ -99,9 +99,9 @@ class PeerConnectionHandler(val settings: NetworkSettings,
 
         case Failure(t) =>
           log.info(s"Error during parsing a handshake", t)
-          //ban the peer for the wrong handshake message
+          //penalise the peer for the wrong handshake message and disconnect from it
           //peer will be added to the blacklist and the network controller will send CloseConnection
-          selfPeer.foreach(c => networkControllerRef ! PenalizePeer(c.connectionId.remoteAddress, PenaltyType.PermanentPenalty))
+          selfPeer.foreach(c => networkControllerRef ! PenalizePeer(c.connectionId.remoteAddress, PenaltyType.DisconnectPenalty(settings)))
       }
   }
 
@@ -204,7 +204,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
               case MaliciousBehaviorException(msg) =>
                 log.warn(s"Banning peer for malicious behaviour($msg): ${connectionId.toString}")
                 //peer will be added to the blacklist and the network controller will send CloseConnection
-                networkControllerRef ! PenalizePeer(connectionId.remoteAddress, PenaltyType.PermanentPenalty)
+                networkControllerRef ! PenalizePeer(connectionId.remoteAddress, PenaltyType.DisconnectPenalty(settings))
               //non-malicious corruptions
               case _ =>
                 log.info(s"Corrupted data from ${connectionId.toString}: ${e.getMessage}")
@@ -268,7 +268,6 @@ object PeerConnectionHandler {
     final case class Ack(id: Long) extends Tcp.Event
 
   }
-
 }
 
 object PeerConnectionHandlerRef {

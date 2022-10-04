@@ -49,7 +49,7 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext) extend
 
     case Penalize(peer, penaltyType) =>
       log.info(s"$peer penalized, penalty: $penaltyType")
-      if (peerDatabase.penalize(peer, penaltyType)) {
+      if (peerDatabase.peerPenaltyScoreOverThreshold(peer, penaltyType)) {
         log.info(s"$peer blacklisted")
         peerDatabase.addToBlacklist(peer, penaltyType)
         sender() ! Blacklisted(peer)
