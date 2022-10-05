@@ -4,7 +4,7 @@ import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.PrivateKey25519
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.crypto.signatures.{Curve25519, Signature}
 
 /**

@@ -4,7 +4,7 @@ import examples.hybrid.blocks.{HybridBlock, PosBlock, PowBlock}
 import examples.hybrid.history.HistoryStorage
 import examples.hybrid.mining.{HybridMiningSettings, PosForger}
 import sparkz.core.block.BlockValidator
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 
 import scala.util.Try
 

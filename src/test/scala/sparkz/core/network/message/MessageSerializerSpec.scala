@@ -39,7 +39,7 @@ class MessageSerializerSpec extends AnyFlatSpec with Matchers {
   it should "throw exception if magic bytes doesn't match" in {
     withSerializer { messageSerializer =>
       val otherSerializer = new MessageSerializer(specs, Array(4, 3, 2, 1), 20)
-      val message = Message[Unit](GetPeersSpec, Right(Unit), None)
+      val message = Message[Unit](GetPeersSpec, Right(()), None)
       val bytes = messageSerializer.serialize(message)
       val parsedMessage = otherSerializer.deserialize(bytes, None)
       an[MaliciousBehaviorException] should be thrownBy parsedMessage.get

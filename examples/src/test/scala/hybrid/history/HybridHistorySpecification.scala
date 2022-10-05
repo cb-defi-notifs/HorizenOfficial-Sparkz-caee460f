@@ -7,7 +7,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.consensus.History.{Older, HistoryComparisonResult, Equal, Younger}
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.core.ModifierTypeId
 import sparkz.util.ModifierId
 

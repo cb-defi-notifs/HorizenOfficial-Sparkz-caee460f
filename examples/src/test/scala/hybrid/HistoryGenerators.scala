@@ -20,7 +20,7 @@ trait HistoryGenerators {
   private val historyBrothersCount = 0
   private val historyBrothersHash = Array.fill(32)(0: Byte)
   private val historyBrothers = Seq.empty
-  private val historyProposition = PublicKey25519Proposition(PublicKey @@ scorex.utils.Random.randomBytes(32))
+  private val historyProposition = PublicKey25519Proposition(PublicKey @@ sparkz.utils.Random.randomBytes(32))
 
   private lazy val genesisBlock = PowBlock(
     settings.mining.GenesisParentId,

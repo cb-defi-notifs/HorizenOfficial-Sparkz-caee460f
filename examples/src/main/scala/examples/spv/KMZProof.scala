@@ -3,7 +3,7 @@ package examples.spv
 import sparkz.core._
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 
 import scala.annotation.tailrec
 import scala.util.Try

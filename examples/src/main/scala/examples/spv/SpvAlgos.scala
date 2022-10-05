@@ -1,6 +1,6 @@
 package examples.spv
 
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.util.{ModifierId, idToBytes}
 
 import scala.annotation.tailrec

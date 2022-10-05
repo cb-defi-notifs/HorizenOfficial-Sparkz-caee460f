@@ -11,7 +11,7 @@ import sparkz.core.settings.RESTApiSettings
 import sparkz.core.transaction.state.MinimalState
 import sparkz.core.transaction.wallet.Vault
 import sparkz.core.transaction.{MemoryPool, Transaction}
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.core.PersistentNodeViewModifier
 import sparkz.util.{ModifierId, bytesToId}
 

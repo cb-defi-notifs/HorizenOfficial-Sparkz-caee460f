@@ -4,7 +4,7 @@ import io.circe.Encoder
 import io.circe.syntax._
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.crypto.authds.SerializedAdProof
 import sparkz.crypto.signatures.Curve25519
 

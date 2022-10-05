@@ -14,7 +14,7 @@ import sparkz.core.consensus.ModifierSemanticValidity._
 import sparkz.core.consensus._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
-import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.validation.RecoverableModifierError
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import sparkz.crypto.hash.Blake2b256

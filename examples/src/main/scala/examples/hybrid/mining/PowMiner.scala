@@ -10,7 +10,7 @@ import examples.hybrid.wallet.HBoxWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.block.Block.BlockId
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.crypto.hash.Blake2b256
 import sparkz.util.{ModifierId, SparkzLogging}
 

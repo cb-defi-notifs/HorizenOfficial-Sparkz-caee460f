@@ -14,7 +14,7 @@ import sparkz.core.block.Block
 import sparkz.core.block.Block._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import sparkz.util.serialization.VLQByteStringWriter
 

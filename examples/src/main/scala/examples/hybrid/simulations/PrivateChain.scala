@@ -10,7 +10,7 @@ import examples.hybrid.util.FileFunctions
 import examples.hybrid.wallet.HBoxWallet
 import sparkz.core.block.Block.BlockId
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
-import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.encode.Base58
 import sparkz.crypto.signatures.PublicKey
 import sparkz.util.SparkzLogging

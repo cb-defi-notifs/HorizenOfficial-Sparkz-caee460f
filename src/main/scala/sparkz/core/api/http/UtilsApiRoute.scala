@@ -6,7 +6,7 @@ import akka.actor.ActorRefFactory
 import akka.http.scaladsl.server.Route
 import io.circe.Json
 import sparkz.core.settings.RESTApiSettings
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.crypto.hash.Blake2b256
 
 

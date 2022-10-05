@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import sparkz.core.consensus.ContainsModifiers
 import sparkz.core.network.ModifiersStatus._
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.CheckDelivery
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import sparkz.util.{ModifierId, SparkzLogging}
 

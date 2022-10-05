@@ -1,7 +1,5 @@
-package sparkz.core.utils
+package sparkz.util
 
-import sparkz.core.VersionTag
-import sparkz.util.ModifierId
 import sparkz.util.encode.{Base16, BytesEncoder}
 
 import scala.util.Try
@@ -30,7 +28,7 @@ class SparkzEncoder extends BytesEncoder {
     * with encode() and decode methods
     */
   @inline
-  def encodeVersion(input: VersionTag): String = input
+  def encodeVersion(input: String): String = input
 
   /**
     * This method might be useful and reimplemented, if encoding of ModifierId and VersionTag

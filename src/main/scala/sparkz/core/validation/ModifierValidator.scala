@@ -1,8 +1,7 @@
 package sparkz.core.validation
 
-import sparkz.util.ModifierId
+import sparkz.util.{ModifierId, SparkzEncoder}
 import sparkz.core.consensus.ModifierSemanticValidity
-import sparkz.core.utils.SparkzEncoder
 import sparkz.core.validation.ValidationResult._
 import sparkz.util.ModifierId
 

@@ -9,7 +9,7 @@ import examples.hybrid.wallet.HBoxWallet
 import io.circe.syntax._
 import sparkz.core.api.http.{ApiResponse, ApiRouteWithFullView, ApiTry}
 import sparkz.core.settings.RESTApiSettings
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.util.ModifierId
 
 import scala.util.Try

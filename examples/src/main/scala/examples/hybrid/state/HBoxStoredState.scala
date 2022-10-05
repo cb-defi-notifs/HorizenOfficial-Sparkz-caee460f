@@ -10,7 +10,7 @@ import sparkz.core._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.crypto.authds._
 import sparkz.mid.state.BoxMinimalState
 import sparkz.util.SparkzLogging

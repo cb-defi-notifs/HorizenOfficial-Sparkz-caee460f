@@ -5,7 +5,7 @@ import io.circe.syntax._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.account.PublicKeyNoncedBox
 import sparkz.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.util.encode.Base16
 import sparkz.crypto.hash.Blake2b256
 import sparkz.crypto.signatures.Curve25519

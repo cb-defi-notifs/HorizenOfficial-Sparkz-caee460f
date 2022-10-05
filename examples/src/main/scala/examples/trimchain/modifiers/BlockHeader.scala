@@ -6,7 +6,7 @@ import io.circe.syntax._
 import sparkz.core.ModifierTypeId
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 //TODO compact proof of ticket in header

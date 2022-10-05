@@ -8,7 +8,7 @@ import org.scalacheck.Gen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Outcome, propspec}
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.testkit.utils.FileUtils
 import sparkz.util.ModifierId
 

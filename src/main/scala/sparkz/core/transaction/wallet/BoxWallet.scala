@@ -7,7 +7,7 @@ import sparkz.core.transaction.Transaction
 import sparkz.core.transaction.box.Box
 import sparkz.core.transaction.box.proposition.{ProofOfKnowledgeProposition, Proposition}
 import sparkz.core.transaction.state.Secret
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.util.{ModifierId, bytesToId, idToBytes}
 import sparkz.core.PersistentNodeViewModifier
 import sparkz.core.transaction.box.proposition.{ProofOfKnowledgeProposition, Proposition}

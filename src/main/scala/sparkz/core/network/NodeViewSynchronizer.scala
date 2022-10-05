@@ -15,11 +15,11 @@ import sparkz.core.settings.NetworkSettings
 import sparkz.core.transaction.state.StateReader
 import sparkz.core.transaction.wallet.VaultReader
 import sparkz.core.transaction.{MempoolReader, Transaction}
-import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.validation.MalformedModifierError
 import sparkz.core.{ModifierTypeId, NodeViewModifier, PersistentNodeViewModifier, idsToString}
 import sparkz.util.serialization.{VLQByteBufferReader, VLQReader}
-import sparkz.util.{ModifierId, SparkzLogging}
+import sparkz.util.{ModifierId, SparkzEncoding, SparkzLogging}
 
 import java.nio.ByteBuffer
 import scala.annotation.{nowarn, tailrec}

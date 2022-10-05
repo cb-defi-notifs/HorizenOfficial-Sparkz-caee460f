@@ -3,7 +3,7 @@ package sparkz.core
 import com.typesafe.config.ConfigFactory
 import sparkz.core.serialization.BytesSerializable
 import sparkz.core.transaction.Transaction
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 
 import scala.util.Try
 

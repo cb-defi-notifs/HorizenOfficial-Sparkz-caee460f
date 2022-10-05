@@ -10,7 +10,7 @@ import examples.hybrid.wallet.HBoxWallet
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.PrivateKey25519Companion
-import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifierTypeId, NodeViewHolder, NodeViewModifier}
 import sparkz.util.encode.Base58
 import sparkz.crypto.signatures.PublicKey

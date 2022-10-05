@@ -10,7 +10,7 @@ import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.proof.{Signature25519, Signature25519Serializer}
 import sparkz.core.transaction.state.PrivateKey25519
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, TransactionsCarryingPersistentNodeViewModifier, idToBytes}
 import sparkz.crypto.hash.Blake2b256
 import sparkz.crypto.signatures.{Curve25519, Signature}

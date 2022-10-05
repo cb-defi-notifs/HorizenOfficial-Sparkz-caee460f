@@ -1,7 +1,7 @@
 package sparkz
 
 import sparkz.core.network.message.InvData
-import sparkz.core.utils.SparkzEncoder
+import sparkz.util.SparkzEncoder
 import sparkz.util.encode.Base16
 import supertagged.TaggedType
 

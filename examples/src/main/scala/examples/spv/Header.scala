@@ -6,7 +6,7 @@ import io.circe.syntax._
 import sparkz.core.block.Block
 import sparkz.core.block.Block._
 import sparkz.core.serialization.SparkzSerializer
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, PersistentNodeViewModifier}
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.util.{ModifierId, bytesToId, idToBytes}

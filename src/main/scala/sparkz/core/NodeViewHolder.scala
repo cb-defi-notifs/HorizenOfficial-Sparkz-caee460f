@@ -8,7 +8,7 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction._
 import sparkz.core.transaction.state.{MinimalState, TransactionValidation}
 import sparkz.core.transaction.wallet.Vault
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.util.SparkzLogging
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}

@@ -10,7 +10,7 @@ import sparkz.core._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, Removal}
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.crypto.authds.avltree.batch.{BatchAVLProver, Insert, Lookup, Remove}
 import sparkz.crypto.authds.{ADDigest, ADKey, ADValue, SerializedAdProof}
 import sparkz.crypto.hash.{Blake2b256, Digest32}
