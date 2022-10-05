@@ -41,11 +41,6 @@ trait Application extends SparkzLogging {
   protected val additionalMessageSpecs: Seq[MessageSpec[_]]
   private val featureSerializers: PeerFeature.Serializers = features.map(f => f.featureId -> f.serializer).toMap
 
-  //p2p
-  private val upnpGateway: Option[UPnPGateway] = if (settings.network.upnpEnabled) UPnP.getValidGateway(settings.network) else None
-  // TODO use available port on gateway instead settings.network.bindAddress.getPort
-  upnpGateway.foreach(_.addPort(settings.network.bindAddress.getPort))
-
   private lazy val basicSpecs = {
     val invSpec = new InvSpec(settings.network.maxInvObjects)
     val requestModifierSpec = new RequestModifierSpec(settings.network.maxInvObjects)
@@ -69,16 +64,12 @@ trait Application extends SparkzLogging {
 
   //an address to send to peers
   lazy val externalSocketAddress: Option[InetSocketAddress] = {
-    settings.network.declaredAddress orElse {
-      // TODO use available port on gateway instead settings.bindAddress.getPort
-      upnpGateway.map(u => new InetSocketAddress(u.externalAddress, settings.network.bindAddress.getPort))
-    }
+    settings.network.declaredAddress
   }
 
   val sparkzContext = SparkzContext(
     messageSpecs = basicSpecs ++ additionalMessageSpecs,
     features = features,
-    upnpGateway = upnpGateway,
     timeProvider = timeProvider,
     externalNodeAddress = externalSocketAddress
   )
@@ -115,7 +106,6 @@ trait Application extends SparkzLogging {
 
   def stopAll(): Unit = synchronized {
     log.info("Stopping network services")
-    upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))
     networkControllerRef ! ShutdownNetwork
 
     log.info("Stopping actors (incl. block generator)")

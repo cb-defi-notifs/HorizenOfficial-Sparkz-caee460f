@@ -1,5 +1,7 @@
 package sparkz.core.network.peer
 
+import sparkz.core.settings.NetworkSettings
+
 /**
   * A trait describing all possible types of the network participant misbehavior.
   * `penaltyScore` - a number defining how bad concrete kind of misbehavior is,
@@ -29,4 +31,8 @@ object PenaltyType {
     override val isPermanent: Boolean = true
   }
 
+  case class DisconnectPenalty(networkSettings: NetworkSettings) extends PenaltyType {
+    // We want to ban right away a peer with this penalty: +1 to go beyond the threshold
+    override val penaltyScore: Int = networkSettings.penaltyScoreThreshold + 1
+  }
 }

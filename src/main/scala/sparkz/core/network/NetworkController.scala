@@ -409,7 +409,7 @@ class NetworkController(settings: NetworkSettings,
 
   /**
     * Returns local address of peer for local connections and WAN address of peer for
-    * external connections. When local address is not known, try to ask it at the UPnP gateway
+    * external connections.
     *
     * @param peer - known information about peer
     * @return socket address of the peer
@@ -418,11 +418,6 @@ class NetworkController(settings: NetworkSettings,
     (peer.peerSpec.localAddressOpt, peer.peerSpec.declaredAddress) match {
       case (Some(localAddr), _) =>
         Some(localAddr)
-
-      case (None, Some(declaredAddress))
-        if sparkzContext.externalNodeAddress.exists(_.getAddress == declaredAddress.getAddress) =>
-
-        sparkzContext.upnpGateway.flatMap(_.getLocalAddressForExternalPort(declaredAddress.getPort))
 
       case _ => peer.peerSpec.declaredAddress
     }
@@ -461,15 +456,12 @@ class NetworkController(settings: NetworkSettings,
           val myAddress = InetAddress.getAllByName(myHost)
 
           val listenAddresses = NetworkUtils.getListenAddresses(bindAddress)
-          val upnpAddress = sparkzContext.upnpGateway.map(_.externalAddress)
-
-          val valid = listenAddresses.exists(addr => myAddress.contains(addr.getAddress)) || upnpAddress.exists(myAddress.contains)
+          val valid = listenAddresses.exists(addr => myAddress.contains(addr.getAddress))
 
           if (!valid) {
             log.error(
               s"""Declared address validation failed:
-                 | $mySocketAddress not match any of the listening address: $listenAddresses
-                 | or Gateway WAN address: $upnpAddress""".stripMargin)
+                 | $mySocketAddress not match any of the listening address: $listenAddresses""".stripMargin)
           }
         } recover { case t: Throwable =>
           log.error("Declared address validation failed: ", t)

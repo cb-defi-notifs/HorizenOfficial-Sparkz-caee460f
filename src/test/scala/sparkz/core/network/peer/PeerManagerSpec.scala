@@ -22,7 +22,7 @@ class PeerManagerSpec extends NetworkTests {
 
 
     val selfAddress = settings.network.bindAddress
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, None, timeProvider, Some(selfAddress))
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, Some(selfAddress))
     val peerManager = PeerManagerRef(settings, sparkzContext)(system)
     val peerInfo = getPeerInfo(selfAddress)
 
@@ -39,7 +39,7 @@ class PeerManagerSpec extends NetworkTests {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, None, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
     val peerManager = PeerManagerRef(settings, sparkzContext)(system)
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
     val peerInfo = getPeerInfo(peerAddress)
@@ -60,7 +60,7 @@ class PeerManagerSpec extends NetworkTests {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, None, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
     val peerManager = PeerManagerRef(settingsWithKnownPeer, sparkzContext)(system)
 
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)

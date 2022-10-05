@@ -93,16 +93,16 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
 
   it should "blacklist immediately when a permanent penalty is applied" in {
     withDb { db =>
-      db.penalize(peerAddress1, PenaltyType.SpamPenalty) shouldBe false
-      db.penalize(peerAddress1, PenaltyType.PermanentPenalty) shouldBe true
+      db.peerPenaltyScoreOverThreshold(peerAddress1, PenaltyType.SpamPenalty) shouldBe false
+      db.peerPenaltyScoreOverThreshold(peerAddress1, PenaltyType.PermanentPenalty) shouldBe true
     }
   }
 
   it should "not apply another penalty within a safe interval" in {
     withDb { db =>
-      db.penalize(peerAddress1, PenaltyType.SpamPenalty)
+      db.peerPenaltyScoreOverThreshold(peerAddress1, PenaltyType.SpamPenalty)
       db.penaltyScore(peerAddress1) shouldBe PenaltyType.SpamPenalty.penaltyScore
-      db.penalize(peerAddress1, PenaltyType.MisbehaviorPenalty)
+      db.peerPenaltyScoreOverThreshold(peerAddress1, PenaltyType.MisbehaviorPenalty)
       db.penaltyScore(peerAddress1) shouldBe PenaltyType.SpamPenalty.penaltyScore
     }
   }
@@ -203,19 +203,30 @@ class InMemoryPeerDatabaseSpec extends NetworkTests {
       val address = new InetSocketAddress("192.168.31.1", 7280)
       val penalty = PenaltyType.SpamPenalty
       // ==1==
-      db.penalize(address, penalty)
+      db.peerPenaltyScoreOverThreshold(address, penalty)
       db.penaltyScore(address) shouldBe penalty.penaltyScore
       // ==2==
-      db.penalize(address, penalty)
+      db.peerPenaltyScoreOverThreshold(address, penalty)
       db.penaltyScore(address) shouldBe penalty.penaltyScore
       // ==3==
       Thread.sleep(600)
-      db.penalize(address, penalty)
+      db.peerPenaltyScoreOverThreshold(address, penalty)
       db.penaltyScore(address) shouldBe penalty.penaltyScore
       // ==4==
       Thread.sleep(600)
-      db.penalize(address, penalty)
+      db.peerPenaltyScoreOverThreshold(address, penalty)
       db.penaltyScore(address) shouldBe penalty.penaltyScore * 2
+    }
+  }
+
+  it should "penalize a peer by banning it" in {
+    withDb { db =>
+      val address = new InetSocketAddress("192.168.31.1", 7280)
+      val penaltyType = PenaltyType.DisconnectPenalty(settings.network)
+
+      val penalizeWithBan = db.peerPenaltyScoreOverThreshold(address, penaltyType)
+
+      penalizeWithBan shouldBe true
     }
   }
 

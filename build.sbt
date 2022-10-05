@@ -57,7 +57,6 @@ val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-parsing" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-protobuf" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-  "org.bitlet" % "weupnp" % "0.1.4",
   "commons-net" % "commons-net" % "3.8.0"
 )
 
