@@ -6,7 +6,7 @@ import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.util.SparkzEncoding
 import sparkz.crypto.authds.SerializedAdProof
-import sparkz.crypto.signatures.Curve25519
+import sparkz.crypto.signatures.Ed25519
 
 import scala.annotation.tailrec
 import sparkz.util.Extensions._
@@ -26,7 +26,7 @@ object Ticket extends SparkzEncoding {
 
 object TicketSerializer extends SparkzSerializer[Ticket] {
 
-  val MinerKeySize: Int = Curve25519.KeyLength
+  val MinerKeySize: Int = Ed25519.KeyLength
 
   override def serialize(obj: Ticket, w: Writer): Unit = {
     w.putBytes(obj.minerKey)

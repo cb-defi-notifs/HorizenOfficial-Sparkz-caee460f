@@ -4,7 +4,7 @@ import org.scalatest.propspec.AnyPropSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import sparkz.util.encode.Base16
-import sparkz.crypto.signatures.{Curve25519, PrivateKey}
+import sparkz.crypto.signatures.{Ed25519, PrivateKey}
 
 
 class SigningFunctionsSpecification extends AnyPropSpec
@@ -15,37 +15,15 @@ class SigningFunctionsSpecification extends AnyPropSpec
     forAll { (seed1: Array[Byte], seed2: Array[Byte],
               message1: Array[Byte], message2: Array[Byte]) =>
       whenever(!seed1.sameElements(seed2) && !message1.sameElements(message2)) {
-        val keyPair = Curve25519.createKeyPair(seed1)
-        val keyPair2 = Curve25519.createKeyPair(seed2)
+        val keyPair = Ed25519.createKeyPair(seed1)
+        val keyPair2 = Ed25519.createKeyPair(seed2)
 
-        val sig = Curve25519.sign(keyPair._1, message1)
+        val sig = Ed25519.sign(keyPair._1, message1)
 
-        Curve25519.verify(sig, message1, keyPair._2) shouldBe true
-        Curve25519.verify(sig, message1, keyPair2._2) should not be true
-        Curve25519.verify(sig, message2, keyPair._2) should not be true
+        Ed25519.verify(sig, message1, keyPair._2) shouldBe true
+        Ed25519.verify(sig, message1, keyPair2._2) should not be true
+        Ed25519.verify(sig, message2, keyPair._2) should not be true
 
-      }
-    }
-  }
-
-  property("shared secret should be same for both parties ") {
-
-    forAll { (seed1: Array[Byte], seed2: Array[Byte]) =>
-      whenever(!seed1.sameElements(seed2)) {
-        val keyPair1 = Curve25519.createKeyPair(seed1)
-        val keyPair2 = Curve25519.createKeyPair(seed2)
-
-        val shared = Curve25519.createSharedSecret(keyPair1._1, keyPair2._2)
-        val sharedWithKeysReversed = Curve25519.createSharedSecret(keyPair2._1, keyPair1._2)
-
-        val badSharedSecret1 = Curve25519.createSharedSecret(PrivateKey @@ keyPair2._2, keyPair1._2)
-        val badSharedSecret2 = Curve25519.createSharedSecret(PrivateKey @@ keyPair2._2, keyPair1._2)
-
-        shared.sameElements(sharedWithKeysReversed) should be(true)
-
-        badSharedSecret1.sameElements(shared) shouldNot be(true)
-
-        badSharedSecret2.sameElements(shared) shouldNot be(true)
       }
     }
   }
@@ -53,7 +31,7 @@ class SigningFunctionsSpecification extends AnyPropSpec
   property("test vectors from https://tools.ietf.org/html/rfc8032#page-24 - test 1") {
     val privKey = PrivateKey @@ Base16.decode("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60").get
     val message = Array[Byte]()
-    val sig = Curve25519.sign(privKey, message)
+    val sig = Ed25519.sign(privKey, message)
     val specSig = Base16.decode("e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e" +
       "39701cf9b46bd25bf5f0595bbe24655141438e7a100b").get
     sig.sameElements(specSig)
@@ -62,7 +40,7 @@ class SigningFunctionsSpecification extends AnyPropSpec
   property("test vectors from https://tools.ietf.org/html/rfc8032#page-24 - test 2") {
     val privKey = PrivateKey @@ Base16.decode("4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb").get
     val message = Base16.decode("72").get
-    val sig = Curve25519.sign(privKey, message)
+    val sig = Ed25519.sign(privKey, message)
     val specSig = Base16.decode("92a009a9f0d4cab8720e820b5f642540" +
       "a2b27b5416503f8fb3762223ebdb69da" +
       "085ac1e43e15996e458f3613d0f11d8c" +
@@ -73,7 +51,7 @@ class SigningFunctionsSpecification extends AnyPropSpec
   property("test vectors from https://tools.ietf.org/html/rfc8032#page-24 - test 3") {
     val privKey = PrivateKey @@ Base16.decode("c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7").get
     val message = Base16.decode("af82").get
-    val sig = Curve25519.sign(privKey, message)
+    val sig = Ed25519.sign(privKey, message)
     val specSig = Base16.decode("6291d657deec24024827e69c3abe01a3" +
       "0ce548a284743a445e3680d7db5ac3ac" +
       "18ff9b538d16f290ae67f760984dc659" +
@@ -102,7 +80,7 @@ class SigningFunctionsSpecification extends AnyPropSpec
       "f6b1116398a346f1a641f3b041e989f7914f90cc2c7fff357876e506b50d334ba77c225bc307ba537152f3f1610e4eafe595f6d9d90d11" +
       "faa933a15ef1369546868a7f3a45a96768d40fd9d03412c091c6315cf4fde7cb68606937380db2eaaa707b4c4185c32eddcdd306705e4d" +
       "c1ffc872eeee475a64dfac86aba41c0618983f8741c5ef68d3a101e8a3b8cac60c905c15fc910840b94c00a0b9d0").get
-    val sig = Curve25519.sign(privKey, message)
+    val sig = Ed25519.sign(privKey, message)
     val specSig = Base16.decode("0aab4c900501b3e24d7cdf4663326a3a87df5e4843b2cbdb67cbf6e460fec350aa5371b1508f9f4528ec" +
       "ea23c436d94b5e8fcd4f681e30a6ac00a9704a188a03").get
     sig.sameElements(specSig)
@@ -112,7 +90,7 @@ class SigningFunctionsSpecification extends AnyPropSpec
     val privKey = PrivateKey @@ Base16.decode("833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42").get
     val message = Base16.decode("ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836" +
       "ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f").get
-    val sig = Curve25519.sign(privKey, message)
+    val sig = Ed25519.sign(privKey, message)
     val specSig = Base16.decode("dc2a4459e7369633a52b1bf277839a00201009a3efbf3ecb69bea2186c26b58909351fc9ac90b3ecfdf" +
       "bc7c66431e0303dca179c138ac17ad9bef1177331a704").get
     sig.sameElements(specSig)

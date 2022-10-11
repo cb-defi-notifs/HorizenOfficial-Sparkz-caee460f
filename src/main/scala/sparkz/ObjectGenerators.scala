@@ -12,7 +12,7 @@ import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion}
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-import sparkz.crypto.signatures.Curve25519
+import sparkz.crypto.signatures.Ed25519
 import sparkz.util.serialization._
 import sparkz.util.{ModifierId, bytesToId}
 
@@ -99,7 +99,7 @@ trait ObjectGenerators {
     direction <- Gen.oneOf[ConnectionDirection](Seq[ConnectionDirection](Incoming, Outgoing))
   } yield ConnectionId(ip1, ip2, direction)
 
-  lazy val key25519Gen: Gen[(PrivateKey25519, PublicKey25519Proposition)] = genBytes(Curve25519.KeyLength)
+  lazy val key25519Gen: Gen[(PrivateKey25519, PublicKey25519Proposition)] = genBytes(Ed25519.KeyLength)
     .map(s => PrivateKey25519Companion.generateKeys(s))
 
   lazy val propositionGen: Gen[PublicKey25519Proposition] = key25519Gen.map(_._2)

@@ -351,6 +351,10 @@ trait VLQReaderWriterSpecification extends AnyPropSpec
     forAll { v: Array[Boolean] => byteBufReader(byteArrayWriter().putBits(v).toBytes).getBits(v.length) shouldBe v }
   }
 
+  property("Boolean roundtrip") {
+    forAll {v: Boolean => byteBufReader(byteArrayWriter().putBoolean(v).toBytes).getBoolean() shouldBe v}
+  }
+
   property("short string roundtrip") {
     forAll(Gen.alphaStr.suchThat(_.length < 256)) { v: String =>
       byteBufReader(byteArrayWriter().putShortString(v).toBytes).getShortString() shouldBe v

@@ -18,6 +18,4 @@ trait SigningFunctions {
   def sign(privateKey: PrivateKey, message: MessageToSign): Signature
 
   def verify(signature: Signature, message: MessageToSign, publicKey: PublicKey): Boolean
-
-  def createSharedSecret(privateKey: PrivateKey, publicKey: PublicKey): SharedSecret
 }

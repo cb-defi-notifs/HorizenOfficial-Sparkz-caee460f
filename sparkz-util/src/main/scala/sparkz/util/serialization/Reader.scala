@@ -83,6 +83,12 @@ trait Reader {
   def getULong(): Long
 
   /**
+    * Decode boolean
+    * @return boolean
+    */
+  def getBoolean(): Boolean
+
+  /**
     * Decode array of byte values
     * @param size expected size of decoded array
     * @return

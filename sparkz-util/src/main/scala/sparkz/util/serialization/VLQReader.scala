@@ -8,6 +8,8 @@ trait VLQReader extends Reader {
 
   @inline override def getUByte(): Int = getByte() & 0xFF
 
+  @inline override def getBoolean(): Boolean = getByte() == 0x01
+
   /**
     * Decode signed Short previously encoded with [[VLQWriter.putShort]] using VLQ and then ZigZag.
     *

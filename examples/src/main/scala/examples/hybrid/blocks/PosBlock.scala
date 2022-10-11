@@ -13,7 +13,7 @@ import sparkz.core.transaction.state.PrivateKey25519
 import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, TransactionsCarryingPersistentNodeViewModifier, idToBytes}
 import sparkz.crypto.hash.Blake2b256
-import sparkz.crypto.signatures.{Curve25519, Signature}
+import sparkz.crypto.signatures.{Ed25519, Signature}
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId}
 import sparkz.util.Extensions._
 
@@ -95,7 +95,7 @@ object PosBlock extends SparkzEncoding {
              privateKey: PrivateKey25519): PosBlock = {
     require(java.util.Arrays.equals(box.proposition.pubKeyBytes, privateKey.publicKeyBytes))
     val unsigned = PosBlock(parentId, timestamp, txs, box, attachment, Signature25519(Signature @@ Array[Byte]()))
-    val signature = Curve25519.sign(privateKey.privKeyBytes, PosBlockSerializer.toByteString(unsigned).toArray)
+    val signature = Ed25519.sign(privateKey.privKeyBytes, PosBlockSerializer.toByteString(unsigned).toArray)
     unsigned.copy(signature = Signature25519(signature))
   }
 

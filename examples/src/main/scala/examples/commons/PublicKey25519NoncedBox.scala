@@ -8,7 +8,7 @@ import sparkz.core.transaction.box.proposition.{PublicKey25519Proposition, Publi
 import sparkz.util.SparkzEncoding
 import sparkz.util.encode.Base16
 import sparkz.crypto.hash.Blake2b256
-import sparkz.crypto.signatures.Curve25519
+import sparkz.crypto.signatures.Ed25519
 import sparkz.util.serialization.{Reader, Writer}
 
 case class PublicKey25519NoncedBox(override val proposition: PublicKey25519Proposition,
@@ -25,7 +25,7 @@ case class PublicKey25519NoncedBox(override val proposition: PublicKey25519Propo
 
 object PublicKey25519NoncedBox extends SparkzEncoding {
   val BoxKeyLength: Int = Blake2b256.DigestSize
-  val BoxLength: Int = Curve25519.KeyLength + 2 * 8
+  val BoxLength: Int = Ed25519.KeyLength + 2 * 8
 
   implicit val publicKey25519NoncedBoxEncoder: Encoder[PublicKey25519NoncedBox] = (pknb: PublicKey25519NoncedBox) =>
     Map(

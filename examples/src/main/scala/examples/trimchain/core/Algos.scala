@@ -14,7 +14,7 @@ import sparkz.core._
 import sparkz.crypto.authds.avltree.batch.{BatchAVLVerifier, Lookup}
 import sparkz.crypto.authds.{ADDigest, ADKey}
 import sparkz.crypto.hash.{Blake2b256, Digest32}
-import sparkz.crypto.signatures.{Curve25519, PublicKey}
+import sparkz.crypto.signatures.{Ed25519, PublicKey}
 
 import scala.util.{Failure, Random, Success, Try}
 
@@ -57,7 +57,7 @@ object Algos extends App {
           difficulty: BigInt,
           attempts: Int): Try[Option[BlockHeader]] = Try {
 
-    require(minerPubKey.length == Curve25519.KeyLength)
+    require(minerPubKey.length == Ed25519.KeyLength)
     require(miningUtxos.length == k)
 
     (1 to attempts).foreach { i =>

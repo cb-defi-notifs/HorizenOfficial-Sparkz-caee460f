@@ -5,7 +5,7 @@ import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.transaction.box._
 import sparkz.core.transaction.box.proposition.{ProofOfKnowledgeProposition, PublicKey25519Proposition}
 import sparkz.core.transaction.proof.{ProofOfKnowledge, Signature25519}
-import sparkz.crypto.signatures.{Curve25519, PrivateKey, PublicKey}
+import sparkz.crypto.signatures.{Ed25519, PrivateKey, PublicKey}
 
 trait Secret extends BytesSerializable {
   self =>
@@ -34,8 +34,8 @@ trait SecretCompanion[S <: Secret] {
 }
 
 case class PrivateKey25519(privKeyBytes: PrivateKey, publicKeyBytes: PublicKey) extends Secret {
-  require(privKeyBytes.length == Curve25519.KeyLength, s"${privKeyBytes.length} == ${Curve25519.KeyLength}")
-  require(publicKeyBytes.length == Curve25519.KeyLength, s"${publicKeyBytes.length} == ${Curve25519.KeyLength}")
+  require(privKeyBytes.length == Ed25519.KeyLength, s"${privKeyBytes.length} == ${Ed25519.KeyLength}")
+  require(publicKeyBytes.length == Ed25519.KeyLength, s"${publicKeyBytes.length} == ${Ed25519.KeyLength}")
 
   override type S = PrivateKey25519
   override type PK = PublicKey25519Proposition
@@ -72,14 +72,14 @@ object PrivateKey25519Companion extends SecretCompanion[PrivateKey25519] {
   }
 
   override def sign(secret: PrivateKey25519, message: Array[Byte]): Signature25519 = {
-    Signature25519(Curve25519.sign(secret.privKeyBytes, message))
+    Signature25519(Ed25519.sign(secret.privKeyBytes, message))
   }
 
   override def verify(message: Array[Byte], publicImage: PublicKey25519Proposition, proof: Signature25519): Boolean =
-    Curve25519.verify(proof.signature, message, publicImage.pubKeyBytes)
+    Ed25519.verify(proof.signature, message, publicImage.pubKeyBytes)
 
   override def generateKeys(randomSeed: Array[Byte]): (PrivateKey25519, PublicKey25519Proposition) = {
-    val pair = Curve25519.createKeyPair(randomSeed)
+    val pair = Ed25519.createKeyPair(randomSeed)
     val secret: PrivateKey25519 = PrivateKey25519(pair._1, pair._2)
     secret -> secret.publicImage
   }
