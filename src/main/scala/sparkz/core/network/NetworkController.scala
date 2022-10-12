@@ -467,8 +467,8 @@ class NetworkController(settings: NetworkSettings,
           val listenAddresses = NetworkUtils.getListenAddresses(bindAddress)
           val upnpAddress = sparkzContext.upnpGateway.map(_.externalAddress)
 
-          val valid = listenAddresses.exists(myAddress.contains) || upnpAddress.exists(myAddress.contains)
-
+          val valid = listenAddresses.exists(addr => myAddress.contains(addr.getAddress))
+          
           if (!valid) {
             log.error(
               s"""Declared address validation failed:
