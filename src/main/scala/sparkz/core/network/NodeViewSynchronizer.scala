@@ -324,20 +324,20 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
                                                     remote: ConnectedPeer): Iterable[M] = {
     modifiers.flatMap { case (id, bytes) =>
       val reader: VLQReader = new VLQByteBufferReader(ByteBuffer.wrap(bytes))
+      val mod = serializer.parse(reader)
 
       if (reader.remaining != 0) {
         penalizeMisbehavingPeer(remote)
         log.warn(s"Received additional bytes after block. Declared id ${encoder.encodeId(id)} from ${remote.toString}")
       }
 
-      serializer.parseTry(reader) match {
-        case Success(mod) if id == mod.id =>
-          Some(mod)
-        case _ =>
-          // Penalize peer and do nothing - it will be switched to correct state on CheckDelivery
-          penalizeMisbehavingPeer(remote)
-          log.warn(s"Failed to parse modifier with declared id ${encoder.encodeId(id)} from ${remote.toString}")
-          None
+      if (id == mod.id) {
+        Some(mod)
+      } else {
+        // Penalize peer and do nothing - it will be switched to correct state on CheckDelivery
+        penalizeMisbehavingPeer(remote)
+        log.warn(s"Failed to parse modifier with declared id ${encoder.encodeId(id)} from ${remote.toString}")
+        None
       }
     }
   }
