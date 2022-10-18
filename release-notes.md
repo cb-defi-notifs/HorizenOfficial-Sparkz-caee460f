@@ -1,3 +1,7 @@
+2.0.0-RC9
+---------
+* Hotfix - mistakenly penalizing peers during synchronization
+
 2.0.0-RC8
 ---------
 * Application execution context name fixed.
