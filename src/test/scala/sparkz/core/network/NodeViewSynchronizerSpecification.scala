@@ -52,7 +52,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
       case Failure(e) => throw e
       case Success(value) => value match {
         case Some(value) => value
-        case None => fail("")
+        case None => fail("roundTrip test method unexpected behavior")
       }
     }
   }
