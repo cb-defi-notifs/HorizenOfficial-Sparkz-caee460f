@@ -142,7 +142,7 @@ class NetworkController(settings: NetworkSettings,
   }
 
   private def connectionEvents: Receive = {
-    case Connected(remoteAddress, localAddress) if connectionForPeerAddress(remoteAddress).isEmpty =>
+    case Connected(remoteAddress, localAddress) if isNewConnectionAndStillHaveRoom(remoteAddress) =>
       val connectionDirection: ConnectionDirection =
         if (unconfirmedConnections.contains(remoteAddress)) Outgoing else Incoming
       val connectionId = ConnectionId(remoteAddress, localAddress, connectionDirection)
@@ -151,7 +151,9 @@ class NetworkController(settings: NetworkSettings,
       else peerManagerRef ! ConfirmConnection(connectionId, sender())
 
     case Connected(remoteAddress, _) =>
-      log.warn(s"Connection to peer $remoteAddress is already established")
+      val logMessage = if (connections.size >= settings.maxConnections) "Max connections limit reached"
+                       else s"Connection to peer $remoteAddress is already established"
+      log.warn(logMessage)
       sender() ! Close
 
     case ConnectionConfirmed(connectionId, handlerRef) =>
@@ -191,6 +193,10 @@ class NetworkController(settings: NetworkSettings,
 
     case ConnectionToPeer(activeConnections, unconfirmedConnections) =>
       connectionToPeer(activeConnections, unconfirmedConnections)
+  }
+
+  private def isNewConnectionAndStillHaveRoom(remoteAddress: InetSocketAddress) = {
+    connectionForPeerAddress(remoteAddress).isEmpty && connections.size < settings.maxConnections
   }
 
   //calls from API / application
