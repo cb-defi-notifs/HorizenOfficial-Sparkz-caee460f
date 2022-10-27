@@ -30,10 +30,19 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext) extend
     }
   }
 
-  override def receive: Receive = peersManagement orElse apiInterface orElse {
+  override def receive: Receive = testLog orElse peersManagement orElse apiInterface orElse {
     case a: Any =>
       log.error(s"Wrong input for peer manager: $a")
   }
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("PeerManager", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
+  }
+
 
   private def peersManagement: Receive = {
 

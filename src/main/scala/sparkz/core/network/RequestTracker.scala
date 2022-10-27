@@ -32,11 +32,20 @@ class RequestTracker(
   implicit val timeout: Timeout = Timeout(60, SECONDS)
 
   override def receive: Receive = {
+    testLog orElse
     registerMessageSpec orElse
       sendTrackedRequest orElse
       receiveResponse orElse
       verifyDelivery orElse
       forward
+  }
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("RequestTracker", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
   }
 
   private def registerMessageSpec: Receive = {

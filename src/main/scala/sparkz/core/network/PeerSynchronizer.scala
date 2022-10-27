@@ -44,12 +44,24 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
   }
 
   override def receive: Receive = {
+    testLog orElse baseReceive
+  }
+
+  def baseReceive : Receive = {
 
     // data received from a remote peer
     case Message(spec, Left(msgBytes), Some(source)) => parseAndHandle(spec, msgBytes, source)
 
     // fall-through method for reporting unhandled messages
     case nonsense: Any => log.warn(s"PeerSynchronizer: got unexpected input $nonsense from ${sender()}")
+  }
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("PeerSynchronizer", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
   }
 
   override protected def penalizeMaliciousPeer(peer: ConnectedPeer): Unit = {

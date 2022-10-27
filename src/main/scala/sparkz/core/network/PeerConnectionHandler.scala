@@ -64,11 +64,20 @@ class PeerConnectionHandler(val settings: NetworkSettings,
     context.become(handshaking)
   }
 
-  override def receive: Receive = reportStrangeInput
+  override def receive: Receive = testLog orElse reportStrangeInput
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("PeerConnectionHandler", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
+  }
+
 
   override def postStop(): Unit = log.info(s"Peer handler to $connectionId destroyed")
 
-  private def handshaking: Receive = {
+  private def handshaking: Receive = testLog orElse {
     handshakeTimeoutCancellableOpt = Some(context.system.scheduler.scheduleOnce(settings.handshakeTimeout)
     (self ! HandshakeTimeout))
     val hb = handshakeSerializer.toBytes(createHandshakeMessage())
@@ -114,16 +123,18 @@ class PeerConnectionHandler(val settings: NetworkSettings,
   }
 
   private def workingCycleWriting: Receive =
-    localInterfaceWriting orElse
+    testLog orElse  localInterfaceWriting orElse
       remoteInterface orElse
       closeCommands orElse
       reportStrangeInput
 
   private def workingCycleBuffering: Receive =
-    localInterfaceBuffering orElse
+    testLog orElse  localInterfaceBuffering orElse
       remoteInterface orElse
       closeCommands orElse
       reportStrangeInput
+
+      
 
   private def closeCommands: Receive = {
     case CloseConnection =>

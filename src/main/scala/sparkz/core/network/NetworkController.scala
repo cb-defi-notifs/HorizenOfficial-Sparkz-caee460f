@@ -79,12 +79,22 @@ class NetworkController(settings: NetworkSettings,
   tcpManager ! Bind(self, bindAddress, options = Nil, pullMode = false)
 
   override def receive: Receive =
+    testLog orElse
     bindingLogic orElse
-      businessLogic orElse
-      peerCommands orElse
-      connectionEvents orElse
-      interfaceCalls orElse
-      nonsense
+    businessLogic orElse
+    peerCommands orElse
+    connectionEvents orElse
+    interfaceCalls orElse
+    nonsense
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("NetworkController", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
+  }
+
 
   private def bindingLogic: Receive = {
     case Bound(_) =>

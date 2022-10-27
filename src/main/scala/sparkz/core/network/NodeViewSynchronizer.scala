@@ -433,6 +433,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
   }
 
   override def receive: Receive =
+    testLog orElse    
     processDataFromPeer orElse
       getLocalSyncInfo orElse
       processSyncStatus orElse
@@ -442,6 +443,14 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       checkDelivery orElse {
       case a: Any => log.error("Strange input: " + a)
     }
+
+  def testLog: Receive =  new Receive {
+    def isDefinedAt(x: Any) = {
+      sparkz.core.debug.MessageCounters.log("NodeViewSynchronizer", x)
+      false
+    }
+    def apply(x: Any) = throw new UnsupportedOperationException  
+  }
 
 }
 
