@@ -192,13 +192,17 @@ class NetworkController(settings: NetworkSettings,
   }
 
   private def handleNewConnectionCreation(remoteAddress: InetSocketAddress, localAddress: InetSocketAddress): Unit = {
-    val connectionDirection: ConnectionDirection =
-      if (unconfirmedConnections.contains(remoteAddress)) Outgoing else Incoming
+    val connectionDirection: ConnectionDirection = if (unconfirmedConnections.contains(remoteAddress)) Outgoing else Incoming
     val connectionId = ConnectionId(remoteAddress, localAddress, connectionDirection)
+
     log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
-    if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection) createPeerConnectionHandler(connectionId, sender())
-    else if (connectionDirection.isIncoming && canEstablishNewIncomingConnection) peerManagerRef ! ConfirmConnection(connectionId, sender())
-    else self ! ConnectionDenied(connectionId, sender())
+
+    if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection)
+      createPeerConnectionHandler(connectionId, sender())
+    else if (connectionDirection.isIncoming && canEstablishNewIncomingConnection)
+      peerManagerRef ! ConfirmConnection(connectionId, sender())
+    else
+      self ! ConnectionDenied(connectionId, sender())
   }
 
   private def isNewConnectionAndStillHaveRoom(remoteAddress: InetSocketAddress) = {
