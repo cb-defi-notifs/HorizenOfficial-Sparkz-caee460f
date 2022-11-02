@@ -197,12 +197,16 @@ class NetworkController(settings: NetworkSettings,
 
     log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
 
-    if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection)
-      createPeerConnectionHandler(connectionId, sender())
+    val handlerRef = sender()
+    if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection) {
+      createPeerConnectionHandler(connectionId, handlerRef)
+    }
     else if (connectionDirection.isIncoming && canEstablishNewIncomingConnection)
-      peerManagerRef ! ConfirmConnection(connectionId, sender())
-    else
-      self ! ConnectionDenied(connectionId, sender())
+      peerManagerRef ! ConfirmConnection(connectionId, handlerRef)
+    else {
+      log.info(s"Connection to address ${connectionId.remoteAddress} refused; there is no room left for a new peer")
+      handlerRef ! Close
+    }
   }
 
   private def isNewConnectionAndStillHaveRoom(remoteAddress: InetSocketAddress) = {
@@ -244,7 +248,7 @@ class NetworkController(settings: NetworkSettings,
     context.system.scheduler.scheduleWithFixedDelay(5.seconds, 5.seconds) {
       () => {
         if (canEstablishNewOutgoingConnection) {
-          log.debug(s"Looking for a new random connection")
+          log.trace(s"Looking for a new random connection")
           connectionToPeer(connections, unconfirmedConnections)
         }
       }
