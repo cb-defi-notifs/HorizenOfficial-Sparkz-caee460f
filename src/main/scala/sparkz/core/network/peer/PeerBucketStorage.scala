@@ -3,14 +3,14 @@ package sparkz.core.network.peer
 import com.google.common.primitives.{Bytes, Ints}
 import scorex.crypto.hash.Blake2b256
 import sparkz.core.network.peer.BucketManager.PeerBucketValue
-import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, BucketHashContent, NOT_FOUND_PEER_INDEXES, TriedPeerBucketHashContent}
+import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, BucketHashContent, NOT_FOUND_PEER_INDEXES}
 import sparkz.core.utils.TimeProvider.Time
 import sparkz.core.utils.{NetworkAddressWrapper, TimeProvider}
 
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import scala.collection.mutable
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 abstract class PeerBucketStorage[T <: BucketHashContent](
                                   private val bucketConfig: BucketConfig,
@@ -22,35 +22,52 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
   private val table: mutable.Map[(Int, Int), (PeerBucketValue, Time)] = mutable.Map.empty[(Int, Int), (PeerBucketValue, Time)]
   private val reverseTable: mutable.Map[InetSocketAddress, (Int, Int)] = mutable.Map.empty[InetSocketAddress, (Int, Int)]
 
-  private def getBucket(hashContent: T): Int = {
+  protected[peer] def getBucket(hashContent: T): Int = {
     val hash1Content = Bytes.concat(Ints.toByteArray(nKey), hashContent.getHashAsBytes)
     val h: Array[Byte] = Blake2b256.hash(hash1Content)
     val hInt = ByteBuffer.wrap(h).getInt
 
     val hash2Content = Bytes.concat(Ints.toByteArray(nKey), getAddressGroup(hashContent.getAddress), Ints.toByteArray(hInt % bucketSubgroup))
     val hash2: Array[Byte] = Blake2b256.hash(hash2Content)
+
     ByteBuffer.wrap(hash2).getInt % buckets
   }
 
   private def getAddressGroup(peerAddress: InetSocketAddress): Array[Byte] = {
-    val networkAddress = new NetworkAddressWrapper(peerAddress)
-    var nClass = 0
+    val na = new NetworkAddressWrapper(peerAddress)
+    var nClass = NetworkAddressWrapper.NET_IPV6
     var nStartByte = 0
     var nBits = 16
 
-    if (networkAddress.isLocal) {
+    if (na.isLocal) {
       nClass = 255
       nBits = 0
+    } else if (!na.isRoutable) {
+      nClass = NetworkAddressWrapper.NET_UNROUTABLE
+      nBits = 0
+    } else if (na.hasLinkedIPv4) {
+      nClass = NetworkAddressWrapper.NET_IPV4
+    } else if (na.isHeNet) {
+      nBits = 36
     }
-    Array[Byte]()
+    else
+      nBits = 32
+
+    var result: Array[Byte] = Array(nClass.toByte)
+    while (nBits >= 16) {
+      result = result ++ na.getSubNum(nStartByte)
+      nStartByte += 1
+      nBits -= 16
+    }
+    result
   }
 
-  private def getBucketPosition(nBucket: Int, peerAddress: InetSocketAddress): Int = {
+  protected[peer] def getBucketPosition(nBucket: Int, peerAddress: InetSocketAddress): Int = {
     val hashContent = Bytes.concat(
       Ints.toByteArray(nKey),
       Ints.toByteArray(if (isNewPeer) 1 else 0),
       Ints.toByteArray(nBucket),
-      peerAddress.getHostName.getBytes,
+      peerAddress.getHostString.getBytes,
       Ints.toByteArray(peerAddress.getPort)
     )
     val hash1 = Blake2b256.hash(hashContent)
@@ -86,20 +103,36 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
     }
   }
 
-  def contains(address: InetSocketAddress): Boolean = {
-    val peerIndexes = tryGetIndexesFromPeerAddress(address)
+  def bucketPositionIsAlreadyTaken(peerBucketValue: PeerBucketValue): Boolean = {
+    val hashContent = getHashContent(peerBucketValue)
+    val (bucket, bucketPosition) = getPeerPositionIndexes(hashContent)
 
-    if (peerIndexes == NOT_FOUND_PEER_INDEXES)
-      false
-    else
-      table.contains((peerIndexes._1, peerIndexes._2))
+    table.contains((bucket, bucketPosition))
   }
 
-  def getStoredPeer(address: InetSocketAddress): Option[PeerBucketValue] = {
+  def contains(address: InetSocketAddress): Boolean = {
+    tryGetIndexesFromPeerAddress(address) != NOT_FOUND_PEER_INDEXES
+  }
+
+  def getStoredPeerByAddress(address: InetSocketAddress): Option[PeerBucketValue] = {
     tryGetIndexesFromPeerAddress(address) match {
       case indexes if indexes != NOT_FOUND_PEER_INDEXES => Some(table(indexes._1, indexes._2)._1)
       case _ => None
     }
+  }
+
+  def getStoredPeerByIndexes(bucket: Int, bucketPosition: Int): Option[PeerBucketValue] = {
+    Try(table(bucket, bucketPosition)) match {
+      case Success((peerBucketValue, _)) => Some(peerBucketValue)
+      case _ => None
+    }
+  }
+
+  def getPeerIndexes(peerBucketValue: PeerBucketValue): (Int, Int) = {
+    val peerHashContent = getHashContent(peerBucketValue)
+    val bucket = getBucket(peerHashContent)
+    val bucketPosition = getBucketPosition(bucket, peerHashContent.getAddress)
+    (bucket, bucketPosition)
   }
 
   private def tryGetIndexesFromPeerAddress(address: InetSocketAddress): (Int, Int) = {
@@ -130,9 +163,9 @@ object PeerBucketStorage {
 
   case class NewPeerBucketHashContent(address: InetSocketAddress, sourceAddress: InetSocketAddress) extends BucketHashContent {
     override def getHashAsBytes: Array[Byte] = Bytes.concat(
-      address.getHostName.getBytes,
+      address.getHostString.getBytes,
       Ints.toByteArray(address.getPort),
-      sourceAddress.getHostName.getBytes,
+      sourceAddress.getHostString.getBytes,
       Ints.toByteArray(sourceAddress.getPort)
     )
 
@@ -140,7 +173,8 @@ object PeerBucketStorage {
   }
 
   case class TriedPeerBucketHashContent(address: InetSocketAddress) extends BucketHashContent {
-    override def getHashAsBytes: Array[Byte] = Bytes.concat(address.getHostName.getBytes, Ints.toByteArray(address.getPort))
+
+    override def getHashAsBytes: Array[Byte] = Bytes.concat(address.getHostString.getBytes, Ints.toByteArray(address.getPort))
 
     override def getAddress: InetSocketAddress = address
   }

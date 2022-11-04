@@ -1,20 +1,22 @@
 package sparkz.core.app
 
-import java.net.InetSocketAddress
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
+import scorex.util.ScorexLogging
 import sparkz.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import sparkz.core.network._
 import sparkz.core.network.message._
-import sparkz.core.network.peer.PeerManagerRef
+import sparkz.core.network.peer.BucketManager.BucketManagerConfig
+import sparkz.core.network.peer.PeerBucketStorage.BucketConfig
+import sparkz.core.network.peer.{InMemoryPeerDatabase, PeerManagerRef}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{NodeViewHolder, PersistentNodeViewModifier}
-import scorex.util.ScorexLogging
 
+import java.net.InetSocketAddress
+import java.security.SecureRandom
 import scala.concurrent.ExecutionContext
 
 trait Application extends ScorexLogging {
@@ -67,14 +69,21 @@ trait Application extends ScorexLogging {
     settings.network.declaredAddress
   }
 
-  val sparkzContext = SparkzContext(
+  val sparkzContext: SparkzContext = SparkzContext(
     messageSpecs = basicSpecs ++ additionalMessageSpecs,
     features = features,
     timeProvider = timeProvider,
     externalNodeAddress = externalSocketAddress
   )
 
-  val peerManagerRef = PeerManagerRef(settings, sparkzContext)
+  val secureRandom = new SecureRandom()
+  val bucketManagerConfig: BucketManagerConfig = BucketManagerConfig(
+    newBucketConfig = BucketConfig(buckets = 1024, bucketPositions =  64, bucketSubgroups = 64),
+    triedBucketConfig = BucketConfig(buckets = 256, bucketPositions = 64, bucketSubgroups = 8),
+    secureRandom.nextInt()
+  )
+  val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManagerConfig)
+  val peerManagerRef: ActorRef = PeerManagerRef(settings, sparkzContext, peerDatabase)
 
   val networkControllerRef: ActorRef = NetworkControllerRef(
     "networkController", settings.network, peerManagerRef, sparkzContext)
