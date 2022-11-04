@@ -6,6 +6,7 @@ import sparkz.core.network.peer.BucketManager.PeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage._
 
 import java.net.InetSocketAddress
+import scala.util.Random
 
 class BucketManager(private val newBucket: NewPeerBucketStorage, private val triedBucket: TriedPeerBucketStorage) {
   def addNewPeer(peerBucketValue: PeerBucketValue): Unit = {
@@ -43,6 +44,15 @@ class BucketManager(private val newBucket: NewPeerBucketStorage, private val tri
   def getNewPeers: Map[InetSocketAddress, PeerInfo] = newBucket.getPeers
 
   def getTriedPeers: Map[InetSocketAddress, PeerInfo] = triedBucket.getPeers
+
+  def getRandomPeers: Map[InetSocketAddress, PeerInfo] = {
+    val pickFromNewBucket = new Random().nextBoolean()
+
+    if ((pickFromNewBucket && newBucket.nonEmpty) || triedBucket.isEmpty)
+      newBucket.getPeers
+    else
+      triedBucket.getPeers
+  }
 
   def getPeer(peerAddress: InetSocketAddress): Option[PeerBucketValue] = {
     triedBucket.getStoredPeerByAddress(peerAddress) match {

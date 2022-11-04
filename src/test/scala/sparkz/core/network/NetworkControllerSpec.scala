@@ -183,7 +183,7 @@ class NetworkControllerSpec extends NetworkTests {
   }
 
   it should "send close message when maxIncomingConnections threshold is reached" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 

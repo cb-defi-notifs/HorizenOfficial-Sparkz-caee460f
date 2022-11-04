@@ -149,4 +149,5 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
         (360 * 10).days.toMillis
     }
 
+  override def randomPeersSubset: Map[InetSocketAddress, PeerInfo] = bucketManager.getRandomPeers
 }

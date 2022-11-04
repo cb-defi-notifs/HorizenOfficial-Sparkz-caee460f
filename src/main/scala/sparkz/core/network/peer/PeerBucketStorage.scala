@@ -144,6 +144,8 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
 
   def isEmpty: Boolean = table.isEmpty
 
+  def nonEmpty: Boolean = !isEmpty
+
   def getPeers: Map[InetSocketAddress, PeerInfo] =
     table
       .values

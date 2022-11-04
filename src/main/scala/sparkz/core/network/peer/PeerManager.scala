@@ -70,6 +70,9 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
       peerDatabase.remove(address)
       log.info(s"$address removed from peers database")
 
+    case get: RandomPeerForConnectionExcluding =>
+      sender() ! get.choose(knownPeers, peerDatabase.randomPeersSubset, peerDatabase.blacklistedPeers, sparkzContext)
+
     case get: GetPeers[_] =>
       sender() ! get.choose(knownPeers, peerDatabase.allPeers, peerDatabase.blacklistedPeers, sparkzContext)
   }
@@ -164,7 +167,7 @@ object PeerManager {
                           sparkzContext: SparkzContext): Map[InetSocketAddress, PeerInfo] = knownPeers ++ peers
     }
 
-    case class RandomPeerExcluding(excludedPeers: Seq[Option[InetSocketAddress]]) extends GetPeers[Option[PeerInfo]] {
+    case class RandomPeerForConnectionExcluding(excludedPeers: Seq[Option[InetSocketAddress]]) extends GetPeers[Option[PeerInfo]] {
       private val secureRandom = new SecureRandom()
 
       override def choose(knownPeers: Map[InetSocketAddress, PeerInfo],

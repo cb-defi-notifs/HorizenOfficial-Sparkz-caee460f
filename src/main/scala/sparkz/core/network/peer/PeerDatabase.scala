@@ -22,6 +22,8 @@ trait PeerDatabase {
 
   def allPeers: Map[InetSocketAddress, PeerInfo]
 
+  def randomPeersSubset: Map[InetSocketAddress, PeerInfo]
+
   def addToBlacklist(address: InetSocketAddress, penaltyType: PenaltyType): Unit
 
   def removeFromBlacklist(address: InetAddress): Unit
