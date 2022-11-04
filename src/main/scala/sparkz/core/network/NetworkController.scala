@@ -60,6 +60,7 @@ class NetworkController(settings: NetworkSettings,
 
   private var connections = Map.empty[InetSocketAddress, ConnectedPeer]
   private var unconfirmedConnections = Set.empty[InetSocketAddress]
+  private val maxConnections = settings.maxIncomingConnections + settings.maxOutgoingConnections
 
   private val mySessionIdFeature = SessionIdPeerFeature(settings.magicBytes)
   /**
@@ -143,15 +144,10 @@ class NetworkController(settings: NetworkSettings,
 
   private def connectionEvents: Receive = {
     case Connected(remoteAddress, localAddress) if isNewConnectionAndStillHaveRoom(remoteAddress) =>
-      val connectionDirection: ConnectionDirection =
-        if (unconfirmedConnections.contains(remoteAddress)) Outgoing else Incoming
-      val connectionId = ConnectionId(remoteAddress, localAddress, connectionDirection)
-      log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
-      if (connectionDirection.isOutgoing) createPeerConnectionHandler(connectionId, sender())
-      else peerManagerRef ! ConfirmConnection(connectionId, sender())
+      handleNewConnectionCreation(remoteAddress, localAddress)
 
     case Connected(remoteAddress, _) =>
-      val logMessage = if (connections.size >= settings.maxConnections) "Max connections limit reached"
+      val logMessage = if (connections.size >= maxConnections) "Max connections limit reached"
                        else s"Connection to peer $remoteAddress is already established"
       log.warn(logMessage)
       sender() ! Close
@@ -195,8 +191,26 @@ class NetworkController(settings: NetworkSettings,
       connectionToPeer(activeConnections, unconfirmedConnections)
   }
 
+  private def handleNewConnectionCreation(remoteAddress: InetSocketAddress, localAddress: InetSocketAddress): Unit = {
+    val connectionDirection: ConnectionDirection = if (unconfirmedConnections.contains(remoteAddress)) Outgoing else Incoming
+    val connectionId = ConnectionId(remoteAddress, localAddress, connectionDirection)
+
+    log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
+
+    val handlerRef = sender()
+    if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection) {
+      createPeerConnectionHandler(connectionId, handlerRef)
+    }
+    else if (connectionDirection.isIncoming && canEstablishNewIncomingConnection)
+      peerManagerRef ! ConfirmConnection(connectionId, handlerRef)
+    else {
+      log.info(s"Connection to address ${connectionId.remoteAddress} refused; there is no room left for a new peer")
+      handlerRef ! Close
+    }
+  }
+
   private def isNewConnectionAndStillHaveRoom(remoteAddress: InetSocketAddress) = {
-    connectionForPeerAddress(remoteAddress).isEmpty && connections.size < settings.maxConnections
+    connectionForPeerAddress(remoteAddress).isEmpty && connections.size < maxConnections
   }
 
   //calls from API / application
@@ -233,12 +247,28 @@ class NetworkController(settings: NetworkSettings,
   private def scheduleConnectionToPeer(): Unit = {
     context.system.scheduler.scheduleWithFixedDelay(5.seconds, 5.seconds) {
       () => {
-        if (connections.size < settings.maxConnections) {
-          log.debug(s"Looking for a new random connection")
+        if (canEstablishNewOutgoingConnection) {
+          log.trace(s"Looking for a new random connection")
           connectionToPeer(connections, unconfirmedConnections)
         }
       }
     }
+  }
+
+  private def canEstablishNewOutgoingConnection: Boolean = {
+    getOutgoingConnectionsSize < settings.maxOutgoingConnections
+  }
+
+  private def canEstablishNewIncomingConnection: Boolean = {
+    getIncomingConnectionsSize < settings.maxIncomingConnections
+  }
+
+  private def getOutgoingConnectionsSize: Int = {
+    connections.count { p => p._2.connectionId.direction == Outgoing }
+  }
+
+  private def getIncomingConnectionsSize: Int = {
+    connections.count { p => p._2.connectionId.direction == Incoming }
   }
 
   private def connectionToPeer(activeConnections: Map[InetSocketAddress, ConnectedPeer], unconfirmedConnections: Set[InetSocketAddress]): Unit = {

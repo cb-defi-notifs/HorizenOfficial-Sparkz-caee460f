@@ -12,7 +12,7 @@ import org.scalatest.TryValues._
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.Internal.ConnectionToPeer
-import sparkz.core.network.NetworkController.ReceivableMessages.{GetConnectedPeers, GetPeersStatus}
+import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
 import sparkz.core.network.message._
 import sparkz.core.network.peer.BucketManager.BucketManagerConfig
 import sparkz.core.network.peer.PeerBucketStorage.BucketConfig
@@ -182,13 +182,13 @@ class NetworkControllerSpec extends NetworkTests {
     system.terminate()
   }
 
-  it should "send close message when max connections threshold is reached" in {
-    implicit val system: ActorSystem = ActorSystem()
+  it should "send close message when maxIncomingConnections threshold is reached" in {
+    implicit val system = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
-    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxConnections = 1))
+    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxIncomingConnections = 1))
     val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
@@ -203,6 +203,34 @@ class NetworkControllerSpec extends NetworkTests {
     val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
     val testPeer2 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     testPeer2.connectAndExpectMessage(peer2LocalAddr, nodeAddr, Tcp.Close)
+
+    system.terminate()
+  }
+
+  it should "send close message when maxOutgoingConnections threshold is reached" in {
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+
+    val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
+    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1))
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
+
+    val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
+    val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
+    val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
+    val peerInfo1 = getPeerInfo(peer1LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo1)
+    testPeer.connectAndExpectSuccessfulMessages(peer1LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer.receiveHandshake
+    testPeer.sendHandshake(Some(peer1DecalredAddr), Some(peer1LocalAddr))
+    testPeer.receiveGetPeers
+    testPeer.sendPeers(Seq.empty)
+
+    val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
+    val peerInfo2 = getPeerInfo(peer2LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo2)
+    testPeer.connectAndExpectMessage(peer2LocalAddr, nodeAddr, Tcp.Close)
 
     system.terminate()
   }
@@ -513,6 +541,16 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
 
   @SuppressWarnings(Array("org.wartremover.warts.Null"))
   private var connectionHandler: ActorRef = _
+
+  /**
+    * Sends a ConnectTo message to emulate an outgoingConnection by creating an entry in the unconfirmedConnections
+    *
+    * @param peerInfo - peer info
+    */
+  def establishNewOutgoingConnection(peerInfo: PeerInfo): Unit = {
+    tcpManagerProbe.send(networkControllerRef, ConnectTo(peerInfo))
+    tcpManagerProbe.expectMsgClass(classOf[Tcp.Connect])
+  }
 
   /**
     * Connect peer to node
