@@ -74,19 +74,10 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
     ByteBuffer.wrap(hash1).getInt % positionsInBucket
   }
 
-  private def getPeerPositionIndexes(bucketHashContent: T): (Int, Int) = {
-    if (reverseTable.contains(bucketHashContent.getAddress)) reverseTable(bucketHashContent.getAddress)
-    else {
-      val bucket = getBucket(bucketHashContent)
-      val bucketPosition = getBucketPosition(bucket, bucketHashContent.getAddress)
-      (bucket, bucketPosition)
-    }
-  }
-
   def add(peerBucketValue: PeerBucketValue): Unit = {
     peerBucketValue.peerInfo.peerSpec.address.foreach(address => {
       val hashContent = getHashContent(peerBucketValue)
-      val (bucket, bucketPosition) = getPeerPositionIndexes(hashContent)
+      val (bucket, bucketPosition) = getPeerIndexes(hashContent)
       table += (bucket, bucketPosition) -> (peerBucketValue, timeProvider.time())
       reverseTable += address -> (bucket, bucketPosition)
     })
@@ -105,7 +96,7 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
 
   def bucketPositionIsAlreadyTaken(peerBucketValue: PeerBucketValue): Boolean = {
     val hashContent = getHashContent(peerBucketValue)
-    val (bucket, bucketPosition) = getPeerPositionIndexes(hashContent)
+    val (bucket, bucketPosition) = getPeerIndexes(hashContent)
 
     table.contains((bucket, bucketPosition))
   }
@@ -130,6 +121,10 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
 
   def getPeerIndexes(peerBucketValue: PeerBucketValue): (Int, Int) = {
     val peerHashContent = getHashContent(peerBucketValue)
+    getPeerIndexes(peerHashContent)
+  }
+
+  def getPeerIndexes(peerHashContent: T): (Int, Int) = {
     val bucket = getBucket(peerHashContent)
     val bucketPosition = getBucketPosition(bucket, peerHashContent.getAddress)
     (bucket, bucketPosition)
