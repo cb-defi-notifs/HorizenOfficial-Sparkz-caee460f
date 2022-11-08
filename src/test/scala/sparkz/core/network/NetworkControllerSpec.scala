@@ -2,9 +2,10 @@ package sparkz.core.network
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.io.Tcp
-import akka.io.Tcp.{Bind, Bound, Connect, Connected, Message => TcpMessage, Message => _}
+import akka.io.Tcp.{Bind, Bound, Connect, Connected, Message => TcpMessage}
 import akka.testkit.TestProbe
 import akka.util.ByteString
+import akka.io.Tcp.{Message => _, _}
 import org.scalatest.EitherValues._
 import org.scalatest.OptionValues._
 import org.scalatest.TryValues._
