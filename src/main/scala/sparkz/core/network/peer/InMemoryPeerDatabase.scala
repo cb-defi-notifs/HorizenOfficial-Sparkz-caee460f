@@ -14,22 +14,10 @@ import scala.concurrent.duration._
 /**
   * In-memory peer database implementation supporting temporal blacklisting.
   */
-final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimeProvider, bucketManagerConfig: BucketManagerConfig)
+final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimeProvider, bucketManager: BucketManager)
   extends PeerDatabase with ScorexLogging {
 
   private val safeInterval = settings.penaltySafeInterval.toMillis
-
-  private val bucketManager = createBucketManager
-
-  private def createBucketManager = {
-    val (newBucketConfig, triedBucketConfig, nKey) =
-      BucketManagerConfig.unapply(bucketManagerConfig).getOrElse(throw new IllegalArgumentException())
-
-    val triedBucket = TriedPeerBucketStorage(triedBucketConfig, nKey, timeProvider)
-    val newBucket = NewPeerBucketStorage(newBucketConfig, nKey, timeProvider)
-
-    new BucketManager(newBucket, triedBucket)
-  }
 
   /**
     * banned peer ip -> ban expiration timestamp

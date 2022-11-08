@@ -3,12 +3,10 @@ package sparkz.core.network.peer
 import org.scalatest.Assertion
 import sparkz.ObjectGenerators
 import sparkz.core.network.NetworkTests
-import sparkz.core.network.peer.BucketManager.BucketManagerConfig
-import sparkz.core.network.peer.PeerBucketStorage.BucketConfig
+import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, NewPeerBucketStorage, TriedPeerBucketStorage}
 
 import java.net.InetSocketAddress
 import scala.concurrent.duration.DurationInt
-import scala.util.Random
 
 @SuppressWarnings(Array(
   "org.wartremover.warts.Null",
@@ -19,15 +17,15 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators {
   private val peerAddress1 = new InetSocketAddress("1.1.1.1", 27017)
   private val peerAddress2 = new InetSocketAddress("2.2.2.2", 27017)
   private val storedPeersLimit = 10
-  private val bucketManagerConfig: BucketManagerConfig = BucketManagerConfig(
-    newBucketConfig = BucketConfig(buckets = 1024, bucketPositions = 64, bucketSubgroups = 64),
-    triedBucketConfig = BucketConfig(buckets = 256, bucketPositions = 64, bucketSubgroups = 8),
-    1234
-  )
+  private val nKey = 1234
+  private val bucketConfig: BucketConfig = BucketConfig(buckets = 10, bucketPositions = 10, bucketSubgroups = 10)
+  private val triedBucket: TriedPeerBucketStorage = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
+  private val newBucket: NewPeerBucketStorage = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
+  private val bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
   private val sourcePeer = connectedPeerGen(null).sample.get
 
   private def withDb(test: InMemoryPeerDatabase => Assertion): Assertion =
-    test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds), timeProvider, bucketManagerConfig))
+    test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds), timeProvider, bucketManager))
 
   "new DB" should "be empty" in {
     withDb { db =>
