@@ -2,8 +2,7 @@ package sparkz.core.network.peer
 
 import scorex.util.ScorexLogging
 import sparkz.core.network.ConnectedPeer
-import sparkz.core.network.peer.BucketManager.{BucketManagerConfig, PeerBucketValue}
-import sparkz.core.network.peer.PeerBucketStorage.{NewPeerBucketStorage, TriedPeerBucketStorage}
+import sparkz.core.network.peer.BucketManager.PeerBucketValue
 import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.TimeProvider
@@ -29,10 +28,11 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     */
   private var penaltyBook = Map.empty[InetAddress, (Int, Long)]
 
-  override def get(peer: InetSocketAddress): Option[PeerInfo] = bucketManager.getPeer(peer) match {
-    case Some(peerBucketValue) => Some(peerBucketValue.peerInfo)
-    case _ => None
-  }
+  override def get(peer: InetSocketAddress): Option[PeerInfo] =
+    bucketManager.getPeer(peer) match {
+      case Some(peerBucketValue) => Some(peerBucketValue.peerInfo)
+      case _ => None
+    }
 
   /**
    * Adds a peer to the in-memory database ignoring the configurable limit.

@@ -36,28 +36,25 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
   private def getAddressGroup(peerAddress: InetSocketAddress): Array[Byte] = {
     val na = new NetworkAddressWrapper(peerAddress)
     var nClass = NetworkAddressWrapper.NET_IPV6
-    var nStartByte = 0
-    var nBits = 16
+    var addressSubgroupIndex = 0
+    var addressSubGroupToInclude = 1
 
     if (na.isLocal) {
       nClass = 255
-      nBits = 0
+      addressSubGroupToInclude = 0
     } else if (!na.isRoutable) {
       nClass = NetworkAddressWrapper.NET_UNROUTABLE
-      nBits = 0
+      addressSubGroupToInclude = 0
     } else if (na.hasLinkedIPv4) {
       nClass = NetworkAddressWrapper.NET_IPV4
-    } else if (na.isHeNet) {
-      nBits = 36
-    }
-    else
-      nBits = 32
+    } else
+      addressSubGroupToInclude = 2
 
     var result: Array[Byte] = Array(nClass.toByte)
-    while (nBits >= 16) {
-      result = result ++ na.getSubNum(nStartByte)
-      nStartByte += 1
-      nBits -= 16
+    while (addressSubGroupToInclude > 0) {
+      result = result ++ na.getSubNum(addressSubgroupIndex)
+      addressSubgroupIndex += 1
+      addressSubGroupToInclude -= 1
     }
     result
   }

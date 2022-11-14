@@ -75,16 +75,7 @@ trait Application extends ScorexLogging {
     externalNodeAddress = externalSocketAddress
   )
 
-  private val secureRandom = new SecureRandom()
-  private val nKey: Int = secureRandom.nextInt()
-  private val newBucketConfig: BucketConfig = BucketConfig(buckets = 1024, bucketPositions = 64, bucketSubgroups = 64)
-  private val triedBucketConfig: BucketConfig = BucketConfig(buckets = 256, bucketPositions = 64, bucketSubgroups = 8)
-  private val triedBucket: TriedPeerBucketStorage = TriedPeerBucketStorage(triedBucketConfig, nKey, timeProvider)
-  private val newBucket: NewPeerBucketStorage = NewPeerBucketStorage(newBucketConfig, nKey, timeProvider)
-
-  private val bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
-  private val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManager)
-  val peerManagerRef: ActorRef = PeerManagerRef(settings, sparkzContext, peerDatabase)
+  val peerManagerRef: ActorRef = initializePeerManagerRef
 
   val networkControllerRef: ActorRef = NetworkControllerRef(
     "networkController", settings.network, peerManagerRef, sparkzContext)
@@ -123,6 +114,20 @@ trait Application extends ScorexLogging {
       log.info("Exiting from the app...")
       System.exit(0)
     }
+  }
+
+  private def initializePeerManagerRef = {
+    val secureRandom = new SecureRandom()
+    val nKey: Int = secureRandom.nextInt()
+    val newBucketConfig: BucketConfig = BucketConfig(buckets = 1024, bucketPositions = 64, bucketSubgroups = 64)
+    val triedBucketConfig: BucketConfig = BucketConfig(buckets = 256, bucketPositions = 64, bucketSubgroups = 8)
+    val triedBucket: TriedPeerBucketStorage = TriedPeerBucketStorage(triedBucketConfig, nKey, timeProvider)
+    val newBucket: NewPeerBucketStorage = NewPeerBucketStorage(newBucketConfig, nKey, timeProvider)
+
+    val bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
+    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManager)
+
+    PeerManagerRef(settings, sparkzContext, peerDatabase)
   }
 }
 

@@ -47,12 +47,12 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
       // We have connected to a peer and got his peerInfo from him
       if (!isSelf(peerInfo.peerSpec)) peerDatabase.addOrUpdateKnownPeer(peerInfo, source)
 
-    case Penalize(peer, penaltyType) =>
-      log.info(s"$peer penalized, penalty: $penaltyType")
-      if (peerDatabase.peerPenaltyScoreOverThreshold(peer, penaltyType)) {
-        log.info(s"$peer blacklisted")
-        peerDatabase.addToBlacklist(peer, penaltyType)
-        sender() ! Blacklisted(peer)
+    case Penalize(peerAddress, penaltyType) =>
+      log.info(s"$peerAddress penalized, penalty: $penaltyType")
+      if (peerDatabase.peerPenaltyScoreOverThreshold(peerAddress, penaltyType) && !isKnownPeer(peerAddress)) {
+        log.info(s"$peerAddress blacklisted")
+        peerDatabase.addToBlacklist(peerAddress, penaltyType)
+        sender() ! Blacklisted(peerAddress)
       }
 
     case AddPeersIfEmpty(peersSpec, source) =>
@@ -76,6 +76,8 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
     case get: GetPeers[_] =>
       sender() ! get.choose(knownPeers, peerDatabase.allPeers, peerDatabase.blacklistedPeers, sparkzContext)
   }
+
+  private def isKnownPeer(peerAddress: InetSocketAddress) = knownPeers.contains(peerAddress)
 
   private def apiInterface: Receive = {
 
@@ -148,7 +150,7 @@ object PeerManager {
                           sparkzContext: SparkzContext): Seq[PeerInfo] = {
         val recentlySeenKnownPeers = knownPeers.values.toSeq
           .filter { p =>
-            (p.connectionType.isDefined || p.lastHandshake > 0)
+            p.connectionType.isDefined || p.lastHandshake > 0
           }
         val recentlySeenNonBlacklisted = peers.values.toSeq
           .filter { p =>

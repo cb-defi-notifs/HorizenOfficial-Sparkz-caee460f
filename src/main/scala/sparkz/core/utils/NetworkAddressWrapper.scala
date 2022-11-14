@@ -105,10 +105,6 @@ class NetworkAddressWrapper(address: InetSocketAddress) {
     isIPv6 && stringAddr(3) == "ffff"
   }
 
-  def isHeNet: Boolean = {
-    isIPv6 && stringAddr(0) == "2001" && stringAddr(1) == "470"
-  }
-
   def getSubNum(index: Int): Array[Byte] = {
     stringAddr(index).getBytes
   }

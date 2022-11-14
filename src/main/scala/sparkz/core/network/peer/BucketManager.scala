@@ -55,10 +55,8 @@ class BucketManager(private val newBucket: NewPeerBucketStorage, private val tri
   }
 
   def getPeer(peerAddress: InetSocketAddress): Option[PeerBucketValue] = {
-    triedBucket.getStoredPeerByAddress(peerAddress) match {
-      case peer: Some[PeerBucketValue] => peer
-      case _ => newBucket.getStoredPeerByAddress(peerAddress)
-    }
+    triedBucket.getStoredPeerByAddress(peerAddress)
+      .orElse(newBucket.getStoredPeerByAddress(peerAddress))
   }
 }
 
