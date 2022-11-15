@@ -31,7 +31,7 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
     }
   }
 
-  override def receive: Receive = peersManagement orElse apiInterface orElse {
+  override def receive: Receive = peersManagement orElse {
     case a: Any =>
       log.error(s"Wrong input for peer manager: $a")
   }
@@ -78,16 +78,6 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
   }
 
   private def isKnownPeer(peerAddress: InetSocketAddress) = knownPeers.contains(peerAddress)
-
-  private def apiInterface: Receive = {
-
-    case GetAllPeers =>
-      log.trace(s"Get all peers: ${peerDatabase.allPeers}")
-      sender() ! peerDatabase.allPeers
-
-    case GetBlacklistedPeers =>
-      sender() ! peerDatabase.blacklistedPeers
-  }
 
   /**
     * Given a peer's address, returns `true` if the peer is the same is this node.
