@@ -1,7 +1,5 @@
 package sparkz.core.api.http
 
-import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import io.circe.generic.semiauto._
@@ -10,11 +8,12 @@ import io.circe.{Encoder, Json}
 import sparkz.core.api.http.PeersApiRoute.{BlacklistedPeers, PeerInfoResponse, PeersStatusResponse}
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer.{PeerInfo, PeersStatus}
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
 
+import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext
 
 case class PeersApiRoute(peerManager: ActorRef,
@@ -24,8 +23,17 @@ case class PeersApiRoute(peerManager: ActorRef,
                         (implicit val context: ActorRefFactory, val ec: ExecutionContext) extends ApiRoute {
 
   override lazy val route: Route = pathPrefix("peers") {
-    allPeers ~ connectedPeers ~ blacklistedPeers ~ connect ~ peersStatus
+    allPeers ~ peerByAddress ~
+      connectedPeers ~ peersStatus ~
+      blacklistedPeers ~ addToBlacklist ~ removeFromBlacklist ~
+      removePeer ~ connect
   }
+
+  private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
+
+  /////////////////////
+  // READ OPERATIONS //
+  /////////////////////
 
   def allPeers: Route = (path("all") & get) {
     val result = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
@@ -34,6 +42,26 @@ case class PeersApiRoute(peerManager: ActorRef,
       }
     }
     ApiResponse(result)
+  }
+
+  def peerByAddress: Route = (path("peer" / Remaining) & get) { addressParam =>
+    val maybeAddress = addressAndPortRegexp.findFirstMatchIn(addressParam)
+    maybeAddress match {
+      case None => ApiResponse.BAD_REQUEST.withJson(Map(
+        "errorMessage" -> s"address $maybeAddress is not well formatted".asJson
+      ).asJson)
+      case Some(addressAndPort) =>
+        val host = InetAddress.getByName(addressAndPort.group(1))
+        val port = addressAndPort.group(2).toInt
+
+        val address = new InetSocketAddress(host, port)
+        val result = askActor[Option[PeerInfo]](peerManager, GetPeer(address)).map {
+          _.map(peerInfo =>
+            PeerInfoResponse.fromAddressAndInfo(address, peerInfo)
+          )
+        }
+        ApiResponse(result)
+    }
   }
 
   def connectedPeers: Route = (path("connected") & get) {
@@ -66,7 +94,16 @@ case class PeersApiRoute(peerManager: ActorRef,
     ApiResponse(result)
   }
 
-  private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
+
+  def blacklistedPeers: Route = (path("blacklist") & get) {
+    val result = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
+      .map(x => BlacklistedPeers(x.map(_.toString)).asJson)
+    ApiResponse(result)
+  }
+
+  //////////////////////
+  // WRITE OPERATIONS //
+  //////////////////////
 
   def connect: Route = (path("connect") & post & withAuth & entity(as[Json])) { json =>
     val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
@@ -80,12 +117,53 @@ case class PeersApiRoute(peerManager: ActorRef,
     }
   }
 
-  def blacklistedPeers: Route = (path("blacklisted") & get) {
-    val result = askActor[Seq[InetAddress]](peerManager, GetBlacklistedPeers)
-      .map(x => BlacklistedPeers(x.map(_.toString)).asJson)
-    ApiResponse(result)
+  def addToBlacklist: Route = (path("blacklist") & post & withAuth & entity(as[Json])) { json =>
+    val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
+
+    maybeAddress match {
+      case None => ApiResponse.BAD_REQUEST.withJson(Map(
+        "errorMessage" -> s"address $maybeAddress is not well formatted".asJson
+      ).asJson)
+
+      case Some(addressAndPort) =>
+        val host = InetAddress.getByName(addressAndPort.group(1))
+        val port = addressAndPort.group(2).toInt
+        peerManager ! AddToBlacklist(new InetSocketAddress(host, port))
+        ApiResponse.OK
+    }
   }
 
+  def removePeer: Route = (path("peer") & delete & withAuth & entity(as[Json])) { json =>
+    val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
+
+    maybeAddress match {
+      case None => ApiResponse.BAD_REQUEST.withJson(Map(
+        "errorMessage" -> s"address $maybeAddress is not well formatted".asJson
+      ).asJson)
+
+      case Some(addressAndPort) =>
+        val host = InetAddress.getByName(addressAndPort.group(1))
+        val port = addressAndPort.group(2).toInt
+        peerManager ! RemovePeer(new InetSocketAddress(host, port))
+        ApiResponse.OK
+    }
+  }
+
+  def removeFromBlacklist: Route = (path("blacklist") & delete & withAuth & entity(as[Json])) { json =>
+    val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
+
+    maybeAddress match {
+      case None => ApiResponse.BAD_REQUEST.withJson(Map(
+        "errorMessage" -> s"address $maybeAddress is not well formatted".asJson
+      ).asJson)
+
+      case Some(addressAndPort) =>
+        val host = InetAddress.getByName(addressAndPort.group(1))
+        val port = addressAndPort.group(2).toInt
+        peerManager ! RemoveFromBlacklist(new InetSocketAddress(host, port))
+        ApiResponse.OK
+    }
+  }
 }
 
 object PeersApiRoute {

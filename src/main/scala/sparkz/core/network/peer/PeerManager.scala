@@ -66,6 +66,12 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext) extend
         }
       peerDatabase.addOrUpdateKnownPeers(filteredPeers)
 
+    case AddToBlacklist(address) =>
+      peerDatabase.addToBlacklist(address, PenaltyType.MisbehaviorPenalty)
+
+    case RemoveFromBlacklist(address) =>
+      peerDatabase.removeFromBlacklist(address.getAddress)
+
     case RemovePeer(address) =>
       if (!knownPeersSet(address)) {
         peerDatabase.remove(address)
@@ -113,6 +119,10 @@ object PeerManager {
 
     case class Blacklisted(remote: InetSocketAddress)
 
+    case class AddToBlacklist(remote: InetSocketAddress)
+
+    case class RemoveFromBlacklist(remote: InetSocketAddress)
+
     // peerListOperations messages
     case class AddOrUpdatePeer(data: PeerInfo)
 
@@ -153,6 +163,15 @@ object PeerManager {
       override def choose(knownPeers: Map[InetSocketAddress, PeerInfo],
                           blacklistedPeers: Seq[InetAddress],
                           sparkzContext: SparkzContext): Map[InetSocketAddress, PeerInfo] = knownPeers
+    }
+
+    case class GetPeer(peerAddress: InetSocketAddress) extends GetPeers[Option[PeerInfo]] {
+
+      override def choose(knownPeers: Map[InetSocketAddress, PeerInfo],
+                          blacklistedPeers: Seq[InetAddress],
+                          sparkzContext: SparkzContext): Option[PeerInfo] = {
+        knownPeers.get(peerAddress)
+      }
     }
 
     case class RandomPeerExcluding(excludedPeers: Seq[Option[InetSocketAddress]]) extends GetPeers[Option[PeerInfo]] {
