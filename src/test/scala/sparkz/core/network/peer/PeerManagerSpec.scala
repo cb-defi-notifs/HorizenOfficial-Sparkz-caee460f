@@ -3,10 +3,10 @@ package sparkz.core.network.peer
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import sparkz.core.app.SparkzContext
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.RemovePeer
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, GetBlacklistedPeers, RemoveFromBlacklist, RemovePeer}
 import sparkz.core.network.NetworkTests
 
-import java.net.InetSocketAddress
+import java.net.{InetAddress, InetSocketAddress}
 
 class PeerManagerSpec extends NetworkTests {
 
@@ -78,4 +78,77 @@ class PeerManagerSpec extends NetworkTests {
     system.terminate()
   }
 
+  it should "add the peer into the blacklist" in {
+    implicit val system: ActorSystem = ActorSystem()
+    val p = TestProbe("p")(system)
+    implicit val defaultSender: ActorRef = p.testActor
+
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val peerManagerRef = PeerManagerRef(settings, sparkzContext)(system)
+
+    val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
+    val peerInfo = getPeerInfo(peerAddress)
+
+    peerManagerRef ! AddOrUpdatePeer(peerInfo)
+
+    // Check added peers
+    peerManagerRef ! GetAllPeers
+
+    val allPeersMsg = p.expectMsgClass(classOf[Map[InetSocketAddress, PeerInfo]])
+    allPeersMsg.size shouldBe 1
+    allPeersMsg.contains(peerAddress) shouldBe true
+
+    // Check blacklisted peers
+    peerManagerRef ! GetBlacklistedPeers
+
+    val blacklistMsg = p.expectMsgClass(classOf[Seq[InetAddress]])
+    blacklistMsg.size shouldBe 0
+
+    // Add peer to blacklist
+    peerManagerRef ! AddToBlacklist(peerAddress)
+
+    // Check again all peers
+    peerManagerRef ! GetAllPeers
+
+    val allPeersAfterBlacklistMsg = p.expectMsgClass(classOf[Map[InetSocketAddress, PeerInfo]])
+    allPeersAfterBlacklistMsg.size shouldBe 0
+    allPeersAfterBlacklistMsg.contains(peerAddress) shouldBe false
+
+    // Check again blacklisted peers
+    peerManagerRef ! GetBlacklistedPeers
+
+    val blacklistedPeersAfterBlacklistMsg = p.expectMsgClass(classOf[Seq[InetAddress]])
+    blacklistedPeersAfterBlacklistMsg.size shouldBe 1
+    blacklistedPeersAfterBlacklistMsg.headOption.foreach(address => address shouldBe peerAddress.getAddress)
+
+    system.terminate()
+  }
+
+  it should "remove the peer into the blacklist" in {
+    implicit val system: ActorSystem = ActorSystem()
+    val p = TestProbe("p")(system)
+    implicit val defaultSender: ActorRef = p.testActor
+
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val peerManagerRef = PeerManagerRef(settings, sparkzContext)(system)
+
+    val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
+    val peerInfo = getPeerInfo(peerAddress)
+
+    peerManagerRef ! AddOrUpdatePeer(peerInfo)
+    peerManagerRef ! AddToBlacklist(peerAddress)
+    peerManagerRef ! RemoveFromBlacklist(peerAddress)
+
+    // Check all peers
+    peerManagerRef ! GetAllPeers
+    val allPeersAfterBlacklistMsg = p.expectMsgClass(classOf[Map[InetSocketAddress, PeerInfo]])
+    allPeersAfterBlacklistMsg.size shouldBe 0
+
+    // Check blacklisted peers
+    peerManagerRef ! GetBlacklistedPeers
+    val blacklistedPeersAfterBlacklistMsg = p.expectMsgClass(classOf[Seq[InetAddress]])
+    blacklistedPeersAfterBlacklistMsg.size shouldBe 0
+
+    system.terminate()
+  }
 }
