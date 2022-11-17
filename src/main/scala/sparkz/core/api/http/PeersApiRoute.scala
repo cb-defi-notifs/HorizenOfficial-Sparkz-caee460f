@@ -1,6 +1,7 @@
 package sparkz.core.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import io.circe.generic.semiauto._
 import io.circe.syntax._
@@ -47,9 +48,8 @@ case class PeersApiRoute(peerManager: ActorRef,
   def peerByAddress: Route = (path("peer" / Remaining) & get) { addressParam =>
     val maybeAddress = addressAndPortRegexp.findFirstMatchIn(addressParam)
     maybeAddress match {
-      case None => ApiResponse.BAD_REQUEST.withJson(Map(
-        "errorMessage" -> s"address $maybeAddress is not well formatted".asJson
-      ).asJson)
+      case None => ApiError(StatusCodes.BadRequest, s"address $maybeAddress is not well formatted")
+
       case Some(addressAndPort) =>
         val host = InetAddress.getByName(addressAndPort.group(1))
         val port = addressAndPort.group(2).toInt
@@ -121,9 +121,7 @@ case class PeersApiRoute(peerManager: ActorRef,
     val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
 
     maybeAddress match {
-      case None => ApiResponse.BAD_REQUEST.withJson(Map(
-        "errorMessage" -> s"address $maybeAddress is not well formatted".asJson
-      ).asJson)
+      case None => ApiError(StatusCodes.BadRequest, s"address $maybeAddress is not well formatted")
 
       case Some(addressAndPort) =>
         val host = InetAddress.getByName(addressAndPort.group(1))
@@ -137,9 +135,7 @@ case class PeersApiRoute(peerManager: ActorRef,
     val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
 
     maybeAddress match {
-      case None => ApiResponse.BAD_REQUEST.withJson(Map(
-        "errorMessage" -> s"address $maybeAddress is not well formatted".asJson
-      ).asJson)
+      case None => ApiError(StatusCodes.BadRequest, s"address $maybeAddress is not well formatted")
 
       case Some(addressAndPort) =>
         val host = InetAddress.getByName(addressAndPort.group(1))
@@ -153,9 +149,7 @@ case class PeersApiRoute(peerManager: ActorRef,
     val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
 
     maybeAddress match {
-      case None => ApiResponse.BAD_REQUEST.withJson(Map(
-        "errorMessage" -> s"address $maybeAddress is not well formatted".asJson
-      ).asJson)
+      case None => ApiError(StatusCodes.BadRequest, s"address $maybeAddress is not well formatted")
 
       case Some(addressAndPort) =>
         val host = InetAddress.getByName(addressAndPort.group(1))

@@ -35,19 +35,18 @@ components:
         address:
           type: string
           example: 127.0.0.1:5673
+        lastMessage:
+          type: number
+          example: 123456789
+        lastHandshake:
+          type: number
+          example: 123456789
         name:
           type: string
           example: mynode
-        nonce:
-          type: integer
-          # int32
-          format: int64
-          example: 123456
-        lastSeen:
-          type: integer
-          # int32
-          format: int64
-          example: 123456
+        direction:
+          type: string
+          example: Incoming
     BlacklistedPeers:
       type: object
       required:
@@ -66,7 +65,7 @@ components:
         - detail
       properties:
         error:
-          type: int32
+          type: integer
           description: Error code
           example: 500
         reason:
@@ -77,6 +76,27 @@ components:
           type: string
           nullable: true
           description: Detailed error description
+
+    BadRequest:
+      type: object
+      required:
+        - error
+        - reason
+        - detail
+      properties:
+        error:
+          type: integer
+          description: Error code
+          example: 400
+        reason:
+          type: string
+          description: String error code
+          example: 'Body request is not well formed'
+        detail:
+          type: string
+          nullable: true
+          description: Detailed error description
+
 
 paths:
 
@@ -177,6 +197,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /peers/peer/{peerAddress}:
+    get:
+      summary: Get all peers' info
+      operationId: getPeer
+      parameters:
+        - name: peerAddress
+          in: path
+          description: Peer's address
+          required: true
+          schema:
+            type: string
+      tags:
+        - peers
+      responses:
+        200:
+          description: Peer data info
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Peer'
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /peers/peer:
+    delete:
+      summary: Delete a peer from the internal database
+      operationId: deletePeer
+      tags:
+        - peers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              example: 127.0.0.1:5673
+      responses:
+        200:
+          description: The request was successfully accepted
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+
   /peers/connected:
     get:
       summary: Get current connected peers
@@ -222,7 +298,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
-  /peers/blacklisted:
+  /peers/blacklist:
     get:
       summary: Get blacklisted peers
       operationId: getBlacklistedPeers
@@ -241,6 +317,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+    post:
+      tags:
+        - peers
+      summary: Add a peer in the blacklist
+      operationId: addToBlacklist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              example: 127.0.0.1:8080
+      responses:
+        200:
+          description: Request was accepted
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+
+    delete:
+      tags:
+        - peers
+      summary: Remove a peer from the blacklist
+      operationId: removeToBlacklist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              example: 127.0.0.1:8080
+      responses:
+        200:
+          description: Request was accepted
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
 
   /utils/seed:
     get:
