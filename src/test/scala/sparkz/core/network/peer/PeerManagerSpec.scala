@@ -5,7 +5,7 @@ import akka.testkit.TestProbe
 import org.scalatest.BeforeAndAfter
 import sparkz.core.app.SparkzContext
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, NewPeerBucketStorage, TriedPeerBucketStorage}
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.RemovePeer
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{RandomPeerForConnectionExcluding, RemovePeer}
 import sparkz.core.network.{ConnectedPeer, ConnectionId, Incoming, NetworkTests}
 
 import java.net.InetSocketAddress
@@ -97,4 +97,75 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     system.terminate()
   }
 
+  it should "exclude peers from stored peers" in {
+    // Arrange
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+
+    val peerAddressOne = new InetSocketAddress("127.0.0.1", DefaultPort)
+    val peerAddressTwo = new InetSocketAddress("127.0.0.2", DefaultPort)
+    val peerInfoOne = getPeerInfo(peerAddressOne)
+    val peerInfoTwo = getPeerInfo(peerAddressTwo)
+
+    val allPeers = Map(
+      peerAddressOne -> peerInfoOne,
+      peerAddressTwo -> peerInfoTwo
+    )
+    val peersToExclude = Seq(Some(peerAddressOne))
+    val peersForConnections = RandomPeerForConnectionExcluding(peersToExclude)
+
+    // Act
+    val resultOption = peersForConnections.choose(Map(), allPeers, Seq(), sparkzContext)
+
+    // Assert
+    val result = resultOption.getOrElse(fail("Test result should not be None"))
+    result shouldBe peerInfoTwo
+  }
+
+  it should "exclude blacklisted peers" in {
+    // Arrange
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+
+    val peerAddressOne = new InetSocketAddress("127.0.0.1", DefaultPort)
+    val peerAddressTwo = new InetSocketAddress("127.0.0.2", DefaultPort)
+    val peerInfoOne = getPeerInfo(peerAddressOne)
+    val peerInfoTwo = getPeerInfo(peerAddressTwo)
+
+    val allPeers = Map(
+      peerAddressOne -> peerInfoOne,
+      peerAddressTwo -> peerInfoTwo
+    )
+    val peersForConnections = RandomPeerForConnectionExcluding(Seq())
+    val blacklistedPeers = Seq(peerAddressOne.getAddress)
+
+    // Act
+    val resultOption = peersForConnections.choose(Map(), allPeers, blacklistedPeers, sparkzContext)
+
+    // Assert
+    val result = resultOption.getOrElse(fail("Test result should not be None"))
+    result shouldBe peerInfoTwo
+  }
+
+  it should "exclude peers from known peers" in {
+    // Arrange
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+
+    val peerAddressOne = new InetSocketAddress("127.0.0.1", DefaultPort)
+    val peerAddressTwo = new InetSocketAddress("127.0.0.2", DefaultPort)
+    val peerInfoOne = getPeerInfo(peerAddressOne)
+    val peerInfoTwo = getPeerInfo(peerAddressTwo)
+
+    val allPeers = Map(
+      peerAddressOne -> peerInfoOne,
+      peerAddressTwo -> peerInfoTwo
+    )
+    val peersToExclude = Seq(Some(peerAddressOne))
+    val peersForConnections = RandomPeerForConnectionExcluding(peersToExclude)
+
+    // Act
+    val resultOption = peersForConnections.choose(allPeers, Map(), Seq(), sparkzContext)
+
+    // Assert
+    val result = resultOption.getOrElse(fail("Test result should not be None"))
+    result shouldBe peerInfoTwo
+  }
 }

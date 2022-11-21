@@ -15,7 +15,7 @@ import sparkz.core.network.NetworkController.ReceivableMessages.Internal.Connect
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
 import sparkz.core.network.message._
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, NewPeerBucketStorage, TriedPeerBucketStorage}
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.AddOrUpdatePeer
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, RandomPeerForConnectionExcluding}
 import sparkz.core.network.peer._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.LocalTimeProvider
@@ -334,7 +334,9 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
-    val (networkControllerRef, peerManager) = createNetworkController(settings, tcpManagerProbe)
+    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe)
+
+    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
 
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
@@ -345,8 +347,11 @@ class NetworkControllerSpec extends NetworkTests {
     unconfirmedConnections += peerAddressOne
 
     // Act
-    peerManager ! AddOrUpdatePeer(peerInfoOne)
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourcePeer))
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // We have to wait for some time before any message is sent to the TcpManager actor
+    Thread.sleep(100)
 
     // Assert
     tcpManagerProbe.expectNoMessage()
@@ -389,6 +394,8 @@ class NetworkControllerSpec extends NetworkTests {
 
     val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe)
 
+    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
+
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
 
@@ -403,8 +410,11 @@ class NetworkControllerSpec extends NetworkTests {
     )
 
     // Act
-    peerManagerRef ! AddOrUpdatePeer(peerInfoOne)
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourcePeer))
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // We have to wait for some time before any message is sent to the TcpManager actor
+    Thread.sleep(100)
 
     // Assert
     tcpManagerProbe.expectNoMessage()
@@ -487,6 +497,41 @@ class NetworkControllerSpec extends NetworkTests {
     system.terminate()
   }
 
+  /**
+    * This test is forcing the normal flow for testing purposes.
+    * We send a Connect message to the network controller so it can track the peer's last connection attempt.
+    * Then we tell the network controller to look for another connection to establish passing an empty
+    * activeConnections, which in reality will be populated with the active connection.
+    * This to make sure the only criteria the network controller uses to discard the peer from another connection attempt
+    * is that the last connection attempt was too early
+    */
+  it should "skip connection attempt if the only connection in PeerManager failed to connect earlier" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    val tcpManagerProbe = TestProbe()
+
+    val peerManagerProbe = TestProbe("peerManager")
+    val (networkControllerRef, _) = createNetworkController(settings, tcpManagerProbe, Some(peerManagerProbe))
+
+    val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
+
+    val emptyActiveConnections = Map.empty[InetSocketAddress, ConnectedPeer]
+    val emptyUnconfirmedConnections = Set.empty[InetSocketAddress]
+
+    // Act
+    networkControllerRef ! Connected(peerAddressOne, peerAddressOne)
+    peerManagerProbe.expectMsgClass(classOf[ConfirmConnection])
+
+    val expectedMessage = RandomPeerForConnectionExcluding(Seq(Some(peerAddressOne)))
+    networkControllerRef ! ConnectionToPeer(emptyActiveConnections, emptyUnconfirmedConnections)
+    peerManagerProbe.expectMsg(expectedMessage)
+
+    // Assert
+    tcpManagerProbe.expectNoMessage()
+
+    system.terminate()
+  }
+
   private def extractLocalAddrFeat(handshakeFromNode: Handshake): Option[InetSocketAddress] = {
     handshakeFromNode.peerSpec.localAddressOpt
   }
@@ -494,7 +539,10 @@ class NetworkControllerSpec extends NetworkTests {
   /**
     * Create NetworkControllerActor
     */
-  private def createNetworkController(settings: SparkzSettings, tcpManagerProbe: TestProbe)(implicit system: ActorSystem) = {
+  private def createNetworkController(
+                                       settings: SparkzSettings,
+                                       tcpManagerProbe: TestProbe,
+                                       peerManagerMock: Option[TestProbe] = None)(implicit system: ActorSystem) = {
     val timeProvider = LocalTimeProvider
     val externalAddr = settings.network.declaredAddress
 
@@ -502,14 +550,17 @@ class NetworkControllerSpec extends NetworkTests {
     val messageSpecs = Seq(GetPeersSpec, peersSpec)
     val sparkzContext = SparkzContext(messageSpecs, Seq.empty, timeProvider, externalAddr)
 
-    val nKey = 1234
-    val bucketConfig: BucketConfig = BucketConfig(buckets = 10, bucketPositions = 10, bucketSubgroups = 10)
-    val triedBucket: TriedPeerBucketStorage = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
-    val newBucket: NewPeerBucketStorage = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
-    val bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
-
-    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManager)
-    val peerManagerRef = PeerManagerRef(settings, sparkzContext, peerDatabase)
+    val peerManagerRef = peerManagerMock match {
+      case Some(testProbe) => testProbe.ref
+      case _ =>
+        val nKey = 1234
+        val bucketConfig: BucketConfig = BucketConfig(buckets = 10, bucketPositions = 10, bucketSubgroups = 10)
+        val triedBucket: TriedPeerBucketStorage = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
+        val newBucket: NewPeerBucketStorage = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
+        val bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
+        val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManager)
+        PeerManagerRef(settings, sparkzContext, peerDatabase)
+    }
 
     val networkControllerRef: ActorRef = NetworkControllerRef(
       "networkController", settings.network,

@@ -61,6 +61,9 @@ class NetworkController(settings: NetworkSettings,
   private var connections = Map.empty[InetSocketAddress, ConnectedPeer]
   private var unconfirmedConnections = Set.empty[InetSocketAddress]
   private val maxConnections = settings.maxIncomingConnections + settings.maxOutgoingConnections
+  private var peersLastConnectionAttempts = Map.empty[InetSocketAddress, TimeProvider.Time]
+
+  private val tryNewConnectionAttemptDelay = 5.seconds
 
   private val mySessionIdFeature = SessionIdPeerFeature(settings.magicBytes)
   /**
@@ -196,6 +199,7 @@ class NetworkController(settings: NetworkSettings,
     val connectionId = ConnectionId(remoteAddress, localAddress, connectionDirection)
 
     log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
+    updateLastConnectionAttemptTimestamp(remoteAddress)
 
     val handlerRef = sender()
     if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection) {
@@ -207,6 +211,10 @@ class NetworkController(settings: NetworkSettings,
       log.info(s"Connection to address ${connectionId.remoteAddress} refused; there is no room left for a new peer")
       handlerRef ! Close
     }
+  }
+
+  private def updateLastConnectionAttemptTimestamp(remoteAddress: InetSocketAddress): Unit = {
+    peersLastConnectionAttempts += remoteAddress -> sparkzContext.timeProvider.time()
   }
 
   private def isNewConnectionAndStillHaveRoom(remoteAddress: InetSocketAddress) = {
@@ -245,7 +253,7 @@ class NetworkController(settings: NetworkSettings,
     * Schedule a periodic connection to a random known peer
     */
   private def scheduleConnectionToPeer(): Unit = {
-    context.system.scheduler.scheduleWithFixedDelay(5.seconds, 5.seconds) {
+    context.system.scheduler.scheduleWithFixedDelay(5.seconds, tryNewConnectionAttemptDelay) {
       () => {
         if (canEstablishNewOutgoingConnection) {
           log.trace(s"Looking for a new random connection")
@@ -276,11 +284,25 @@ class NetworkController(settings: NetworkSettings,
     val unconfirmedConnectionsAddressSeq = unconfirmedConnections.map(connection => PeerInfo.fromAddress(connection)).toSeq
     val mergedSeq = connectionsAddressSeq ++ unconfirmedConnectionsAddressSeq
     val peersAddresses = mergedSeq.map(getPeerAddress)
-    val randomPeerF = peerManagerRef ? RandomPeerForConnectionExcluding(peersAddresses)
+
+    val peersAlreadyTriedFewTimeBefore = getPeersWeAlreadyTryToConnectFewTimeAgo
+
+    val randomPeerF = peerManagerRef ? RandomPeerForConnectionExcluding(peersAddresses ++ peersAlreadyTriedFewTimeBefore)
     randomPeerF.mapTo[Option[PeerInfo]].foreach {
       case Some(peerInfo) => self ! ConnectTo(peerInfo)
       case None => log.warn("Could not find a peer to connect to, skipping this connectionToPeer round")
     }
+  }
+
+  private def getPeersWeAlreadyTryToConnectFewTimeAgo: Seq[Option[InetSocketAddress]] = {
+    val now = sparkzContext.timeProvider.time()
+    val delta = (settings.knownPeers.size + 1) * 5
+    val thresholdInMillis = (tryNewConnectionAttemptDelay * delta).toMillis
+
+    peersLastConnectionAttempts.map {
+      case entry if now - entry._2 < thresholdInMillis => Some(entry._1)
+      case _ => None
+    }.toSeq
   }
 
   /**
