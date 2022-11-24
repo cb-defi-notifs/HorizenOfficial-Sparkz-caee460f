@@ -3,7 +3,7 @@ package sparkz.core
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import sparkz.core.consensus.{SyncInfo, History, HistoryReader, ModifierSemanticValidity}
+import sparkz.core.consensus.{History, HistoryReader, ModifierSemanticValidity, SyncInfo}
 import sparkz.core.consensus.History.ModifierIds
 import sparkz.core.serialization.SparkzSerializer
 import scorex.crypto.hash.Blake2b256
@@ -100,5 +100,51 @@ class DefaultModifiersCacheSpecification extends AnyPropSpec
     cache.cleanOverfull().length shouldBe 1
     cache.contains(v2) shouldBe false
     cache.size shouldBe limit
+  }
+
+  property("Cache can clear the right amount of elements based on its limit") {
+    val limit = 10
+    val cache = new DefaultModifiersCache[FakeModifier, FakeHr](limit)
+    val elementsToStore = 200
+    for (index <- 1 to elementsToStore) {
+      cache.put(bytesToId(Blake2b256.hash(index.toString)), new FakeModifier)
+    }
+
+    cache.size shouldBe elementsToStore
+
+    val cleared = cache.cleanOverfull()
+
+    cleared.size shouldBe (elementsToStore - limit)
+    cache.size shouldBe limit
+  }
+
+  property("Cache can clear the right amount of elements after performing elements removal") {
+    val limit = 10
+    val cache = new DefaultModifiersCache[FakeModifier, FakeHr](limit)
+    val blocksNumber = 200
+    for (index <- 1 to blocksNumber) {
+      cache.put(bytesToId(Blake2b256.hash(index.toString)), new FakeModifier)
+    }
+    var expectedCacheSize = blocksNumber
+    cache.size shouldBe expectedCacheSize
+
+    for (index <- 1 to blocksNumber) {
+      cache.put(bytesToId(Blake2b256.hash(s"$index.$index")), new FakeModifier)
+    }
+
+    expectedCacheSize += blocksNumber
+    cache.size shouldBe expectedCacheSize
+
+    for (index <- 1 to 10) {
+      cache.remove(bytesToId(Blake2b256.hash(index.toString)))
+    }
+    expectedCacheSize -= 10
+    cache.size shouldBe expectedCacheSize
+
+    val cleared = cache.cleanOverfull()
+
+    cleared.size shouldBe (expectedCacheSize - limit)
+    expectedCacheSize = limit
+    cache.size shouldBe expectedCacheSize
   }
 }
