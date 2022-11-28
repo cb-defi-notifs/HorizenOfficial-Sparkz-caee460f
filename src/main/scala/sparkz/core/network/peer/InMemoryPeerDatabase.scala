@@ -152,6 +152,8 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     penalty match {
       case PenaltyType.NonDeliveryPenalty | PenaltyType.MisbehaviorPenalty | PenaltyType.SpamPenalty | _: DisconnectPenalty =>
         settings.temporalBanDuration.toMillis
+      case customPenalty: PenaltyType.CustomPenaltyDuration =>
+        customPenalty.penaltyDurationInMinutes.minutes.toMillis
       case PenaltyType.PermanentPenalty =>
         (360 * 10).days.toMillis
     }

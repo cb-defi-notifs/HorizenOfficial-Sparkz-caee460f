@@ -52,7 +52,7 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext) extend
       if (peerDatabase.peerPenaltyScoreOverThreshold(peer, penaltyType)) {
         log.info(s"$peer blacklisted")
         peerDatabase.addToBlacklist(peer, penaltyType)
-        sender() ! Blacklisted(peer)
+        sender() ! DisconnectFromAddress(peer)
       }
 
     case AddPeersIfEmpty(peersSpec) =>
@@ -66,8 +66,11 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext) extend
         }
       peerDatabase.addOrUpdateKnownPeers(filteredPeers)
 
-    case AddToBlacklist(address) =>
-      peerDatabase.addToBlacklist(address, PenaltyType.MisbehaviorPenalty)
+    case AddToBlacklist(address, penaltyType) =>
+      penaltyType match {
+        case Some(penalty) => peerDatabase.addToBlacklist(address, penalty)
+        case _ => peerDatabase.addToBlacklist(address, PenaltyType.MisbehaviorPenalty)
+      }
 
     case RemoveFromBlacklist(address) =>
       peerDatabase.removeFromBlacklist(address.getAddress)
@@ -117,9 +120,9 @@ object PeerManager {
 
     case class Penalize(remote: InetSocketAddress, penaltyType: PenaltyType)
 
-    case class Blacklisted(remote: InetSocketAddress)
+    case class DisconnectFromAddress(remote: InetSocketAddress)
 
-    case class AddToBlacklist(remote: InetSocketAddress)
+    case class AddToBlacklist(remote: InetSocketAddress, penalty: Option[PenaltyType] = None)
 
     case class RemoveFromBlacklist(remote: InetSocketAddress)
 

@@ -2,13 +2,14 @@ package sparkz.core.api.http
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
-import akka.testkit.TestDuration
+import akka.testkit.{TestDuration, TestProbe}
 import io.circe.Json
 import io.circe.syntax._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.api.http.PeersApiRoute.PeerInfoResponse
 import sparkz.core.network.peer.PeerInfo
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, RemoveFromBlacklist, RemovePeer}
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 
@@ -86,25 +87,64 @@ class PeersApiRouteSpec extends AnyFlatSpec
   }
 
   it should "respond ok when add or delete blacklisted peer request is correct" in {
-    Post(prefix + "/blacklist", body) ~> routes ~> check {
+    val networkControllerProbe = TestProbe("networkController")
+    val peerManagerProbe = TestProbe("peerManagerProbe")
+    val routesWithProbes = PeersApiRoute(peerManagerProbe.ref, networkControllerProbe.ref, timeProvider, restApiSettings).route
+
+    val bodyRequest = HttpEntity(
+      """{"address": "127.0.0.1:8080", "durationInMinutes": 40}"""
+    ).withContentType(ContentTypes.`application/json`)
+
+    Post(prefix + "/blacklist", bodyRequest) ~> routesWithProbes ~> check {
+      peerManagerProbe.expectMsgClass(classOf[AddToBlacklist])
+      networkControllerProbe.expectMsgClass(classOf[DisconnectFromAddress])
+
       status shouldBe StatusCodes.OK
     }
-    Delete(prefix + "/blacklist", body) ~> routes ~> check {
+
+    Delete(prefix + "/blacklist", body) ~> routesWithProbes ~> check {
+      peerManagerProbe.expectMsgClass(classOf[RemoveFromBlacklist])
+
       status shouldBe StatusCodes.OK
     }
   }
 
   it should "response bad request if blacklist body content is not well formed" in {
-    Post(prefix + "/blacklist", badBody) ~> routes ~> check {
+    val bodyRequestInvalidAddress = HttpEntity(
+      """{"address": "badAddress", "durationInMinutes": 40}"""
+    ).withContentType(ContentTypes.`application/json`)
+
+    Post(prefix + "/blacklist", bodyRequestInvalidAddress) ~> routes ~> check {
       status shouldBe StatusCodes.BadRequest
     }
+
+    val invalidDurations = Seq(0, -1)
+    invalidDurations.foreach(duration => {
+      val bodyRequestInvalidBanDuration = HttpEntity(
+        s"""{"address": "127.0.0.1:8080", "durationInMinutes": $duration}"""
+      ).withContentType(ContentTypes.`application/json`)
+
+      Post(prefix + "/blacklist", bodyRequestInvalidBanDuration) ~> routes ~> check {
+        responseAs[String].contains("duration must be greater than 0") shouldBe true
+        status shouldBe StatusCodes.BadRequest
+      }
+    })
+
+
     Delete(prefix + "/blacklist", badBody) ~> routes ~> check {
       status shouldBe StatusCodes.BadRequest
     }
   }
 
   it should "respond ok when delete peer request is correct" in {
-    Delete(prefix + "/peer", body) ~> routes ~> check {
+    val networkControllerProbe = TestProbe("networkController")
+    val peerManagerProbe = TestProbe("peerManagerProbe")
+    val routesWithProbes = PeersApiRoute(peerManagerProbe.ref, networkControllerProbe.ref, timeProvider, restApiSettings).route
+
+    Delete(prefix + "/peer", body) ~> routesWithProbes ~> check {
+      peerManagerProbe.expectMsgClass(classOf[RemovePeer])
+      networkControllerProbe.expectMsgClass(classOf[DisconnectFromAddress])
+
       status shouldBe StatusCodes.OK
     }
   }
