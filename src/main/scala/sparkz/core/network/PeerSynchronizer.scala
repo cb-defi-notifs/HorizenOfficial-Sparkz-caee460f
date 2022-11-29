@@ -11,6 +11,7 @@ import sparkz.core.settings.NetworkSettings
 import scorex.util.ScorexLogging
 import shapeless.syntax.typeable._
 
+import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -27,7 +28,7 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
 
   protected override val msgHandlers: PartialFunction[(MessageSpec[_], _, ConnectedPeer), Unit] = {
     case (_: PeersSpec, peers: Seq[PeerSpec]@unchecked, sourcePeer: ConnectedPeer) if peers.cast[Seq[PeerSpec]].isDefined =>
-      addNewPeers(peers, sourcePeer)
+      addNewPeers(peers, sourcePeer.connectionId.remoteAddress)
 
     case (spec, _, remote) if spec.messageCode == GetPeersSpec.messageCode =>
       gossipPeers(remote)
@@ -61,7 +62,7 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
     *
     * @param peers sequence of peer specs describing a remote peers details
     */
-  private def addNewPeers(peers: Seq[PeerSpec], sourcePeer: ConnectedPeer): Unit = {
+  private def addNewPeers(peers: Seq[PeerSpec], sourcePeer: InetSocketAddress): Unit = {
     peerManager ! AddPeersIfEmpty(peers, sourcePeer)
   }
 

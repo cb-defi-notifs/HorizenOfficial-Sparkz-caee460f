@@ -178,7 +178,7 @@ object PeerBucketStorage {
 
     override protected def getHashContent(peerBucketValue: PeerBucketValue): NewPeerBucketHashContent = {
       val address = peerBucketValue.peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException())
-      NewPeerBucketHashContent(address, peerBucketValue.source.connectionId.remoteAddress)
+      NewPeerBucketHashContent(address, peerBucketValue.sourceAddress)
     }
   }
 

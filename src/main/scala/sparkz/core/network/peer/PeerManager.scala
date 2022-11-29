@@ -109,11 +109,11 @@ object PeerManager {
     // peerListOperations messages
     /**
       * @param data: information about peer to be stored in PeerDatabase
-      * @param source: if the source is set, it means is a new peer, otherwise it's a peer to be moved into the tried
+      * @param sourceAddress: if the source is set, it means is a new peer, otherwise it's a peer to be moved into the tried
       * */
-    case class AddOrUpdatePeer(data: PeerInfo, source: Option[ConnectedPeer] = None)
+    case class AddOrUpdatePeer(data: PeerInfo, sourceAddress: Option[InetSocketAddress] = None)
 
-    case class AddPeersIfEmpty(data: Seq[PeerSpec], source: ConnectedPeer)
+    case class AddPeersIfEmpty(data: Seq[PeerSpec], sourceAddress: InetSocketAddress)
 
     case class RemovePeer(address: InetSocketAddress)
 

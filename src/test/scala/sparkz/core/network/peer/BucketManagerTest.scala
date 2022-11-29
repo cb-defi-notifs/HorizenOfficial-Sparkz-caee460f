@@ -1,13 +1,12 @@
 package sparkz.core.network.peer
 
 import akka.actor.ActorSystem
-import akka.testkit.TestProbe
 import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar.{doReturn, spy}
+import sparkz.core.network.NetworkTests
 import sparkz.core.network.peer.BucketManager.Exception.PeerNotFoundException
 import sparkz.core.network.peer.BucketManager.PeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, NewPeerBucketStorage, TriedPeerBucketStorage}
-import sparkz.core.network.{ConnectedPeer, ConnectionId, Incoming, NetworkTests}
 
 import java.net.InetSocketAddress
 
@@ -16,6 +15,7 @@ class BucketManagerTest extends NetworkTests {
   private val nKey = 1234
   private val newBucket = NewPeerBucketStorage(bucketConf, nKey, timeProvider)
   private val triedBucket = TriedPeerBucketStorage(bucketConf, nKey, timeProvider)
+  private val sourceAddress = new InetSocketAddress(10)
 
   "BucketManager" should "be empty when created" in {
     // Arrange
@@ -32,8 +32,7 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val source = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-    val peerBucketValue = PeerBucketValue(peerInfo, source, isNew = true)
+    val peerBucketValue = PeerBucketValue(peerInfo, sourceAddress, isNew = true)
     val bucketManager = new BucketManager(newBucket, triedBucket)
 
     // Act
@@ -57,8 +56,7 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val source = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-    val peerBucketValue = PeerBucketValue(peerInfo, source, isNew = true)
+    val peerBucketValue = PeerBucketValue(peerInfo, sourceAddress, isNew = true)
     val bucketManager = new BucketManager(newBucket, triedBucket)
     bucketManager.addNewPeer(peerBucketValue)
 
@@ -82,8 +80,7 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val source = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-    val peerBucketValue = PeerBucketValue(peerInfo, source, isNew = true)
+    val peerBucketValue = PeerBucketValue(peerInfo, sourceAddress, isNew = true)
     val bucketManager = new BucketManager(newBucket, triedBucket)
     bucketManager.addNewPeer(peerBucketValue)
     bucketManager.makeTried(peerAddress)
@@ -110,8 +107,7 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val source = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-    val peerBucketValue = PeerBucketValue(peerInfo, source, isNew = true)
+    val peerBucketValue = PeerBucketValue(peerInfo, sourceAddress, isNew = true)
     val bucketManager = new BucketManager(newBucket, triedBucket)
     bucketManager.addNewPeer(peerBucketValue)
     bucketManager.makeTried(peerAddress)
@@ -159,7 +155,7 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress1 = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo1 = getPeerInfo(peerAddress1)
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
+    val sourcePeer = new InetSocketAddress(10)
     val peer1 = PeerBucketValue(peerInfo1, sourcePeer, isNew = true)
 
     val peerAddress2 = new InetSocketAddress("88.77.66.55", 1234)

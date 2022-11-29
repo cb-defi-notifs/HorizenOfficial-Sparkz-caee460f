@@ -38,18 +38,18 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
    * Adds a peer to the in-memory database ignoring the configurable limit.
    * Used for high-priority peers, like peers from config file or connected peers
    */
-  override def addOrUpdateKnownPeer(peerInfo: PeerInfo, source: Option[ConnectedPeer]): Unit = {
+  override def addOrUpdateKnownPeer(peerInfo: PeerInfo, sourceAddress: Option[InetSocketAddress]): Unit = {
     if (!peerInfo.peerSpec.declaredAddress.exists(x => isBlacklisted(x.getAddress))) {
-      source match {
+      sourceAddress match {
         case Some(source) => bucketManager.addNewPeer(PeerBucketValue(peerInfo, source, isNew = true))
         case None => bucketManager.makeTried(peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException()))
       }
     }
   }
 
-  override def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo], source: Option[ConnectedPeer]): Unit = {
+  override def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo], sourceAddress: Option[InetSocketAddress]): Unit = {
     val validPeers = peersInfo.filterNot {_.peerSpec.declaredAddress.exists(x => isBlacklisted(x.getAddress))}
-    validPeers.foreach(peer => addOrUpdateKnownPeer(peer, source))
+    validPeers.foreach(peer => addOrUpdateKnownPeer(peer, sourceAddress))
   }
 
   override def addToBlacklist(socketAddress: InetSocketAddress,

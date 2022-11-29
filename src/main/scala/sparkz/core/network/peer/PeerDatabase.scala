@@ -1,7 +1,5 @@
 package sparkz.core.network.peer
 
-import sparkz.core.network.ConnectedPeer
-
 import java.net.{InetAddress, InetSocketAddress}
 
 trait PeerDatabase {
@@ -14,11 +12,11 @@ trait PeerDatabase {
     * Add peer to the database, or update it
     *
     * @param peerInfo - peer record
-    * @param source - the peer that sent the peerInfo
+    * @param sourceAddress - the peer that sent the peerInfo
     */
-  def addOrUpdateKnownPeer(peerInfo: PeerInfo, source: Option[ConnectedPeer]): Unit
+  def addOrUpdateKnownPeer(peerInfo: PeerInfo, sourceAddress: Option[InetSocketAddress]): Unit
 
-  def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo], source: Option[ConnectedPeer]): Unit
+  def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo], sourceAddress: Option[InetSocketAddress]): Unit
 
   def allPeers: Map[InetSocketAddress, PeerInfo]
 

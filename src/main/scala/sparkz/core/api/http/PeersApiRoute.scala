@@ -1,20 +1,20 @@
 package sparkz.core.api.http
 
-import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import io.circe.generic.semiauto._
 import io.circe.syntax._
-import io.circe.{Encoder, Json}
+import io.circe.{Decoder, Encoder}
+import sparkz.core.api.http.PeersApiRoute.Request.ConnectBodyRequest
 import sparkz.core.api.http.PeersApiRoute.{BlacklistedPeers, PeerInfoResponse, PeersStatusResponse}
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, GetAllPeers, GetBlacklistedPeers}
 import sparkz.core.network.peer.{PeerInfo, PeersStatus}
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
 
+import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext
 
 case class PeersApiRoute(peerManager: ActorRef,
@@ -68,15 +68,38 @@ case class PeersApiRoute(peerManager: ActorRef,
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
 
-  def connect: Route = (path("connect") & post & withAuth & entity(as[Json])) { json =>
-    val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
+  def connect: Route = (path("connect") & post & withAuth & entity(as[ConnectBodyRequest])) { bodyRequest =>
+    val peerAddress = bodyRequest.address
+
+    val maybeAddress = addressAndPortRegexp.findFirstMatchIn(peerAddress)
     maybeAddress match {
       case None => ApiError.BadRequest
+
       case Some(addressAndPort) =>
         val host = InetAddress.getByName(addressAndPort.group(1))
         val port = addressAndPort.group(2).toInt
-        networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
+        val address = new InetSocketAddress(host, port)
+        val peerInfo = PeerInfo.fromAddress(address)
+        val source = getSourceAddressFromRequestOrDefault(bodyRequest.source)
+
+        peerManager ! AddOrUpdatePeer(peerInfo, Some(source))
+        networkController ! ConnectTo(peerInfo)
+
         ApiResponse.OK
+    }
+  }
+
+  private def getSourceAddressFromRequestOrDefault(sourceAddress: Option[String]): InetSocketAddress = {
+    sourceAddress match {
+      case Some(stringAddress) =>
+        addressAndPortRegexp.findFirstMatchIn(stringAddress) match {
+          case Some(addressAndPort) =>
+            val host = InetAddress.getByName(addressAndPort.group(1))
+            val port = addressAndPort.group(2).toInt
+            new InetSocketAddress(host, port)
+          case None => settings.bindAddress
+        }
+      case None => settings.bindAddress
     }
   }
 
@@ -107,6 +130,10 @@ object PeersApiRoute {
     )
   }
 
+  object Request {
+    case class ConnectBodyRequest(address: String, source: Option[String])
+  }
+
   case class PeersStatusResponse(lastIncomingMessage: Long, currentSystemTime: Long)
 
   case class BlacklistedPeers(addresses: Seq[String])
@@ -119,5 +146,8 @@ object PeersApiRoute {
 
   @SuppressWarnings(Array("org.wartremover.warts.PublicInference"))
   implicit val encodePeersStatusResponse: Encoder[PeersStatusResponse] = deriveEncoder
+
+  @SuppressWarnings(Array("org.wartremover.warts.PublicInference"))
+  implicit val decodeConnectBodyRequest: Decoder[ConnectBodyRequest] = deriveDecoder
 }
 

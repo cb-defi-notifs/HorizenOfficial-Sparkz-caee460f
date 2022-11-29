@@ -412,7 +412,11 @@ class NetworkController(settings: NetworkSettings,
         peerManagerRef ! RemovePeer(peerAddress)
         connections -= connectedPeer.connectionId.remoteAddress
       } else {
-        peerManagerRef ! AddOrUpdatePeer(peerInfo)
+        val source =
+          if (connectedPeer.connectionId.direction == Incoming) peerInfo.peerSpec.address
+          else None
+
+        peerManagerRef ! AddOrUpdatePeer(peerInfo, source)
 
         val updatedConnectedPeer = connectedPeer.copy(peerInfo = Some(peerInfo))
         connections += remoteAddress -> updatedConnectedPeer

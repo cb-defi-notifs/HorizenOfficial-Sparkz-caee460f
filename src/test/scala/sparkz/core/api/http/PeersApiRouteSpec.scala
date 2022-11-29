@@ -58,7 +58,9 @@ class PeersApiRouteSpec extends AnyFlatSpec
   }
 
   it should "connect to peer" in {
-    val body = HttpEntity("localhost:8080".asJson.toString).withContentType(ContentTypes.`application/json`)
+    val body = HttpEntity(
+      """{"address": "localhost:8080"}"""
+    ).withContentType(ContentTypes.`application/json`)
     Post(prefix + "/connect", body) ~> routes ~> check {
       status shouldBe StatusCodes.OK
     }

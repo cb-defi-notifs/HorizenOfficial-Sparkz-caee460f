@@ -1,6 +1,5 @@
 package sparkz.core.network.peer
 
-import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.peer.BucketManager.Exception.PeerNotFoundException
 import sparkz.core.network.peer.BucketManager.PeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage._
@@ -63,7 +62,7 @@ class BucketManager(private val newBucket: NewPeerBucketStorage, private val tri
 object BucketManager {
   case class BucketManagerConfig(newBucketConfig: BucketConfig, triedBucketConfig: BucketConfig, nKey: Int)
 
-  case class PeerBucketValue(peerInfo: PeerInfo, source: ConnectedPeer, isNew: Boolean)
+  case class PeerBucketValue(peerInfo: PeerInfo, sourceAddress: InetSocketAddress, isNew: Boolean)
 
   case object Exception {
     case class PeerNotFoundException(msg: String) extends Exception(msg)

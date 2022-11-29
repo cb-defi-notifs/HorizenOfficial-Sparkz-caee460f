@@ -29,6 +29,7 @@ class NetworkControllerSpec extends NetworkTests {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private val featureSerializers = Map(LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer)
+  private val sourceAddress = new InetSocketAddress(10)
 
   "A NetworkController" should "send local address on handshake when peer and node address are in localhost" in {
     implicit val system: ActorSystem = ActorSystem()
@@ -118,8 +119,7 @@ class NetworkControllerSpec extends NetworkTests {
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     val peer1Addr = new InetSocketAddress("88.77.66.55", 5678)
 
-    val source = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-    peerManager ! AddOrUpdatePeer(getPeerInfo(peer1Addr), Some(source))
+    peerManager ! AddOrUpdatePeer(getPeerInfo(peer1Addr), Some(sourceAddress))
 
     testPeer1.connectAndExpectSuccessfulMessages(peer1Addr, nodeAddr, Tcp.ResumeReading)
     testPeer1.receiveHandshake
@@ -130,7 +130,7 @@ class NetworkControllerSpec extends NetworkTests {
     val peer2Addr = new InetSocketAddress("88.77.66.56", 5678)
     val testPeer2 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
 
-    peerManager ! AddOrUpdatePeer(getPeerInfo(peer2Addr), Some(source))
+    peerManager ! AddOrUpdatePeer(getPeerInfo(peer2Addr), Some(sourceAddress))
 
     testPeer2.connectAndExpectSuccessfulMessages(peer2Addr, nodeAddr, Tcp.ResumeReading)
     testPeer2.receiveHandshake
@@ -155,9 +155,7 @@ class NetworkControllerSpec extends NetworkTests {
     val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
     val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
 
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-
-    peerManagerRef ! AddOrUpdatePeer(getPeerInfo(peer1DecalredAddr), Some(sourcePeer))
+    peerManagerRef ! AddOrUpdatePeer(getPeerInfo(peer1DecalredAddr), Some(sourceAddress))
 
     testPeer1.connectAndExpectSuccessfulMessages(peer1LocalAddr, nodeAddr, Tcp.ResumeReading)
     testPeer1.receiveHandshake
@@ -169,7 +167,7 @@ class NetworkControllerSpec extends NetworkTests {
     val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
     val testPeer2 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
 
-    peerManagerRef ! AddOrUpdatePeer(getPeerInfo(peer2DeclaredAddr), Some(sourcePeer))
+    peerManagerRef ! AddOrUpdatePeer(getPeerInfo(peer2DeclaredAddr), Some(sourceAddress))
 
     testPeer2.connectAndExpectSuccessfulMessages(peer2LocalAddr, nodeAddr, Tcp.ResumeReading)
     testPeer2.receiveHandshake
@@ -275,10 +273,8 @@ class NetworkControllerSpec extends NetworkTests {
 
     val peerLocalAddress = new InetSocketAddress("192.168.1.2", settings.network.bindAddress.getPort)
 
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-
     // Act
-    peerManager ! AddOrUpdatePeer(getPeerInfo(peerLocalAddress), Some(sourcePeer))
+    peerManager ! AddOrUpdatePeer(getPeerInfo(peerLocalAddress), Some(sourceAddress))
 
     testPeer.connectAndExpectSuccessfulMessages(new InetSocketAddress("192.168.1.2", 5678), nodeAddr, Tcp.ResumeReading)
 
@@ -336,8 +332,6 @@ class NetworkControllerSpec extends NetworkTests {
 
     val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe)
 
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
 
@@ -347,7 +341,7 @@ class NetworkControllerSpec extends NetworkTests {
     unconfirmedConnections += peerAddressOne
 
     // Act
-    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourcePeer))
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourceAddress))
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
 
     // We have to wait for some time before any message is sent to the TcpManager actor
@@ -372,10 +366,8 @@ class NetworkControllerSpec extends NetworkTests {
     val activeConnections = Map.empty[InetSocketAddress, ConnectedPeer]
     val unconfirmedConnections = Set.empty[InetSocketAddress]
 
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-
     // Act
-    peerManager ! AddOrUpdatePeer(peerInfoOne, Some(sourcePeer))
+    peerManager ! AddOrUpdatePeer(peerInfoOne, Some(sourceAddress))
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
 
     // Assert
@@ -394,8 +386,6 @@ class NetworkControllerSpec extends NetworkTests {
 
     val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe)
 
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
 
@@ -410,7 +400,7 @@ class NetworkControllerSpec extends NetworkTests {
     )
 
     // Act
-    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourcePeer))
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourceAddress))
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
 
     // We have to wait for some time before any message is sent to the TcpManager actor
@@ -443,11 +433,10 @@ class NetworkControllerSpec extends NetworkTests {
       1,
       Some(peerInfoOne)
     )
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
 
     // Act
-    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourcePeer))
-    peerManagerRef ! AddOrUpdatePeer(peerInfoTwo, Some(sourcePeer))
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourceAddress))
+    peerManagerRef ! AddOrUpdatePeer(peerInfoTwo, Some(sourceAddress))
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
 
     // Assert
@@ -481,11 +470,10 @@ class NetworkControllerSpec extends NetworkTests {
       1,
       Some(peerInfoOne)
     )
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
 
     // Act
-    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourcePeer))
-    peerManagerRef ! AddOrUpdatePeer(peerInfoTwo, Some(sourcePeer))
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne, Some(sourceAddress))
+    peerManagerRef ! AddOrUpdatePeer(peerInfoTwo, Some(sourceAddress))
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
 
     // Assert

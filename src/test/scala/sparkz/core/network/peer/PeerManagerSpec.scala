@@ -21,6 +21,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
   private var triedBucket: TriedPeerBucketStorage = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
   private var newBucket: NewPeerBucketStorage = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
   private var bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
+  private val sourceAddress = new InetSocketAddress(10)
 
   after {
     // Need to clean the two buckets for each test
@@ -59,9 +60,8 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
     val peerInfo = getPeerInfo(peerAddress)
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
 
-    peerManager ! AddOrUpdatePeer(peerInfo, Some(sourcePeer))
+    peerManager ! AddOrUpdatePeer(peerInfo, Some(sourceAddress))
     peerManager ! GetAllPeers
 
     val data = p.expectMsgClass(classOf[Data])
@@ -76,7 +76,6 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     implicit val system: ActorSystem = ActorSystem()
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
-    val sourcePeer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
 
     val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
     val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManager)
@@ -85,7 +84,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
     val peerInfo = getPeerInfo(peerAddress)
 
-    peerManager ! AddOrUpdatePeer(peerInfo, Some(sourcePeer))
+    peerManager ! AddOrUpdatePeer(peerInfo, Some(sourceAddress))
 
     peerManager ! RemovePeer(peerAddress)
     peerManager ! RemovePeer(knownPeerAddress)
