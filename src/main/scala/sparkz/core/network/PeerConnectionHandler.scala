@@ -10,6 +10,7 @@ import sparkz.core.network.NetworkController.ReceivableMessages.{Handshaked, Pen
 import sparkz.core.network.PeerConnectionHandler.ReceivableMessages
 import sparkz.core.network.PeerFeature.Serializers
 import sparkz.core.network.message.{HandshakeSpec, MessageSerializer}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.AddOrUpdatePeer
 import sparkz.core.network.peer.{PeerInfo, PenaltyType}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
@@ -85,6 +86,13 @@ class PeerConnectionHandler(val settings: NetworkSettings,
       selfPeer = Some(peer)
 
       networkControllerRef ! Handshaked(peerInfo)
+
+      val connectionDirection = peerInfo.connectionType.getOrElse(throw new IllegalArgumentException())
+      val source =
+        if (connectionDirection == Incoming) peerInfo.peerSpec.address
+        else None
+      peerManagerRef ! AddOrUpdatePeer(peerInfo, source)
+
       handshakeTimeoutCancellableOpt.map(_.cancel())
       connection ! ResumeReading
       context become workingCycleWriting
