@@ -44,8 +44,8 @@ lazy val commonSettings = Seq(
 )
 
 val circeVersion = "0.14.2"
-val akkaVersion = "2.6.19"
-val akkaHttpVersion = "10.2.9"
+val akkaVersion = "2.7.0"
+val akkaHttpVersion = "10.4.0"
 
 val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
@@ -84,6 +84,7 @@ val testingDependencies = Seq(
 libraryDependencies ++= Seq(
   "com.iheart" %% "ficus" % "1.5.2",
   "org.scorexfoundation" %% "scrypto" % "2.1.7",
+  "org.mindrot" % "jbcrypt" % "0.4",
   scorexUtil
 ) ++ networkDependencies ++ apiDependencies ++ loggingDependencies ++ testingDependencies
 

@@ -68,15 +68,19 @@ case class PeersApiRoute(peerManager: ActorRef,
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
 
-  def connect: Route = (path("connect") & post & withAuth & entity(as[Json])) { json =>
-    val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
-    maybeAddress match {
-      case None => ApiError.BadRequest
-      case Some(addressAndPort) =>
-        val host = InetAddress.getByName(addressAndPort.group(1))
-        val port = addressAndPort.group(2).toInt
-        networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
-        ApiResponse.OK
+  def connect: Route = (path("connect") & post & withBasicAuth) {
+    _ => {
+      entity(as[Json]) { json =>
+        val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
+        maybeAddress match {
+          case None => ApiError.BadRequest
+          case Some(addressAndPort) =>
+            val host = InetAddress.getByName(addressAndPort.group(1))
+            val port = addressAndPort.group(2).toInt
+            networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
+            ApiResponse.OK
+        }
+      }
     }
   }
 
