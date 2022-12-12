@@ -9,7 +9,7 @@ import sparkz.core.api.http.PeersApiRoute.Request.ConnectBodyRequest
 import sparkz.core.api.http.PeersApiRoute.{BlacklistedPeers, PeerInfoResponse, PeersStatusResponse}
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, GetAllPeers, GetBlacklistedPeers}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, GetAllPeers, GetBlacklistedPeers}
 import sparkz.core.network.peer.{PeerInfo, PeersStatus}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
@@ -80,26 +80,11 @@ case class PeersApiRoute(peerManager: ActorRef,
         val port = addressAndPort.group(2).toInt
         val address = new InetSocketAddress(host, port)
         val peerInfo = PeerInfo.fromAddress(address)
-        val source = getSourceAddressFromRequestOrDefault(bodyRequest.source)
 
-        peerManager ! AddOrUpdatePeer(peerInfo, Some(source))
+        peerManager ! AddPeersIfEmpty(Seq(peerInfo.peerSpec))
         networkController ! ConnectTo(peerInfo)
 
         ApiResponse.OK
-    }
-  }
-
-  private def getSourceAddressFromRequestOrDefault(sourceAddress: Option[String]): InetSocketAddress = {
-    sourceAddress match {
-      case Some(stringAddress) =>
-        addressAndPortRegexp.findFirstMatchIn(stringAddress) match {
-          case Some(addressAndPort) =>
-            val host = InetAddress.getByName(addressAndPort.group(1))
-            val port = addressAndPort.group(2).toInt
-            new InetSocketAddress(host, port)
-          case None => settings.bindAddress
-        }
-      case None => settings.bindAddress
     }
   }
 
@@ -131,7 +116,7 @@ object PeersApiRoute {
   }
 
   object Request {
-    case class ConnectBodyRequest(address: String, source: Option[String])
+    case class ConnectBodyRequest(address: String)
   }
 
   case class PeersStatusResponse(lastIncomingMessage: Long, currentSystemTime: Long)

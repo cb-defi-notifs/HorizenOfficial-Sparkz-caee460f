@@ -4,9 +4,8 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import org.scalatest.BeforeAndAfter
 import sparkz.core.app.SparkzContext
-import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, NewPeerBucketStorage, TriedPeerBucketStorage}
+import sparkz.core.network.NetworkTests
 import sparkz.core.network.peer.PeerManager.ReceivableMessages.{RandomPeerForConnectionExcluding, RemovePeer}
-import sparkz.core.network.{ConnectedPeer, ConnectionId, Incoming, NetworkTests}
 
 import java.net.InetSocketAddress
 
@@ -16,19 +15,6 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
   type Data = Map[InetSocketAddress, PeerInfo]
   private val DefaultPort = 27017
-  private val nKey = 1234
-  private val bucketConfig: BucketConfig = BucketConfig(buckets = 10, bucketPositions = 10, bucketSubgroups = 10)
-  private var triedBucket: TriedPeerBucketStorage = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
-  private var newBucket: NewPeerBucketStorage = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
-  private var bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
-  private val sourceAddress = new InetSocketAddress(10)
-
-  after {
-    // Need to clean the two buckets for each test
-    triedBucket = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
-    newBucket = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
-    bucketManager = new BucketManager(newBucket, triedBucket)
-  }
 
   it should "ignore adding self as a peer" in {
     implicit val system: ActorSystem = ActorSystem()
@@ -38,7 +24,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
     val selfAddress = settings.network.bindAddress
     val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, Some(selfAddress))
-    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManager)
+    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
     val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
     val peerInfo = getPeerInfo(selfAddress)
 
@@ -56,12 +42,12 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     implicit val defaultSender: ActorRef = p.testActor
 
     val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
-    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManager)
+    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
     val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
     val peerInfo = getPeerInfo(peerAddress)
 
-    peerManager ! AddOrUpdatePeer(peerInfo, Some(sourceAddress))
+    peerManager ! AddOrUpdatePeer(peerInfo)
     peerManager ! GetAllPeers
 
     val data = p.expectMsgClass(classOf[Data])
@@ -78,13 +64,13 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     implicit val defaultSender: ActorRef = p.testActor
 
     val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
-    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManager)
+    val peerDatabase = new InMemoryPeerDatabase(settingsWithKnownPeer.network, sparkzContext)
     val peerManager = PeerManagerRef(settingsWithKnownPeer, sparkzContext, peerDatabase)(system)
 
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
     val peerInfo = getPeerInfo(peerAddress)
 
-    peerManager ! AddOrUpdatePeer(peerInfo, Some(sourceAddress))
+    peerManager ! AddOrUpdatePeer(peerInfo)
 
     peerManager ! RemovePeer(peerAddress)
     peerManager ! RemovePeer(knownPeerAddress)
@@ -113,7 +99,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val peersForConnections = RandomPeerForConnectionExcluding(peersToExclude)
 
     // Act
-    val resultOption = peersForConnections.choose(Map(), allPeers, Seq(), sparkzContext)
+    val resultOption = peersForConnections.choose(allPeers, Seq(), sparkzContext)
 
     // Assert
     val result = resultOption.getOrElse(fail("Test result should not be None"))
@@ -137,7 +123,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val blacklistedPeers = Seq(peerAddressOne.getAddress)
 
     // Act
-    val resultOption = peersForConnections.choose(Map(), allPeers, blacklistedPeers, sparkzContext)
+    val resultOption = peersForConnections.choose(allPeers, blacklistedPeers, sparkzContext)
 
     // Assert
     val result = resultOption.getOrElse(fail("Test result should not be None"))
@@ -161,7 +147,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val peersForConnections = RandomPeerForConnectionExcluding(peersToExclude)
 
     // Act
-    val resultOption = peersForConnections.choose(allPeers, Map(), Seq(), sparkzContext)
+    val resultOption = peersForConnections.choose(allPeers, Seq(), sparkzContext)
 
     // Assert
     val result = resultOption.getOrElse(fail("Test result should not be None"))

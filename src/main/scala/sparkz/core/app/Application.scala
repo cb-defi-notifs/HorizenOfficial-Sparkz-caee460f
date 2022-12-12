@@ -7,15 +7,13 @@ import scorex.util.ScorexLogging
 import sparkz.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import sparkz.core.network._
 import sparkz.core.network.message._
-import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, NewPeerBucketStorage, TriedPeerBucketStorage}
-import sparkz.core.network.peer.{BucketManager, InMemoryPeerDatabase, PeerManagerRef}
+import sparkz.core.network.peer.{InMemoryPeerDatabase, PeerManagerRef}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{NodeViewHolder, PersistentNodeViewModifier}
 
 import java.net.InetSocketAddress
-import java.security.SecureRandom
 import scala.concurrent.ExecutionContext
 
 trait Application extends ScorexLogging {
@@ -75,7 +73,7 @@ trait Application extends ScorexLogging {
     externalNodeAddress = externalSocketAddress
   )
 
-  val peerManagerRef: ActorRef = initializePeerManagerRef
+  val peerManagerRef: ActorRef = PeerManagerRef(settings, sparkzContext, new InMemoryPeerDatabase(settings.network, sparkzContext))
 
   val networkControllerRef: ActorRef = NetworkControllerRef(
     "networkController", settings.network, peerManagerRef, sparkzContext)
@@ -114,20 +112,6 @@ trait Application extends ScorexLogging {
       log.info("Exiting from the app...")
       System.exit(0)
     }
-  }
-
-  private def initializePeerManagerRef = {
-    val secureRandom = new SecureRandom()
-    val nKey: Int = secureRandom.nextInt()
-    val newBucketConfig: BucketConfig = BucketConfig(buckets = 1024, bucketPositions = 64, bucketSubgroups = 64)
-    val triedBucketConfig: BucketConfig = BucketConfig(buckets = 256, bucketPositions = 64, bucketSubgroups = 8)
-    val triedBucket: TriedPeerBucketStorage = TriedPeerBucketStorage(triedBucketConfig, nKey, timeProvider)
-    val newBucket: NewPeerBucketStorage = NewPeerBucketStorage(newBucketConfig, nKey, timeProvider)
-
-    val bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
-    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext.timeProvider, bucketManager)
-
-    PeerManagerRef(settings, sparkzContext, peerDatabase)
   }
 }
 

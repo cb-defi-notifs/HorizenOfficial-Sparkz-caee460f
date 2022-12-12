@@ -87,12 +87,6 @@ class PeerConnectionHandler(val settings: NetworkSettings,
 
       networkControllerRef ! Handshaked(peerInfo)
 
-      val connectionDirection = peerInfo.connectionType.getOrElse(throw new IllegalArgumentException())
-      val source =
-        if (connectionDirection == Incoming) peerInfo.peerSpec.address
-        else None
-      peerManagerRef ! AddOrUpdatePeer(peerInfo, source)
-
       handshakeTimeoutCancellableOpt.map(_.cancel())
       connection ! ResumeReading
       context become workingCycleWriting

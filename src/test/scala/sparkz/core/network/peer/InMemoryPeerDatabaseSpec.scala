@@ -1,9 +1,9 @@
 package sparkz.core.network.peer
 
-import org.scalatest.Assertion
+import org.scalatest.{Assertion, BeforeAndAfter}
 import sparkz.ObjectGenerators
+import sparkz.core.app.SparkzContext
 import sparkz.core.network.NetworkTests
-import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, NewPeerBucketStorage, TriedPeerBucketStorage}
 
 import java.net.InetSocketAddress
 import scala.concurrent.duration.DurationInt
@@ -12,20 +12,15 @@ import scala.concurrent.duration.DurationInt
   "org.wartremover.warts.Null",
   "org.wartremover.warts.OptionPartial"
 ))
-class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators {
+class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with BeforeAndAfter {
 
   private val peerAddress1 = new InetSocketAddress("1.1.1.1", 27017)
   private val peerAddress2 = new InetSocketAddress("2.2.2.2", 27017)
   private val storedPeersLimit = 10
-  private val nKey = 1234
-  private val bucketConfig: BucketConfig = BucketConfig(buckets = 10, bucketPositions = 10, bucketSubgroups = 10)
-  private val triedBucket: TriedPeerBucketStorage = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
-  private val newBucket: NewPeerBucketStorage = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
-  private val bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
-  private val sourceAddress = new InetSocketAddress(10)
+  private val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
 
   private def withDb(test: InMemoryPeerDatabase => Assertion): Assertion =
-    test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds), timeProvider, bucketManager))
+    test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds), sparkzContext))
 
   "new DB" should "be empty" in {
     withDb { db =>
@@ -38,7 +33,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators {
 
   it should "be non-empty after adding a peer" in {
     withDb { db =>
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress1), Some(sourceAddress))
+      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress1))
       db.isEmpty shouldBe false
       db.blacklistedPeers.isEmpty shouldBe true
       db.allPeers.isEmpty shouldBe false
@@ -49,17 +44,20 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators {
     withDb { db =>
       val peerInfo = getPeerInfo(peerAddress1)
 
-      db.addOrUpdateKnownPeer(peerInfo, Some(sourceAddress))
-      db.allPeers shouldBe Map(peerAddress1 -> peerInfo)
+      db.addOrUpdateKnownPeer(peerInfo)
+      val peers = db.allPeers
+
+      peers.size shouldBe 1
+      peers.contains(peerAddress1) shouldBe true
     }
   }
 
   it should "return an updated peer after updating a peer" in {
     withDb { db =>
       val peerInfo = getPeerInfo(peerAddress1, Some("initialName"))
-      db.addOrUpdateKnownPeer(peerInfo, Some(sourceAddress))
+      db.addOrUpdateKnownPeer(peerInfo)
       val newPeerInfo = getPeerInfo(peerAddress1, Some("updatedName"))
-      db.addOrUpdateKnownPeer(newPeerInfo, Some(sourceAddress))
+      db.addOrUpdateKnownPeer(newPeerInfo)
 
       db.allPeers shouldBe Map(peerAddress1 -> newPeerInfo)
     }
@@ -67,8 +65,8 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators {
 
   it should "return a blacklisted peer after blacklisting" in {
     withDb { db =>
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress1), Some(sourceAddress))
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress2), Some(sourceAddress))
+      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress1))
+      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress2))
       db.addToBlacklist(peerAddress1, PenaltyType.PermanentPenalty)
 
       db.isBlacklisted(peerAddress1.getAddress) shouldBe true
@@ -80,8 +78,8 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators {
   it should "the blacklisted peer be absent in knownPeers" in {
     withDb { db =>
       val peerInfo1 = getPeerInfo(peerAddress1)
-      db.addOrUpdateKnownPeer(peerInfo1, Some(sourceAddress))
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress2), Some(sourceAddress))
+      db.addOrUpdateKnownPeer(peerInfo1)
+      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress2))
       db.addToBlacklist(peerAddress2, PenaltyType.PermanentPenalty)
 
       db.allPeers shouldBe Map(peerAddress1 -> peerInfo1)
@@ -90,7 +88,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators {
 
   it should "remove peers from db correctly" in {
     withDb { db =>
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress1), Some(sourceAddress))
+      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress1))
       db.isEmpty shouldBe false
       db.blacklistedPeers.isEmpty shouldBe true
       db.allPeers.isEmpty shouldBe false

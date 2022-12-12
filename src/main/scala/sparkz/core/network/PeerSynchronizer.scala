@@ -3,15 +3,14 @@ package sparkz.core.network
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
-import sparkz.core.network.message.{GetPeersSpec, Message, MessageSpec, PeersSpec}
-import sparkz.core.network.peer.{PeerInfo, PenaltyType}
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, SeenPeers}
-import sparkz.core.settings.NetworkSettings
 import scorex.util.ScorexLogging
 import shapeless.syntax.typeable._
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import sparkz.core.network.message.{GetPeersSpec, Message, MessageSpec, PeersSpec}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, SeenPeers}
+import sparkz.core.network.peer.{PeerInfo, PenaltyType}
+import sparkz.core.settings.NetworkSettings
 
-import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -27,8 +26,8 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
   private val peersSpec = new PeersSpec(featureSerializers, settings.maxPeerSpecObjects)
 
   protected override val msgHandlers: PartialFunction[(MessageSpec[_], _, ConnectedPeer), Unit] = {
-    case (_: PeersSpec, peers: Seq[PeerSpec]@unchecked, sourcePeer: ConnectedPeer) if peers.cast[Seq[PeerSpec]].isDefined =>
-      addNewPeers(peers, sourcePeer.connectionId.remoteAddress)
+    case (_: PeersSpec, peers: Seq[PeerSpec]@unchecked, _: ConnectedPeer) if peers.cast[Seq[PeerSpec]].isDefined =>
+      addNewPeers(peers)
 
     case (spec, _, remote) if spec.messageCode == GetPeersSpec.messageCode =>
       gossipPeers(remote)
@@ -62,8 +61,8 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
     *
     * @param peers sequence of peer specs describing a remote peers details
     */
-  private def addNewPeers(peers: Seq[PeerSpec], sourcePeer: InetSocketAddress): Unit = {
-    peerManager ! AddPeersIfEmpty(peers, sourcePeer)
+  private def addNewPeers(peers: Seq[PeerSpec]): Unit = {
+    peerManager ! AddPeersIfEmpty(peers)
   }
 
   /**

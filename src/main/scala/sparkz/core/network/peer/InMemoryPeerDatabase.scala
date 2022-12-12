@@ -1,22 +1,35 @@
 package sparkz.core.network.peer
 
 import scorex.util.ScorexLogging
-import sparkz.core.network.ConnectedPeer
-import sparkz.core.network.peer.BucketManager.PeerBucketValue
+import sparkz.core.app.SparkzContext
+import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
 import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
 import sparkz.core.settings.NetworkSettings
-import sparkz.core.utils.TimeProvider
+import sparkz.core.utils.{NetworkUtils, TimeProvider}
 
 import java.net.{InetAddress, InetSocketAddress}
+import java.security.SecureRandom
 import scala.concurrent.duration._
 
 /**
   * In-memory peer database implementation supporting temporal blacklisting.
   */
-final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimeProvider, bucketManager: BucketManager)
+final class InMemoryPeerDatabase(settings: NetworkSettings, sparkzContext: SparkzContext)
   extends PeerDatabase with ScorexLogging {
 
+  private val timeProvider = sparkzContext.timeProvider
+
+  private val nKey: Int = new SecureRandom().nextInt()
+  private val newBucketConfig: BucketConfig = BucketConfig(buckets = 1024, bucketPositions = 64, bucketSubgroups = 64)
+  private val triedBucketConfig: BucketConfig = BucketConfig(buckets = 256, bucketPositions = 64, bucketSubgroups = 8)
+  private val triedBucket: PeerBucketStorageImpl = PeerBucketStorageImpl(triedBucketConfig, nKey, timeProvider)
+  private val newBucket: PeerBucketStorageImpl = PeerBucketStorageImpl(newBucketConfig, nKey, timeProvider)
+
+  private val bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
+
   private val safeInterval = settings.penaltySafeInterval.toMillis
+
+  private var knownPeers: Map[InetSocketAddress, PeerInfo] = Map.empty
 
   /**
     * banned peer ip -> ban expiration timestamp
@@ -28,28 +41,40 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     */
   private var penaltyBook = Map.empty[InetAddress, (Int, Long)]
 
-  override def get(peer: InetSocketAddress): Option[PeerInfo] =
-    bucketManager.getPeer(peer) match {
-      case Some(peerBucketValue) => Some(peerBucketValue.peerInfo)
-      case _ => None
+  // fill database with known peers
+  settings.knownPeers.foreach { address =>
+    if (!NetworkUtils.isSelf(address, settings.bindAddress, sparkzContext.externalNodeAddress)) {
+      knownPeers += address -> PeerInfo.fromAddress(address)
     }
+  }
 
-  /**
-   * Adds a peer to the in-memory database ignoring the configurable limit.
-   * Used for high-priority peers, like peers from config file or connected peers
-   */
-  override def addOrUpdateKnownPeer(peerInfo: PeerInfo, sourceAddress: Option[InetSocketAddress]): Unit = {
-    if (!peerInfo.peerSpec.declaredAddress.exists(x => isBlacklisted(x.getAddress))) {
-      sourceAddress match {
-        case Some(source) => bucketManager.addNewPeer(PeerBucketValue(peerInfo, source, isNew = true))
-        case None => bucketManager.makeTried(peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException()))
+  override def get(peer: InetSocketAddress): Option[PeerInfo] = {
+    if (knownPeers.contains(peer)) {
+      knownPeers.get(peer)
+    } else {
+      bucketManager.getPeer(peer) match {
+        case Some(peerBucketValue) => Some(peerBucketValue.peerInfo)
+        case _ => None
       }
     }
   }
 
-  override def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo], sourceAddress: Option[InetSocketAddress]): Unit = {
-    val validPeers = peersInfo.filterNot {_.peerSpec.declaredAddress.exists(x => isBlacklisted(x.getAddress))}
-    validPeers.foreach(peer => addOrUpdateKnownPeer(peer, sourceAddress))
+  override def addOrUpdateKnownPeer(peerInfo: PeerInfo): Unit = {
+    if (peerIsNotBlacklistedAndNotKnownPeer(peerInfo)) {
+      bucketManager.addPeerIntoBucket(peerInfo)
+    }
+  }
+
+  private def peerIsNotBlacklistedAndNotKnownPeer(peerInfo: PeerInfo): Boolean = {
+    !peerInfo.peerSpec.declaredAddress.exists(x => isBlacklisted(x.getAddress)) &&
+      !peerInfo.peerSpec.address.exists(x => knownPeers.contains(x))
+  }
+
+  override def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo]): Unit = {
+    val validPeers = peersInfo.filterNot {
+      _.peerSpec.declaredAddress.exists(x => isBlacklisted(x.getAddress))
+    }
+    validPeers.foreach(peer => addOrUpdateKnownPeer(peer))
   }
 
   override def addToBlacklist(socketAddress: InetSocketAddress,
@@ -72,7 +97,7 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     bucketManager.removePeer(address)
   }
 
-  override def allPeers: Map[InetSocketAddress, PeerInfo] = bucketManager.getTriedPeers ++ bucketManager.getNewPeers
+  override def allPeers: Map[InetSocketAddress, PeerInfo] = knownPeers ++ bucketManager.getTriedPeers ++ bucketManager.getNewPeers
 
   override def blacklistedPeers: Seq[InetAddress] = blacklist
     .map { case (address, bannedTill) =>

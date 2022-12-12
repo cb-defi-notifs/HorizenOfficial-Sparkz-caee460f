@@ -12,11 +12,10 @@ trait PeerDatabase {
     * Add peer to the database, or update it
     *
     * @param peerInfo - peer record
-    * @param sourceAddress - the peer that sent the peerInfo
     */
-  def addOrUpdateKnownPeer(peerInfo: PeerInfo, sourceAddress: Option[InetSocketAddress]): Unit
+  def addOrUpdateKnownPeer(peerInfo: PeerInfo): Unit
 
-  def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo], sourceAddress: Option[InetSocketAddress]): Unit
+  def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo]): Unit
 
   def allPeers: Map[InetSocketAddress, PeerInfo]
 

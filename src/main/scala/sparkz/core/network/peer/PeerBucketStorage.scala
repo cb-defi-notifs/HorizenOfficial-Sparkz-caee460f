@@ -22,7 +22,7 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
   private val table: mutable.Map[(Int, Int), (PeerBucketValue, Time)] = mutable.Map.empty[(Int, Int), (PeerBucketValue, Time)]
   private val reverseTable: mutable.Map[InetSocketAddress, (Int, Int)] = mutable.Map.empty[InetSocketAddress, (Int, Int)]
 
-  protected[peer] def getBucket(hashContent: T): Int = {
+  private[peer] def getBucket(hashContent: T): Int = {
     val hash1Content = Bytes.concat(Ints.toByteArray(nKey), hashContent.getHashAsBytes)
     val h: Array[Byte] = Blake2b256.hash(hash1Content)
     val hInt = ByteBuffer.wrap(h).getInt
@@ -59,7 +59,7 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
     result
   }
 
-  protected[peer] def getBucketPosition(nBucket: Int, peerAddress: InetSocketAddress): Int = {
+  private[peer] def getBucketPosition(nBucket: Int, peerAddress: InetSocketAddress): Int = {
     val hashContent = Bytes.concat(
       Ints.toByteArray(nKey),
       Ints.toByteArray(if (isNewPeer) 1 else 0),
@@ -155,39 +155,21 @@ object PeerBucketStorage {
     def getHashAsBytes: Array[Byte]
   }
 
-  case class NewPeerBucketHashContent(address: InetSocketAddress, sourceAddress: InetSocketAddress) extends BucketHashContent {
+  case class PeerBucketHashContentImpl(address: InetSocketAddress) extends BucketHashContent {
     override def getHashAsBytes: Array[Byte] = Bytes.concat(
       address.getHostString.getBytes,
-      Ints.toByteArray(address.getPort),
-      sourceAddress.getHostString.getBytes,
-      Ints.toByteArray(sourceAddress.getPort)
+      Ints.toByteArray(address.getPort)
     )
 
     override def getAddress: InetSocketAddress = address
   }
 
-  case class TriedPeerBucketHashContent(address: InetSocketAddress) extends BucketHashContent {
+  case class PeerBucketStorageImpl(bucketConfig: BucketConfig, nKey: Int, timeProvider: TimeProvider)
+    extends PeerBucketStorage[PeerBucketHashContentImpl](bucketConfig, nKey, timeProvider, true) {
 
-    override def getHashAsBytes: Array[Byte] = Bytes.concat(address.getHostString.getBytes, Ints.toByteArray(address.getPort))
-
-    override def getAddress: InetSocketAddress = address
-  }
-
-  case class NewPeerBucketStorage(bucketConfig: BucketConfig, nKey: Int, timeProvider: TimeProvider)
-    extends PeerBucketStorage[NewPeerBucketHashContent](bucketConfig, nKey, timeProvider, true) {
-
-    override protected def getHashContent(peerBucketValue: PeerBucketValue): NewPeerBucketHashContent = {
+    override protected def getHashContent(peerBucketValue: PeerBucketValue): PeerBucketHashContentImpl = {
       val address = peerBucketValue.peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException())
-      NewPeerBucketHashContent(address, peerBucketValue.sourceAddress)
-    }
-  }
-
-  case class TriedPeerBucketStorage(bucketConfig: BucketConfig, nKey: Int, timeProvider: TimeProvider)
-    extends PeerBucketStorage[TriedPeerBucketHashContent](bucketConfig, nKey, timeProvider, false) {
-
-    override protected def getHashContent(peerBucketValue: PeerBucketValue): TriedPeerBucketHashContent = {
-      val address = peerBucketValue.peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException())
-      TriedPeerBucketHashContent(address)
+      PeerBucketHashContentImpl(address)
     }
   }
 }

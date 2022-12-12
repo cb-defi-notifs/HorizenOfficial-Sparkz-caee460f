@@ -3,7 +3,7 @@ package sparkz.core.network.peer
 import akka.actor.ActorSystem
 import sparkz.core.network.NetworkTests
 import sparkz.core.network.peer.BucketManager.PeerBucketValue
-import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, NewPeerBucketStorage, TriedPeerBucketStorage}
+import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
 
 import java.net.InetSocketAddress
 
@@ -12,13 +12,12 @@ class PeerBucketStorageTest extends NetworkTests {
   private val bucketPositions = 64
   private val bucketSubgroups = 8
   private val nKey = 1234
-  private val sourceAddress = new InetSocketAddress(10)
 
   "Both new and tried buckets" should "should be empty when created" in {
     // Arrange
     val bucketConfig = BucketConfig(buckets, bucketPositions, bucketSubgroups)
-    val tried = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
-    val newB = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
+    val tried = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
+    val newB = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
 
     // Assert
     tried.isEmpty shouldBe true
@@ -33,12 +32,12 @@ class PeerBucketStorageTest extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
 
     val bucketConfig = BucketConfig(buckets, bucketPositions, bucketSubgroups)
-    val tried = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
-    val newB = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
+    val tried = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
+    val newB = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val newPeer = PeerBucketValue(peerInfo, sourceAddress, isNew = true)
-    val triedPeer = PeerBucketValue(peerInfo, sourceAddress, isNew = false)
+    val newPeer = PeerBucketValue(peerInfo, isNew = true)
+    val triedPeer = PeerBucketValue(peerInfo, isNew = false)
 
     // Act
     newB.add(newPeer)
@@ -67,12 +66,12 @@ class PeerBucketStorageTest extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
 
     val bucketConfig = BucketConfig(buckets, bucketPositions, bucketSubgroups)
-    val tried = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
-    val newB = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
+    val tried = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
+    val newB = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val newPeer = PeerBucketValue(peerInfo, sourceAddress, isNew = true)
-    val triedPeer = PeerBucketValue(peerInfo, sourceAddress, isNew = false)
+    val newPeer = PeerBucketValue(peerInfo, isNew = true)
+    val triedPeer = PeerBucketValue(peerInfo, isNew = false)
     newB.add(newPeer)
     tried.add(triedPeer)
 
@@ -95,12 +94,12 @@ class PeerBucketStorageTest extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
 
     val bucketConfig = BucketConfig(buckets, bucketPositions, bucketSubgroups)
-    val tried = TriedPeerBucketStorage(bucketConfig, nKey, timeProvider)
-    val newB = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
+    val tried = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
+    val newB = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val newPeer = PeerBucketValue(peerInfo, sourceAddress, isNew = true)
-    val triedPeer = PeerBucketValue(peerInfo, sourceAddress, isNew = false)
+    val newPeer = PeerBucketValue(peerInfo, isNew = true)
+    val triedPeer = PeerBucketValue(peerInfo, isNew = false)
 
     // Act
     newPeer.peerInfo.peerSpec.address.foreach(address => newB.remove(address))
@@ -121,13 +120,13 @@ class PeerBucketStorageTest extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
 
     val bucketConfig = BucketConfig(buckets, bucketPositions, bucketSubgroups)
-    val newB = NewPeerBucketStorage(bucketConfig, nKey, timeProvider)
+    val newB = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
     val peerAddress1 = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo1 = getPeerInfo(peerAddress1)
     val peerAddress2 = new InetSocketAddress("88.77.66.55", 1234)
     val peerInfo2 = getPeerInfo(peerAddress2)
-    val newPeer1 = PeerBucketValue(peerInfo1, sourceAddress, isNew = true)
-    val newPeer2 = PeerBucketValue(peerInfo2, sourceAddress, isNew = true)
+    val newPeer1 = PeerBucketValue(peerInfo1, isNew = true)
+    val newPeer2 = PeerBucketValue(peerInfo2, isNew = true)
     val fakeAddress = new InetSocketAddress("55.88.77.66", 1234)
 
     // Act
