@@ -25,18 +25,13 @@ trait ApiDirectives extends CorsHandler with SparkzEncoding {
   lazy val withBasicAuth: AuthenticationDirective[String] = authenticateBasic(realm = "secure api", basicAuthentication)
 
   def basicAuthentication(credentials: Credentials): Option[String] = {
-    settings.apiKeyHash match {
-      case None => Some(DEFAULT_USER)
-      case Some(key) =>
-        key.isEmpty match {
-          case true =>
-            Some(DEFAULT_USER)
-          case false =>
+    settings.apiKeyHash.isEmpty match {
+      case true => Some(DEFAULT_USER)
+      case false =>
             credentials match {
               case p @ Credentials.Provided(id) if p.provideVerify(verifyApiKey) => Some(id)
               case _ => None
             }
-        }
     }
   }
 
