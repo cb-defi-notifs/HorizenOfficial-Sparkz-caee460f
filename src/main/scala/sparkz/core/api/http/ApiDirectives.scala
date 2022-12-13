@@ -36,7 +36,11 @@ trait ApiDirectives extends CorsHandler with SparkzEncoding {
   }
 
   def verifyApiKey(apiKey: String): Boolean = {
-    BCrypt.checkpw(apiKey, settings.apiKeyHash.fold("")(key => key))
+    val apiKeyHash = settings.apiKeyHash.fold("")(key => key)
+    if (apiKeyHash.equals(""))
+      false
+    else
+      BCrypt.checkpw(apiKey, apiKeyHash)
   }
 
 }
