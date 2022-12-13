@@ -3,33 +3,44 @@ package sparkz.core.network.peer
 import sparkz.core.network.peer.BucketManager.Exception.PeerNotFoundException
 import sparkz.core.network.peer.BucketManager.PeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage._
+import sparkz.core.network.peer.PeerDatabase.PeerDatabaseValue
 
 import java.net.InetSocketAddress
 import scala.util.Random
 
 class BucketManager(newBucket: PeerBucketStorageImpl, triedBucket: PeerBucketStorageImpl) {
-  def addPeerIntoBucket(peerInfo: PeerInfo): Unit = {
-    peerInfo.peerSpec.address.foreach(address =>
-      if (newBucket.contains(address)) {
-        makeTried(peerInfo)
+  def addPeerIntoBucket(peerDatabaseValue: PeerDatabaseValue): Unit = {
+    if (newBucket.contains(peerDatabaseValue.address)) {
+      makeTried(peerDatabaseValue)
+    } else {
+      // We don't want to add the peer if we already have it in the tried database unless it's an update
+      if (!triedBucket.contains(peerDatabaseValue.address)) {
+        addNewPeer(peerDatabaseValue)
       } else {
-        // We don't want to add the peer if we already have it in the tried database
-        if (!triedBucket.contains(address))
-          addNewPeer(peerInfo)
+        updatePeerInTriedIfDifferent(peerDatabaseValue)
       }
-    )
+    }
   }
 
-  private[peer] def addNewPeer(peerInfo: PeerInfo): Unit = {
-    newBucket.add(PeerBucketValue(peerInfo, isNew = true))
+  private def updatePeerInTriedIfDifferent(peerDatabaseValue: PeerDatabaseValue): Unit = {
+    val oldPeer = triedBucket.getStoredPeerByAddress(peerDatabaseValue.address)
+    oldPeer.foreach(p => {
+      if (p.peerDatabaseValue.hasBeenUpdated(peerDatabaseValue)) {
+        triedBucket.updateExistingPeer(PeerBucketValue(peerDatabaseValue, isNew = false))
+      }
+    })
   }
 
-  private[peer] def makeTried(peerInfo: PeerInfo): Unit = {
-    val address = peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException())
+  private[peer] def addNewPeer(peerDatabaseValue: PeerDatabaseValue): Unit = {
+    newBucket.add(PeerBucketValue(peerDatabaseValue, isNew = true))
+  }
+
+  private[peer] def makeTried(peerDatabaseValue: PeerDatabaseValue): Unit = {
+    val address = peerDatabaseValue.address
     val peerToBeMovedInTried = newBucket
       .getStoredPeerByAddress(address)
       .getOrElse(
-        throw PeerNotFoundException(s"Cannot move peer $peerInfo to tried table because it doesn't exist in new")
+        throw PeerNotFoundException(s"Cannot move peer $address to tried table because it doesn't exist in new")
       )
     newBucket.remove(address)
 
@@ -37,13 +48,13 @@ class BucketManager(newBucket: PeerBucketStorageImpl, triedBucket: PeerBucketSto
       val (bucket, bucketPosition) = triedBucket.getPeerIndexes(peerToBeMovedInTried)
       val peerToBeRemovedOption = triedBucket.getStoredPeerByIndexes(bucket, bucketPosition)
       val peerToBeRemoved = peerToBeRemovedOption.getOrElse(throw new IllegalArgumentException())
-      val addressToBeRemoved = peerToBeRemoved.peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException())
+      val addressToBeRemoved = peerToBeRemoved.peerDatabaseValue.peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException())
       triedBucket.remove(addressToBeRemoved)
 
-      addNewPeer(peerToBeRemoved.peerInfo)
+      addNewPeer(peerToBeRemoved.peerDatabaseValue)
     }
 
-    triedBucket.add(PeerBucketValue(peerInfo, isNew = false))
+    triedBucket.add(PeerBucketValue(peerDatabaseValue, isNew = false))
   }
 
   def removePeer(address: InetSocketAddress): Unit = {
@@ -53,11 +64,11 @@ class BucketManager(newBucket: PeerBucketStorageImpl, triedBucket: PeerBucketSto
 
   def isEmpty: Boolean = triedBucket.isEmpty && newBucket.isEmpty
 
-  def getNewPeers: Map[InetSocketAddress, PeerInfo] = newBucket.getPeers
+  def getNewPeers: Map[InetSocketAddress, PeerDatabaseValue] = newBucket.getPeers
 
-  def getTriedPeers: Map[InetSocketAddress, PeerInfo] = triedBucket.getPeers
+  def getTriedPeers: Map[InetSocketAddress, PeerDatabaseValue] = triedBucket.getPeers
 
-  def getRandomPeers: Map[InetSocketAddress, PeerInfo] = {
+  def getRandomPeers: Map[InetSocketAddress, PeerDatabaseValue] = {
     val pickFromNewBucket = new Random().nextBoolean()
 
     if ((pickFromNewBucket && newBucket.nonEmpty) || triedBucket.isEmpty)
@@ -73,7 +84,7 @@ class BucketManager(newBucket: PeerBucketStorageImpl, triedBucket: PeerBucketSto
 }
 
 object BucketManager {
-  case class PeerBucketValue(peerInfo: PeerInfo, isNew: Boolean)
+  case class PeerBucketValue(peerDatabaseValue: PeerDatabaseValue, isNew: Boolean)
 
   case object Exception {
     case class PeerNotFoundException(msg: String) extends Exception(msg)

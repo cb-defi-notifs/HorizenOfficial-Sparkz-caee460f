@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import sparkz.core.network.NetworkTests
 import sparkz.core.network.peer.BucketManager.PeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
+import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 
 import java.net.InetSocketAddress
 
@@ -36,8 +37,8 @@ class PeerBucketStorageTest extends NetworkTests {
     val newB = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val newPeer = PeerBucketValue(peerInfo, isNew = true)
-    val triedPeer = PeerBucketValue(peerInfo, isNew = false)
+    val newPeer = PeerBucketValue(PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown), isNew = true)
+    val triedPeer = PeerBucketValue(PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown), isNew = false)
 
     // Act
     newB.add(newPeer)
@@ -49,14 +50,9 @@ class PeerBucketStorageTest extends NetworkTests {
 
     val newPeers = newB.getPeers
     val triedPeers = tried.getPeers
-    newPeer.peerInfo.peerSpec.address match {
-      case Some(address) => newPeers.contains(address) shouldBe true
-      case _ => fail("Expected newPeer to have a valid address")
-    }
-    triedPeer.peerInfo.peerSpec.address match {
-      case Some(address) => triedPeers.contains(address) shouldBe true
-      case _ => fail("Expected newPeer to have a valid address")
-    }
+
+    newPeers.contains(newPeer.peerDatabaseValue.address) shouldBe true
+    triedPeers.contains(triedPeer.peerDatabaseValue.address) shouldBe true
 
     system.terminate()
   }
@@ -70,14 +66,14 @@ class PeerBucketStorageTest extends NetworkTests {
     val newB = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val newPeer = PeerBucketValue(peerInfo, isNew = true)
-    val triedPeer = PeerBucketValue(peerInfo, isNew = false)
+    val newPeer = PeerBucketValue(PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown), isNew = true)
+    val triedPeer = PeerBucketValue(PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown), isNew = false)
     newB.add(newPeer)
     tried.add(triedPeer)
 
     // Act
-    newPeer.peerInfo.peerSpec.address.foreach(address => newB.remove(address))
-    triedPeer.peerInfo.peerSpec.address.foreach(address => tried.remove(address))
+    newB.remove(newPeer.peerDatabaseValue.address)
+    tried.remove(triedPeer.peerDatabaseValue.address)
 
     // Assert
     newB.isEmpty shouldBe true
@@ -98,12 +94,12 @@ class PeerBucketStorageTest extends NetworkTests {
     val newB = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val newPeer = PeerBucketValue(peerInfo, isNew = true)
-    val triedPeer = PeerBucketValue(peerInfo, isNew = false)
+    val newPeer = PeerBucketValue(PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown), isNew = true)
+    val triedPeer = PeerBucketValue(PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown), isNew = false)
 
     // Act
-    newPeer.peerInfo.peerSpec.address.foreach(address => newB.remove(address))
-    triedPeer.peerInfo.peerSpec.address.foreach(address => tried.remove(address))
+    newB.remove(newPeer.peerDatabaseValue.address)
+    tried.remove(triedPeer.peerDatabaseValue.address)
 
     // Assert
     newB.isEmpty shouldBe true
@@ -125,8 +121,8 @@ class PeerBucketStorageTest extends NetworkTests {
     val peerInfo1 = getPeerInfo(peerAddress1)
     val peerAddress2 = new InetSocketAddress("88.77.66.55", 1234)
     val peerInfo2 = getPeerInfo(peerAddress2)
-    val newPeer1 = PeerBucketValue(peerInfo1, isNew = true)
-    val newPeer2 = PeerBucketValue(peerInfo2, isNew = true)
+    val newPeer1 = PeerBucketValue(PeerDatabaseValue(peerAddress1, peerInfo1, PeerConfidence.Unknown), isNew = true)
+    val newPeer2 = PeerBucketValue(PeerDatabaseValue(peerAddress2, peerInfo2, PeerConfidence.Unknown), isNew = true)
     val fakeAddress = new InetSocketAddress("55.88.77.66", 1234)
 
     // Act
@@ -138,6 +134,31 @@ class PeerBucketStorageTest extends NetworkTests {
     newB.contains(peerAddress1) shouldBe true
     newB.contains(peerAddress2) shouldBe true
     newB.contains(fakeAddress) shouldBe false
+
+    system.terminate()
+  }
+
+  it should "update a peer" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+
+    val bucketConfig = BucketConfig(buckets, bucketPositions, bucketSubgroups)
+    val newB = PeerBucketStorageImpl(bucketConfig, nKey, timeProvider)
+    val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
+    val peerInfo = getPeerInfo(peerAddress)
+    val newPeer = PeerBucketValue(PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown), isNew = true)
+
+    // Act
+    newB.add(newPeer)
+    newB.updateExistingPeer(PeerBucketValue(PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Medium), isNew = true))
+
+    // Assert
+    val peers = newB.getPeers
+    peers.contains(peerAddress) shouldBe true
+    peers.size shouldBe 1
+
+    val peer = peers(peerAddress)
+    peer.confidence shouldBe PeerConfidence.Medium
 
     system.terminate()
   }

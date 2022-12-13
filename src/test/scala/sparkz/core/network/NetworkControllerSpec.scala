@@ -4,26 +4,29 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.io.Tcp
 import akka.io.Tcp.{Bind, Bound, Connect, Connected, Message => TcpMessage}
 import akka.testkit.TestProbe
-import akka.util.ByteString
+import akka.util.{ByteString, Timeout}
 import akka.io.Tcp.{Message => _, _}
+import akka.pattern.ask
 import org.scalatest.EitherValues._
 import org.scalatest.OptionValues._
 import org.scalatest.TryValues._
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.Internal.ConnectionToPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
 import sparkz.core.network.message._
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, RandomPeerForConnectionExcluding}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, GetAllPeers, RandomPeerForConnectionExcluding}
 import sparkz.core.network.peer._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.LocalTimeProvider
 
 import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 
-class NetworkControllerSpec extends NetworkTests {
+class NetworkControllerSpec extends NetworkTests with ScalaFutures {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -179,12 +182,13 @@ class NetworkControllerSpec extends NetworkTests {
 
   it should "send close message when maxIncomingConnections threshold is reached" in {
     implicit val system: ActorSystem = ActorSystem()
+    implicit val timeout: Timeout = Timeout(60.seconds)
 
     val tcpManagerProbe = TestProbe()
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
     val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxIncomingConnections = 1))
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, peerManagerRef: ActorRef) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
@@ -198,6 +202,13 @@ class NetworkControllerSpec extends NetworkTests {
     val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
     val testPeer2 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     testPeer2.connectAndExpectMessage(peer2LocalAddr, nodeAddr, Tcp.Close)
+
+    val futureResponse = peerManagerRef ? GetAllPeers
+    whenReady(futureResponse.mapTo[Map[InetSocketAddress, PeerInfo]]) {
+      peersMap =>
+        peersMap.size shouldBe 1
+        peersMap.contains(peer1DecalredAddr) shouldBe true
+    }
 
     system.terminate()
   }

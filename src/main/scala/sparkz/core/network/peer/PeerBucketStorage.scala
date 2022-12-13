@@ -4,6 +4,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import scorex.crypto.hash.Blake2b256
 import sparkz.core.network.peer.BucketManager.PeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, BucketHashContent, NOT_FOUND_PEER_INDEXES}
+import sparkz.core.network.peer.PeerDatabase.PeerDatabaseValue
 import sparkz.core.utils.TimeProvider.Time
 import sparkz.core.utils.{NetworkAddressWrapper, TimeProvider}
 
@@ -72,12 +73,17 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
   }
 
   def add(peerBucketValue: PeerBucketValue): Unit = {
-    peerBucketValue.peerInfo.peerSpec.address.foreach(address => {
-      val hashContent = getHashContent(peerBucketValue)
-      val (bucket, bucketPosition) = getPeerIndexes(hashContent)
-      table += (bucket, bucketPosition) -> (peerBucketValue, timeProvider.time())
-      reverseTable += address -> (bucket, bucketPosition)
-    })
+    val address = peerBucketValue.peerDatabaseValue.address
+    val hashContent = getHashContent(peerBucketValue)
+    val (bucket, bucketPosition) = getPeerIndexes(hashContent)
+    table += (bucket, bucketPosition) -> (peerBucketValue, timeProvider.time())
+    reverseTable += address -> (bucket, bucketPosition)
+  }
+
+  def updateExistingPeer(peerBucketValue: PeerBucketValue): Unit = {
+    val address = peerBucketValue.peerDatabaseValue.address
+    val indexes = reverseTable(address)
+    table(indexes) = (peerBucketValue, timeProvider.time())
   }
 
   protected def getHashContent(peerBucketValue: PeerBucketValue): T
@@ -138,10 +144,10 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
 
   def nonEmpty: Boolean = !isEmpty
 
-  def getPeers: Map[InetSocketAddress, PeerInfo] =
+  def getPeers: Map[InetSocketAddress, PeerDatabaseValue] =
     table
       .values
-      .map { p => (p._1.peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException()), p._1.peerInfo) }
+      .map { p => (p._1.peerDatabaseValue.address, p._1.peerDatabaseValue) }
       .toMap
 }
 
@@ -168,7 +174,7 @@ object PeerBucketStorage {
     extends PeerBucketStorage[PeerBucketHashContentImpl](bucketConfig, nKey, timeProvider, true) {
 
     override protected def getHashContent(peerBucketValue: PeerBucketValue): PeerBucketHashContentImpl = {
-      val address = peerBucketValue.peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException())
+      val address = peerBucketValue.peerDatabaseValue.address
       PeerBucketHashContentImpl(address)
     }
   }

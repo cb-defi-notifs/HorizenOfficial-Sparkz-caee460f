@@ -285,7 +285,7 @@ class NetworkController(settings: NetworkSettings,
     val mergedSeq = connectionsAddressSeq ++ unconfirmedConnectionsAddressSeq
     val peersAddresses = mergedSeq.map(getPeerAddress)
 
-    val peersAlreadyTriedFewTimeBefore = getPeersWeAlreadyTryToConnectFewTimeAgo
+    val peersAlreadyTriedFewTimeBefore = getPeersWeAlreadyTriedToConnectFewTimeAgo
 
     val randomPeerF = peerManagerRef ? RandomPeerForConnectionExcluding(peersAddresses ++ peersAlreadyTriedFewTimeBefore)
     randomPeerF.mapTo[Option[PeerInfo]].foreach {
@@ -294,7 +294,7 @@ class NetworkController(settings: NetworkSettings,
     }
   }
 
-  private def getPeersWeAlreadyTryToConnectFewTimeAgo: Seq[Option[InetSocketAddress]] = {
+  private def getPeersWeAlreadyTriedToConnectFewTimeAgo: Seq[Option[InetSocketAddress]] = {
     val now = sparkzContext.timeProvider.time()
     val delta = (settings.knownPeers.size + 1) * 5
     val thresholdInMillis = (tryNewConnectionAttemptDelay * delta).toMillis

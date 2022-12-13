@@ -7,6 +7,7 @@ import sparkz.core.network.NetworkTests
 import sparkz.core.network.peer.BucketManager.Exception.PeerNotFoundException
 import sparkz.core.network.peer.BucketManager.PeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
+import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 
 import java.net.InetSocketAddress
 
@@ -31,11 +32,12 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
-    val peerBucketValue = PeerBucketValue(peerInfo, isNew = true)
+    val peerDatabaseValue = PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown)
+    val peerBucketValue = PeerBucketValue(peerDatabaseValue, isNew = true)
     val bucketManager = new BucketManager(newBucket, triedBucket)
 
     // Act
-    bucketManager.addNewPeer(peerInfo)
+    bucketManager.addNewPeer(peerDatabaseValue)
 
     // Assert
     bucketManager.isEmpty shouldBe false
@@ -55,17 +57,18 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
+    val peerDatabaseValue = PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown)
     val bucketManager = new BucketManager(newBucket, triedBucket)
-    bucketManager.addNewPeer(peerInfo)
+    bucketManager.addNewPeer(peerDatabaseValue)
 
     // Act
-    bucketManager.makeTried(peerInfo)
+    bucketManager.makeTried(peerDatabaseValue)
 
     // Assert
     bucketManager.isEmpty shouldBe false
 
     val retrievedTriedPeer = bucketManager.getTriedPeers(peerAddress)
-    retrievedTriedPeer shouldBe peerInfo
+    retrievedTriedPeer shouldBe peerDatabaseValue
     val retrievedNewPeer = bucketManager.getNewPeers
     retrievedNewPeer.isEmpty shouldBe true
 
@@ -78,12 +81,13 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
+    val peerDatabaseValue = PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown)
     val bucketManager = new BucketManager(newBucket, triedBucket)
-    bucketManager.addNewPeer(peerInfo)
-    bucketManager.makeTried(peerInfo)
+    bucketManager.addNewPeer(peerDatabaseValue)
+    bucketManager.makeTried(peerDatabaseValue)
 
     // Act
-    bucketManager.addNewPeer(peerInfo)
+    bucketManager.addNewPeer(peerDatabaseValue)
 
     // Assert
     bucketManager.isEmpty shouldBe false
@@ -104,10 +108,11 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
+    val peerDatabaseValue = PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown)
     val bucketManager = new BucketManager(newBucket, triedBucket)
-    bucketManager.addNewPeer(peerInfo)
-    bucketManager.makeTried(peerInfo)
-    bucketManager.addNewPeer(peerInfo)
+    bucketManager.addNewPeer(peerDatabaseValue)
+    bucketManager.makeTried(peerDatabaseValue)
+    bucketManager.addNewPeer(peerDatabaseValue)
 
     // Act
     bucketManager.removePeer(peerAddress)
@@ -125,14 +130,15 @@ class BucketManagerTest extends NetworkTests {
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val bucketManager = new BucketManager(newBucket, triedBucket)
     val peerInfo = getPeerInfo(peerAddress)
+    val peerDatabaseValue = PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown)
 
     // Act
     val exception = intercept[PeerNotFoundException] {
-      bucketManager.makeTried(peerInfo)
+      bucketManager.makeTried(peerDatabaseValue)
     }
 
     // Assert
-    exception.getMessage shouldBe s"Cannot move peer $peerInfo to tried table because it doesn't exist in new"
+    exception.getMessage shouldBe s"Cannot move peer $peerAddress to tried table because it doesn't exist in new"
 
     system.terminate()
   }
@@ -152,17 +158,19 @@ class BucketManagerTest extends NetworkTests {
 
     val peerAddress1 = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo1 = getPeerInfo(peerAddress1)
+    val peerDatabaseValue1 = PeerDatabaseValue(peerAddress1, peerInfo1, PeerConfidence.Unknown)
 
     val peerAddress2 = new InetSocketAddress("88.77.66.55", 1234)
     val peerInfo2 = getPeerInfo(peerAddress2)
+    val peerDatabaseValue2 = PeerDatabaseValue(peerAddress2, peerInfo2, PeerConfidence.Unknown)
 
     val bucketManager = new BucketManager(newBucketMock, triedBucketMock)
 
     // Act
-    bucketManager.addNewPeer(peerInfo1)
-    bucketManager.addNewPeer(peerInfo2)
-    bucketManager.makeTried(peerInfo1)
-    bucketManager.makeTried(peerInfo2)
+    bucketManager.addNewPeer(peerDatabaseValue1)
+    bucketManager.addNewPeer(peerDatabaseValue2)
+    bucketManager.makeTried(peerDatabaseValue1)
+    bucketManager.makeTried(peerDatabaseValue2)
 
     // Assert
     bucketManager.isEmpty shouldBe false
@@ -170,8 +178,8 @@ class BucketManagerTest extends NetworkTests {
     val newPeers = bucketManager.getNewPeers
     val triedPeers = bucketManager.getTriedPeers
 
-    newPeers shouldBe Map(peerAddress1 -> peerInfo1)
-    triedPeers shouldBe Map(peerAddress2 -> peerInfo2)
+    newPeers shouldBe Map(peerAddress1 -> peerDatabaseValue1)
+    triedPeers shouldBe Map(peerAddress2 -> peerDatabaseValue2)
 
     system.terminate()
   }

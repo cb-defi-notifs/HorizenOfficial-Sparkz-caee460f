@@ -34,6 +34,20 @@ case class PeerSpec(agentName: String,
 
   def address: Option[InetSocketAddress] = declaredAddress orElse localAddressOpt
 
+  override def equals(obj: Any): Boolean = obj match {
+    case other: PeerSpec =>
+      agentName == other.agentName && protocolVersion == other.protocolVersion && nodeName == other.nodeName &&
+        declaredAddress == other.declaredAddress && features.toSet == other.features.toSet
+    case _ => false
+  }
+  override def hashCode(): Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + agentName.##
+    result = prime * result + protocolVersion.##
+    result = prime * result + nodeName.##
+    result
+  }
 }
 
 class PeerSpecSerializer(featureSerializers: PeerFeature.Serializers) extends SparkzSerializer[PeerSpec] {

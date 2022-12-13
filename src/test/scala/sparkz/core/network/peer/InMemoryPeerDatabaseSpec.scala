@@ -4,6 +4,7 @@ import org.scalatest.{Assertion, BeforeAndAfter}
 import sparkz.ObjectGenerators
 import sparkz.core.app.SparkzContext
 import sparkz.core.network.NetworkTests
+import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 
 import java.net.InetSocketAddress
 import scala.concurrent.duration.DurationInt
@@ -33,7 +34,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
 
   it should "be non-empty after adding a peer" in {
     withDb { db =>
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress1))
+      db.addOrUpdateKnownPeer(PeerDatabaseValue(peerAddress1, getPeerInfo(peerAddress1), PeerConfidence.Unknown))
       db.isEmpty shouldBe false
       db.blacklistedPeers.isEmpty shouldBe true
       db.allPeers.isEmpty shouldBe false
@@ -44,7 +45,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
     withDb { db =>
       val peerInfo = getPeerInfo(peerAddress1)
 
-      db.addOrUpdateKnownPeer(peerInfo)
+      db.addOrUpdateKnownPeer(PeerDatabaseValue(peerAddress1, peerInfo, PeerConfidence.Unknown))
       val peers = db.allPeers
 
       peers.size shouldBe 1
@@ -55,18 +56,49 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
   it should "return an updated peer after updating a peer" in {
     withDb { db =>
       val peerInfo = getPeerInfo(peerAddress1, Some("initialName"))
-      db.addOrUpdateKnownPeer(peerInfo)
-      val newPeerInfo = getPeerInfo(peerAddress1, Some("updatedName"))
-      db.addOrUpdateKnownPeer(newPeerInfo)
+      val peerDatabaseOld = PeerDatabaseValue(peerAddress1, peerInfo, PeerConfidence.Unknown)
+      db.addOrUpdateKnownPeer(peerDatabaseOld)
 
-      db.allPeers shouldBe Map(peerAddress1 -> newPeerInfo)
+      val newPeerInfo = getPeerInfo(peerAddress1, Some("updatedName"))
+      val peerDatabaseNew = PeerDatabaseValue(peerAddress1, newPeerInfo, PeerConfidence.Unknown)
+      db.addOrUpdateKnownPeer(peerDatabaseNew)
+
+      db.allPeers shouldBe Map(peerAddress1 -> peerDatabaseNew)
+    }
+  }
+
+  it should "return an updated peer after updating" in {
+    withDb { db =>
+      val peerInfo = getPeerInfo(peerAddress1, Some("initialName"))
+      val peerDatabaseOld = PeerDatabaseValue(peerAddress1, peerInfo, PeerConfidence.Unknown)
+      // First time we see the peer
+      db.addOrUpdateKnownPeer(peerDatabaseOld)
+
+      val newPeerInfo = getPeerInfo(peerAddress1, Some("updatedName"))
+      val peerDatabaseNew = PeerDatabaseValue(peerAddress1, newPeerInfo, PeerConfidence.Unknown)
+      // We want to update it and make this peer tried
+      db.addOrUpdateKnownPeer(peerDatabaseNew)
+
+      val newPeerInfo2 = getPeerInfo(peerAddress1, Some("updatedNameSecondTime"))
+      val peerDatabaseNew2 = PeerDatabaseValue(peerAddress1, newPeerInfo2, PeerConfidence.Unknown)
+      // We want to update its name
+      db.addOrUpdateKnownPeer(peerDatabaseNew2)
+
+      db.allPeers shouldBe Map(peerAddress1 -> peerDatabaseNew2)
+
+      val newPeerInfoConfidence = getPeerInfo(peerAddress1, Some("updatedNameSecondTime"))
+      val peerDatabaseNewConfidence = PeerDatabaseValue(peerAddress1, newPeerInfoConfidence, PeerConfidence.Medium)
+      // We want to update its confidence
+      db.addOrUpdateKnownPeer(peerDatabaseNewConfidence)
+
+      db.allPeers shouldBe Map(peerAddress1 -> peerDatabaseNewConfidence)
     }
   }
 
   it should "return a blacklisted peer after blacklisting" in {
     withDb { db =>
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress1))
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress2))
+      db.addOrUpdateKnownPeer(PeerDatabaseValue(peerAddress1, getPeerInfo(peerAddress1), PeerConfidence.Unknown))
+      db.addOrUpdateKnownPeer(PeerDatabaseValue(peerAddress1, getPeerInfo(peerAddress2), PeerConfidence.Unknown))
       db.addToBlacklist(peerAddress1, PenaltyType.PermanentPenalty)
 
       db.isBlacklisted(peerAddress1.getAddress) shouldBe true
@@ -78,17 +110,20 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
   it should "the blacklisted peer be absent in knownPeers" in {
     withDb { db =>
       val peerInfo1 = getPeerInfo(peerAddress1)
-      db.addOrUpdateKnownPeer(peerInfo1)
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress2))
+      val peerDatabaseValue1 = PeerDatabaseValue(peerAddress1, peerInfo1, PeerConfidence.Unknown)
+      db.addOrUpdateKnownPeer(peerDatabaseValue1)
+
+      val peerInfo2 = getPeerInfo(peerAddress2)
+      db.addOrUpdateKnownPeer(PeerDatabaseValue(peerAddress2, peerInfo2, PeerConfidence.Unknown))
       db.addToBlacklist(peerAddress2, PenaltyType.PermanentPenalty)
 
-      db.allPeers shouldBe Map(peerAddress1 -> peerInfo1)
+      db.allPeers shouldBe Map(peerAddress1 -> peerDatabaseValue1)
     }
   }
 
   it should "remove peers from db correctly" in {
     withDb { db =>
-      db.addOrUpdateKnownPeer(getPeerInfo(peerAddress1))
+      db.addOrUpdateKnownPeer(PeerDatabaseValue(peerAddress1, getPeerInfo(peerAddress1), PeerConfidence.Unknown))
       db.isEmpty shouldBe false
       db.blacklistedPeers.isEmpty shouldBe true
       db.allPeers.isEmpty shouldBe false
@@ -152,4 +187,30 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
     }
   }
 
+  it should "not add a peer if it's already a knownPeer" in {
+    val firstAddress = new InetSocketAddress(10)
+    val secondAddress = new InetSocketAddress(11)
+    val thirdAddress = new InetSocketAddress(12)
+    val knownPeers = Seq(firstAddress, secondAddress, thirdAddress)
+
+    def withDbHavingKnownPeers(test: InMemoryPeerDatabase => Assertion): Assertion =
+      test(new InMemoryPeerDatabase(
+        settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds, knownPeers = knownPeers),
+        sparkzContext
+      ))
+
+    withDbHavingKnownPeers { db =>
+      val peerDatabaseValueOne = PeerDatabaseValue(firstAddress, getPeerInfo(firstAddress), PeerConfidence.Unknown)
+      val peerDatabaseValueThree = PeerDatabaseValue(thirdAddress, getPeerInfo(thirdAddress), PeerConfidence.Unknown)
+
+      db.addOrUpdateKnownPeer(peerDatabaseValueOne)
+      db.addOrUpdateKnownPeer(peerDatabaseValueThree)
+
+      val allPeers = db.allPeers
+      allPeers.foreach(p => p._2.confidence shouldBe PeerConfidence.High)
+      allPeers.contains(firstAddress) shouldBe true
+      allPeers.contains(secondAddress) shouldBe true
+      allPeers.contains(thirdAddress) shouldBe true
+    }
+  }
 }
