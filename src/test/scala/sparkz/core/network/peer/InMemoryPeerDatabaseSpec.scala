@@ -121,6 +121,32 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
     }
   }
 
+  it should "not add the peer if it exists in the blacklist" in {
+    withDb { db =>
+      val peer = PeerDatabaseValue(peerAddress1, getPeerInfo(peerAddress1), PeerConfidence.Unknown)
+      db.addOrUpdateKnownPeer(peer)
+      db.addToBlacklist(peerAddress1, PenaltyType.PermanentPenalty)
+      db.addOrUpdateKnownPeers(Seq(peer))
+
+      db.isBlacklisted(peerAddress1.getAddress) shouldBe true
+      db.blacklistedPeers shouldBe Seq(peerAddress1.getAddress)
+      db.allPeers.isEmpty shouldBe true
+    }
+  }
+
+  it should "remove a peer from blacklist" in {
+    withDb { db =>
+      val peer = PeerDatabaseValue(peerAddress1, getPeerInfo(peerAddress1), PeerConfidence.Unknown)
+      db.addOrUpdateKnownPeer(peer)
+      db.addToBlacklist(peerAddress1, PenaltyType.PermanentPenalty)
+      db.removeFromBlacklist(peerAddress1.getAddress)
+
+      db.isBlacklisted(peerAddress1.getAddress) shouldBe false
+      db.blacklistedPeers shouldBe Seq()
+      db.allPeers.isEmpty shouldBe true
+    }
+  }
+
   it should "remove peers from db correctly" in {
     withDb { db =>
       db.addOrUpdateKnownPeer(PeerDatabaseValue(peerAddress1, getPeerInfo(peerAddress1), PeerConfidence.Unknown))
@@ -131,6 +157,26 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
       db.remove(peerAddress1)
 
       db.isEmpty shouldBe true
+    }
+  }
+
+  it should "get peer by address" in {
+    withDb { db =>
+      val peerDatabaseValue = PeerDatabaseValue(peerAddress1, getPeerInfo(peerAddress1), PeerConfidence.Unknown)
+      db.addOrUpdateKnownPeer(peerDatabaseValue)
+
+      val retrievedPeer = db.get(peerAddress1)
+      retrievedPeer shouldNot be(empty)
+
+      val peer = retrievedPeer.getOrElse(fail("Unexpected error in test"))
+      peer shouldBe peerDatabaseValue
+    }
+  }
+
+  it should "return None if peer does not exist" in {
+    withDb { db =>
+      val retrievedPeer = db.get(peerAddress1)
+      retrievedPeer shouldBe empty
     }
   }
 
@@ -184,6 +230,29 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
       val penalizeWithBan = db.peerPenaltyScoreOverThreshold(address, penaltyType)
 
       penalizeWithBan shouldBe true
+    }
+  }
+
+  it should "retrieve a knownPeer" in {
+    val firstAddress = new InetSocketAddress(10)
+    val knownPeers = Seq(firstAddress)
+
+    def withDbHavingKnownPeers(test: InMemoryPeerDatabase => Assertion): Assertion =
+      test(new InMemoryPeerDatabase(
+        settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds, knownPeers = knownPeers),
+        sparkzContext
+      ))
+
+    withDbHavingKnownPeers { db =>
+      val peerDatabaseValueOne = PeerDatabaseValue(firstAddress, getPeerInfo(firstAddress), PeerConfidence.Unknown)
+
+      db.addOrUpdateKnownPeer(peerDatabaseValueOne)
+
+      val retrievedKnownPeer = db.get(firstAddress)
+      retrievedKnownPeer shouldNot be(empty)
+
+      val peerDataValue = retrievedKnownPeer.getOrElse(fail("Unexpected error in test"))
+      peerDataValue.address shouldBe firstAddress
     }
   }
 

@@ -6,9 +6,9 @@ import org.scalatest.BeforeAndAfter
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.{NetworkTests, PeerSpec}
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, RandomPeerForConnectionExcluding, RemovePeer}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, Blacklisted, GetBlacklistedPeers, Penalize, RandomPeerForConnectionExcluding, RemovePeer}
 
-import java.net.InetSocketAddress
+import java.net.{InetAddress, InetSocketAddress}
 
 class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
@@ -34,6 +34,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val data = p.expectMsgClass(classOf[Data])
 
     data.keySet should not contain selfAddress
+
     system.terminate()
   }
 
@@ -53,6 +54,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
     val data = p.expectMsgClass(classOf[Data])
     data.keySet should contain(peerAddress)
+
     system.terminate()
   }
 
@@ -80,6 +82,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val data = p.expectMsgClass(classOf[Data])
     data.keySet should contain(knownPeerAddress)
     data.keySet should not contain peerAddress
+
     system.terminate()
   }
 
@@ -183,8 +186,8 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     // Assert
     val data = p.expectMsgClass(classOf[Option[PeerInfo]])
     data shouldNot be(empty)
-
     data.foreach(p => p.peerSpec.address.contains(knownPeerAddress1) shouldBe true)
+
     system.terminate()
   }
 
@@ -208,6 +211,71 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
     val data = p.expectMsgClass(classOf[Data])
     data.keySet should contain(peerAddress)
+
+    system.terminate()
+  }
+
+  it should "sending an AddPeersIfEmpty to PeerManager with new peers should add them in the database" in {
+    implicit val system: ActorSystem = ActorSystem()
+    val p = TestProbe("p")(system)
+    implicit val defaultSender: ActorRef = p.testActor
+
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
+    val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
+    val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
+    val peerInfo = getPeerInfo(peerAddress)
+
+    peerManager ! AddPeersIfEmpty(Seq(peerInfo.peerSpec))
+
+    peerManager ! GetAllPeers
+
+    val data = p.expectMsgClass(classOf[Data])
+    data.keySet should contain(peerAddress)
+
+    system.terminate()
+  }
+
+  it should "blacklist peers when penalty goes over the threshold" in {
+    implicit val system: ActorSystem = ActorSystem()
+    val p = TestProbe("p")(system)
+    implicit val defaultSender: ActorRef = p.testActor
+
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
+    val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
+    val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
+    val peerInfo = getPeerInfo(peerAddress)
+
+    peerManager ! AddPeersIfEmpty(Seq(peerInfo.peerSpec))
+    peerManager ! Penalize(peerAddress, PenaltyType.MisbehaviorPenalty)
+
+    // Make sure the peer is not blacklisted yet
+    peerManager ! GetAllPeers
+
+    val data = p.expectMsgClass(classOf[Data])
+    data.keySet should contain(peerAddress)
+
+    peerManager ! GetBlacklistedPeers
+    val blacklistedResult = p.expectMsgClass(classOf[Seq[InetAddress]])
+    blacklistedResult shouldBe empty
+
+    // Overflow the ban threshold
+    peerManager ! Penalize(peerAddress, PenaltyType.PermanentPenalty)
+
+    val blacklistMessage = p.expectMsgClass(classOf[Blacklisted])
+    blacklistMessage.remote shouldBe peerAddress
+
+    // Make sure the peer doesn't show up in the database
+    peerManager ! GetAllPeers
+
+    val dataAfterBan = p.expectMsgClass(classOf[Data])
+    dataAfterBan shouldBe empty
+
+    peerManager ! GetBlacklistedPeers
+    val blacklistedResultAfterBan = p.expectMsgClass(classOf[Seq[InetAddress]])
+    blacklistedResultAfterBan shouldBe Seq(peerAddress.getAddress)
+
     system.terminate()
   }
 }
