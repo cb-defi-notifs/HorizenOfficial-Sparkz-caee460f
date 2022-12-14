@@ -69,19 +69,18 @@ class PeersApiRouteSpec extends AnyFlatSpec
   }
 
   //can't check it cause original node using now() timestamp for last seen field
-  it should "get connected peers" in {
-    Get(prefix + "/connected") ~> Route.seal(routes) ~> check {
-      status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-      //connectedPeersResp shouldBe responseAs[String]
+  ignore should "get connected peers" in {
+    Get(prefix + "/connected") ~> routes ~> check {
+      status shouldBe StatusCodes.OK
+      connectedPeersResp shouldBe responseAs[String]
     }
   }
 
   //can't check it cause original node using now() timestamp for last seen field.
   //We can check only that the authorization passed
   it should "get connected peers with Basich Auth" in {
-    Get(prefix + "/connected").addCredentials(credentials) ~> Route.seal(routesWithApiKey) ~> check {
-      status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-      //connectedPeersResp shouldBe responseAs[String]
+    Get(prefix + "/connected").addCredentials(credentials) ~> routesWithApiKey ~> check {
+      status shouldBe StatusCodes.OK
     }
   }
 
