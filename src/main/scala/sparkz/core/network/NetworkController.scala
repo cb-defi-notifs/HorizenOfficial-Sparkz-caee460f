@@ -296,6 +296,8 @@ class NetworkController(settings: NetworkSettings,
 
   private def getPeersWeAlreadyTriedToConnectFewTimeAgo: Seq[Option[InetSocketAddress]] = {
     val now = sparkzContext.timeProvider.time()
+    // This delta is to make sure we wait for enough time before trying another connection attempt to the same peer
+    // In this case we take into account the size of the known peers since they are always prioritized over other peers
     val delta = (settings.knownPeers.size + 1) * 5
     val thresholdInMillis = (tryNewConnectionAttemptDelay * delta).toMillis
 
