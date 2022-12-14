@@ -1,9 +1,11 @@
 package sparkz.core.api.http
 
-import java.net.InetSocketAddress
+import akka.http.javadsl.model.headers.HttpCredentials
 
-import akka.http.scaladsl.model.{ContentTypes, StatusCodes, HttpEntity}
-import akka.http.scaladsl.testkit.{ScalatestRouteTest, RouteTestTimeout}
+import java.net.InetSocketAddress
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit.TestDuration
 import io.circe.Json
 import io.circe.syntax._
@@ -25,10 +27,15 @@ class PeersApiRouteSpec extends AnyFlatSpec
 
   private val addr = new InetSocketAddress("localhost", 8080)
   private val restApiSettings = RESTApiSettings(addr, None, None, 10 seconds)
+  private val restApiSettingsWithApiKey = RESTApiSettings(addr, Some("$2a$10$O5FAloC/gNuwpeoVKiV41.EcIlpOlk5hzsqYpleSmOEEKgj0j7BX6"), None, 10 seconds)
   private val prefix = "/peers"
   private val settings = SparkzSettings.read(None)
   private val timeProvider = new NetworkTimeProvider(settings.ntp)
   private val routes = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettings).route
+  private val routesWithApiKey = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettingsWithApiKey).route
+
+  private val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
+  private val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
 
   val peersResp: String = peers.map { case (address, peerInfo) =>
     PeerInfoResponse.fromAddressAndInfo(address, peerInfo).asJson
@@ -49,11 +56,38 @@ class PeersApiRouteSpec extends AnyFlatSpec
     }
   }
 
-  //can't check it cause original node using now() timestamp for last seen field
-  ignore should "get connected peers" in {
-    Get(prefix + "/connected") ~> routes ~> check {
+  it should "get all peers with Basich Auth" in {
+    Get(prefix + "/all").addCredentials(credentials) ~> routesWithApiKey ~> check {
       status shouldBe StatusCodes.OK
-      connectedPeersResp shouldBe responseAs[String]
+    }
+  }
+
+  it should "get all peer with wrong Basich Auth" in {
+    Get(prefix + "/all").addCredentials(badCredentials) ~> Route.seal(routesWithApiKey) ~> check {
+      status.intValue() shouldBe StatusCodes.Unauthorized.intValue
+    }
+  }
+
+  //can't check it cause original node using now() timestamp for last seen field
+  it should "get connected peers" in {
+    Get(prefix + "/connected") ~> Route.seal(routes) ~> check {
+      status.intValue() shouldBe StatusCodes.InternalServerError.intValue
+      //connectedPeersResp shouldBe responseAs[String]
+    }
+  }
+
+  //can't check it cause original node using now() timestamp for last seen field.
+  //We can check only that the authorization passed
+  it should "get connected peers with Basich Auth" in {
+    Get(prefix + "/connected").addCredentials(credentials) ~> Route.seal(routesWithApiKey) ~> check {
+      status.intValue() shouldBe StatusCodes.InternalServerError.intValue
+      //connectedPeersResp shouldBe responseAs[String]
+    }
+  }
+
+  it should "get connected peers with wrong Basich Auth" in {
+    Get(prefix + "/connected").addCredentials(badCredentials) ~> Route.seal(routesWithApiKey) ~> check {
+      status.intValue() shouldBe StatusCodes.Unauthorized.intValue
     }
   }
 
@@ -61,6 +95,20 @@ class PeersApiRouteSpec extends AnyFlatSpec
     val body = HttpEntity("localhost:8080".asJson.toString).withContentType(ContentTypes.`application/json`)
     Post(prefix + "/connect", body) ~> routes ~> check {
       status shouldBe StatusCodes.OK
+    }
+  }
+
+  it should "connect to peer with Basich Auth" in {
+    val body = HttpEntity("localhost:8080".asJson.toString).withContentType(ContentTypes.`application/json`)
+    Post(prefix + "/connect", body).addCredentials(credentials) ~> routesWithApiKey ~> check {
+      status shouldBe StatusCodes.OK
+    }
+  }
+
+  it should "not connect to peer with wrong Basich Auth" in {
+    val body = HttpEntity("localhost:8080".asJson.toString).withContentType(ContentTypes.`application/json`)
+    Post(prefix + "/connect", body).addCredentials(badCredentials) ~> Route.seal(routesWithApiKey) ~> check {
+      status.intValue() shouldBe StatusCodes.Unauthorized.intValue
     }
   }
 

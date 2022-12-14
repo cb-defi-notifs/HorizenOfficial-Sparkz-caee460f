@@ -27,30 +27,34 @@ case class PeersApiRoute(peerManager: ActorRef,
     allPeers ~ connectedPeers ~ blacklistedPeers ~ connect ~ peersStatus
   }
 
-  def allPeers: Route = (path("all") & get) {
-    val result = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
-      _.map { case (address, peerInfo) =>
-        PeerInfoResponse.fromAddressAndInfo(address, peerInfo)
-      }
-    }
-    ApiResponse(result)
-  }
-
-  def connectedPeers: Route = (path("connected") & get) {
-    val result = askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers).map {
-      _.flatMap { con =>
-        con.peerInfo.map { peerInfo =>
-          PeerInfoResponse(
-            address = peerInfo.peerSpec.declaredAddress.map(_.toString).getOrElse(""),
-            lastMessage = con.lastMessage,
-            lastHandshake = peerInfo.lastHandshake,
-            name = peerInfo.peerSpec.nodeName,
-            connectionType = peerInfo.connectionType.map(_.toString)
-          )
+  def allPeers: Route = (path("all") & get & withBasicAuth) {
+    _ => {
+      val result = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
+        _.map { case (address, peerInfo) =>
+          PeerInfoResponse.fromAddressAndInfo(address, peerInfo)
         }
       }
+      ApiResponse(result)
     }
-    ApiResponse(result)
+  }
+
+  def connectedPeers: Route = (path("connected") & get & withBasicAuth) {
+    _ => {
+      val result = askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers).map {
+        _.flatMap { con =>
+          con.peerInfo.map { peerInfo =>
+            PeerInfoResponse(
+              address = peerInfo.peerSpec.declaredAddress.map(_.toString).getOrElse(""),
+              lastMessage = con.lastMessage,
+              lastHandshake = peerInfo.lastHandshake,
+              name = peerInfo.peerSpec.nodeName,
+              connectionType = peerInfo.connectionType.map(_.toString)
+            )
+          }
+        }
+      }
+      ApiResponse(result)
+    }
   }
 
   /**
