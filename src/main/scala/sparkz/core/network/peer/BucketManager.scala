@@ -1,7 +1,6 @@
 package sparkz.core.network.peer
 
-import sparkz.core.network.peer.BucketManager.Exception.PeerNotFoundException
-import sparkz.core.network.peer.BucketManager.PeerBucketValue
+import sparkz.core.network.peer.BucketManager.{NewPeerBucketValue, PeerBucketValue, TriedPeerBucketValue}
 import sparkz.core.network.peer.PeerBucketStorage._
 import sparkz.core.network.peer.PeerDatabase.PeerDatabaseValue
 
@@ -9,41 +8,35 @@ import java.net.InetSocketAddress
 import scala.util.Random
 
 class BucketManager(newBucket: PeerBucketStorageImpl, triedBucket: PeerBucketStorageImpl) {
-  def addPeerIntoBucket(peerDatabaseValue: PeerDatabaseValue): Unit = {
+  def addOrUpdatePeerIntoBucket(peerDatabaseValue: PeerDatabaseValue): Unit = {
     if (newBucket.contains(peerDatabaseValue.address)) {
-      makeTried(peerDatabaseValue)
+      updatePeerIfDifferent(newBucket, NewPeerBucketValue(peerDatabaseValue))
+    } else if (triedBucket.contains(peerDatabaseValue.address)) {
+      updatePeerIfDifferent(triedBucket, TriedPeerBucketValue(peerDatabaseValue))
     } else {
-      // We don't want to add the peer if we already have it in the tried database unless it's an update
-      if (!triedBucket.contains(peerDatabaseValue.address)) {
-        addNewPeer(peerDatabaseValue)
-      } else {
-        updatePeerInTriedIfDifferent(peerDatabaseValue)
-      }
+      newBucket.add(NewPeerBucketValue(peerDatabaseValue))
     }
   }
 
-  private def updatePeerInTriedIfDifferent(peerDatabaseValue: PeerDatabaseValue): Unit = {
-    val oldPeer = triedBucket.getStoredPeerByAddress(peerDatabaseValue.address)
+  private def updatePeerIfDifferent(peerBucketStorage: PeerBucketStorage[_], peerBucketValue: PeerBucketValue): Unit = {
+    val oldPeer = peerBucketStorage.getStoredPeerByAddress(peerBucketValue.peerDatabaseValue.address)
     oldPeer.foreach(p => {
-      if (p.peerDatabaseValue.hasBeenUpdated(peerDatabaseValue)) {
-        triedBucket.updateExistingPeer(PeerBucketValue(peerDatabaseValue, isNew = false))
+      if (p.peerDatabaseValue.hasBeenUpdated(peerBucketValue.peerDatabaseValue)) {
+        peerBucketStorage.updateExistingPeer(peerBucketValue)
       }
     })
   }
 
   private[peer] def addNewPeer(peerDatabaseValue: PeerDatabaseValue): Unit = {
-    newBucket.add(PeerBucketValue(peerDatabaseValue, isNew = true))
+    newBucket.add(NewPeerBucketValue(peerDatabaseValue))
   }
 
   private[peer] def makeTried(peerDatabaseValue: PeerDatabaseValue): Unit = {
     val address = peerDatabaseValue.address
-    val peerToBeMovedInTried = newBucket
-      .getStoredPeerByAddress(address)
-      .getOrElse(
-        throw PeerNotFoundException(s"Cannot move peer $address to tried table because it doesn't exist in new")
-      )
-    newBucket.remove(address)
+    val peerToBeRemovedFromNew = newBucket.getStoredPeerByAddress(address)
+    peerToBeRemovedFromNew.foreach(p => newBucket.remove(p.peerDatabaseValue.address))
 
+    val peerToBeMovedInTried = TriedPeerBucketValue(peerDatabaseValue)
     if (triedBucket.bucketPositionIsAlreadyTaken(peerToBeMovedInTried)) {
       val (bucket, bucketPosition) = triedBucket.getPeerIndexes(peerToBeMovedInTried)
       val peerToBeRemovedOption = triedBucket.getStoredPeerByIndexes(bucket, bucketPosition)
@@ -54,7 +47,7 @@ class BucketManager(newBucket: PeerBucketStorageImpl, triedBucket: PeerBucketSto
       addNewPeer(peerToBeRemoved.peerDatabaseValue)
     }
 
-    triedBucket.add(PeerBucketValue(peerDatabaseValue, isNew = false))
+    triedBucket.add(TriedPeerBucketValue(peerDatabaseValue))
   }
 
   def removePeer(address: InetSocketAddress): Unit = {
@@ -84,7 +77,16 @@ class BucketManager(newBucket: PeerBucketStorageImpl, triedBucket: PeerBucketSto
 }
 
 object BucketManager {
-  case class PeerBucketValue(peerDatabaseValue: PeerDatabaseValue, isNew: Boolean)
+  trait PeerBucketValue {
+    val peerDatabaseValue: PeerDatabaseValue
+    val isNew: Boolean
+  }
+  case class NewPeerBucketValue(peerDatabaseValue: PeerDatabaseValue) extends PeerBucketValue {
+    override val isNew: Boolean = true
+  }
+  case class TriedPeerBucketValue(peerDatabaseValue: PeerDatabaseValue) extends PeerBucketValue {
+    override val isNew: Boolean = false
+  }
 
   case object Exception {
     case class PeerNotFoundException(msg: String) extends Exception(msg)

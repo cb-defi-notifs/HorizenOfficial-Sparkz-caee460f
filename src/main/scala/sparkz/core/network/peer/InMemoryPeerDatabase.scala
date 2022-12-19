@@ -62,7 +62,7 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, sparkzContext: Spark
 
   override def addOrUpdateKnownPeer(peerDatabaseValue: PeerDatabaseValue): Unit = {
     if (peerIsNotBlacklistedAndNotKnownPeer(peerDatabaseValue)) {
-      bucketManager.addPeerIntoBucket(peerDatabaseValue)
+      bucketManager.addOrUpdatePeerIntoBucket(peerDatabaseValue)
     }
   }
 
@@ -164,4 +164,10 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, sparkzContext: Spark
     }
 
   override def randomPeersSubset: Map[InetSocketAddress, PeerDatabaseValue] = knownPeers ++ bucketManager.getRandomPeers
+
+  override def updatePeer(peerDatabaseValue: PeerDatabaseValue): Unit = {
+    if (peerIsNotBlacklistedAndNotKnownPeer(peerDatabaseValue)) {
+      bucketManager.makeTried(peerDatabaseValue)
+    }
+  }
 }

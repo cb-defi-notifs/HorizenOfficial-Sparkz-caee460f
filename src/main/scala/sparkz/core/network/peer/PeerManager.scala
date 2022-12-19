@@ -26,7 +26,6 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
   }
 
   private def peersManagement: Receive = {
-
     case ConfirmConnection(connectionId, handlerRef) =>
       log.info(s"Connection confirmation request: $connectionId")
       if (peerDatabase.isBlacklisted(connectionId.remoteAddress.getAddress)) sender() ! ConnectionDenied(connectionId, handlerRef)
@@ -37,7 +36,18 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
       if (!isSelf(peerInfo.peerSpec)) {
         peerDatabase.addOrUpdateKnownPeer(
           PeerDatabaseValue(
-            peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException()),
+            extractAddressFromPeerInfoOrFeature(peerInfo),
+            peerInfo,
+            PeerConfidence.Unknown
+          )
+        )
+      }
+
+    case UpdatePeer(peerInfo) =>
+      if (!isSelf(peerInfo.peerSpec)) {
+        peerDatabase.updatePeer(
+          PeerDatabaseValue(
+            extractAddressFromPeerInfoOrFeature(peerInfo),
             peerInfo,
             PeerConfidence.Unknown
           )
@@ -57,7 +67,10 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
       val filteredPeers = peersSpec
         .collect {
           case peerSpec if peerSpec.address.forall(a => peerDatabase.get(a).isEmpty) && !isSelf(peerSpec) =>
-            val address = peerSpec.address.getOrElse(throw new IllegalArgumentException(s"Cannot add peer because of missing address: $peerSpec"))
+            val address: InetSocketAddress = peerSpec.address.getOrElse(
+              peerSpec.features.find(f => f.featureId == LocalAddressPeerFeature.featureId)
+                .getOrElse(throw new IllegalArgumentException()).asInstanceOf[LocalAddressPeerFeature].address
+            )
             val peerInfo: PeerInfo = PeerInfo(peerSpec, 0L, None)
             log.info(s"New discovered peer: $peerInfo")
             PeerDatabaseValue(address, peerInfo, PeerConfidence.Unknown)
@@ -73,6 +86,14 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
 
     case get: GetPeers[_] =>
       sender() ! get.choose(peerDatabase.allPeers, peerDatabase.blacklistedPeers, sparkzContext)
+  }
+
+  private def extractAddressFromPeerInfoOrFeature(peerInfo: PeerInfo) = {
+    val address: InetSocketAddress = peerInfo.peerSpec.address.getOrElse(
+      peerInfo.peerSpec.features.find(f => f.featureId == LocalAddressPeerFeature.featureId)
+        .getOrElse(throw new IllegalArgumentException()).asInstanceOf[LocalAddressPeerFeature].address
+    )
+    address
   }
 
   /**
@@ -107,6 +128,8 @@ object PeerManager {
       * @param data : information about peer to be stored in PeerDatabase
       * */
     case class AddOrUpdatePeer(data: PeerInfo)
+
+    case class UpdatePeer(data: PeerInfo)
 
     case class AddPeersIfEmpty(data: Seq[PeerSpec])
 

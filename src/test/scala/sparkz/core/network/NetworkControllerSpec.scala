@@ -191,17 +191,18 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     val (networkControllerRef: ActorRef, peerManagerRef: ActorRef) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
-    val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
+    val peer1DecalredAddr = new InetSocketAddress("88.77.66.54", 5678)
     val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
-    testPeer1.connectAndExpectSuccessfulMessages(peer1LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer1.connectAndExpectSuccessfulMessages(peer1DecalredAddr, peer1LocalAddr, Tcp.ResumeReading)
     testPeer1.receiveHandshake
     testPeer1.sendHandshake(Some(peer1DecalredAddr), Some(peer1LocalAddr))
     testPeer1.receiveGetPeers
     testPeer1.sendPeers(Seq.empty)
 
     val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
+    val peer2DeclaredAddr = new InetSocketAddress("88.77.66.53", 5678)
     val testPeer2 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
-    testPeer2.connectAndExpectMessage(peer2LocalAddr, nodeAddr, Tcp.Close)
+    testPeer2.connectAndExpectMessage(peer2DeclaredAddr, peer2LocalAddr, Tcp.Close)
 
     val futureResponse = peerManagerRef ? GetAllPeers
     whenReady(futureResponse.mapTo[Map[InetSocketAddress, PeerInfo]]) {
@@ -597,11 +598,11 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
   /**
     * Connect peer to node
     *
-    * @param peerAddr - peer address
-    * @param nodeAddr - node address
+    * @param remoteAddress - peer address
+    * @param localAddress - node address
     */
-  def connectAndExpectSuccessfulMessages(peerAddr: InetSocketAddress, nodeAddr: InetSocketAddress, expectedMessage: TcpMessage): Unit = {
-    tcpManagerProbe.send(networkControllerRef, Connected(peerAddr, nodeAddr))
+  def connectAndExpectSuccessfulMessages(remoteAddress: InetSocketAddress, localAddress: InetSocketAddress, expectedMessage: TcpMessage): Unit = {
+    tcpManagerProbe.send(networkControllerRef, Connected(remoteAddress, localAddress))
 
     connectionHandler = tcpManagerProbe.expectMsgPF() {
       case Tcp.Register(handler, _, _) => handler

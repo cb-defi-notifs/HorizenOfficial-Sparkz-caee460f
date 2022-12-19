@@ -20,6 +20,8 @@ trait PeerDatabase {
 
   def addOrUpdateKnownPeers(peersInfo: Seq[PeerDatabaseValue]): Unit
 
+  def updatePeer(peerInfo: PeerDatabaseValue): Unit
+
   def allPeers: Map[InetSocketAddress, PeerDatabaseValue]
 
   def randomPeersSubset: Map[InetSocketAddress, PeerDatabaseValue]

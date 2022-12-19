@@ -4,7 +4,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.MockitoSugar.{doReturn, spy}
 import sparkz.core.network.NetworkTests
 import sparkz.core.network.peer.BucketManager.Exception.PeerNotFoundException
-import sparkz.core.network.peer.BucketManager.PeerBucketValue
+import sparkz.core.network.peer.BucketManager.{NewPeerBucketValue, PeerBucketValue}
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 
@@ -30,7 +30,7 @@ class BucketManagerTest extends NetworkTests {
     val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
     val peerInfo = getPeerInfo(peerAddress)
     val peerDatabaseValue = PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown)
-    val peerBucketValue = PeerBucketValue(peerDatabaseValue, isNew = true)
+    val peerBucketValue = NewPeerBucketValue(peerDatabaseValue)
     val bucketManager = new BucketManager(newBucket, triedBucket)
 
     // Act
@@ -104,22 +104,6 @@ class BucketManagerTest extends NetworkTests {
 
     // Assert
     bucketManager.isEmpty shouldBe true
-  }
-
-  it should "raise a PeerNotFoundException if makeTried method is called but the peer does not exist in the new table" in {
-    // Arrange
-    val peerAddress = new InetSocketAddress("55.66.77.88", 1234)
-    val bucketManager = new BucketManager(newBucket, triedBucket)
-    val peerInfo = getPeerInfo(peerAddress)
-    val peerDatabaseValue = PeerDatabaseValue(peerAddress, peerInfo, PeerConfidence.Unknown)
-
-    // Act
-    val exception = intercept[PeerNotFoundException] {
-      bucketManager.makeTried(peerDatabaseValue)
-    }
-
-    // Assert
-    exception.getMessage shouldBe s"Cannot move peer $peerAddress to tried table because it doesn't exist in new"
   }
 
   it should "correctly move peers from tried back to new without deleting them" in {
