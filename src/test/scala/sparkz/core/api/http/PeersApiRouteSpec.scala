@@ -9,6 +9,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit.TestDuration
 import io.circe.Json
 import io.circe.syntax._
+import org.mindrot.jbcrypt.BCrypt
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.api.http.PeersApiRoute.PeerInfoResponse
@@ -27,15 +28,16 @@ class PeersApiRouteSpec extends AnyFlatSpec
 
   private val addr = new InetSocketAddress("localhost", 8080)
   private val restApiSettings = RESTApiSettings(addr, None, None, 10 seconds)
-  private val restApiSettingsWithApiKey = RESTApiSettings(addr, Some("$2a$10$O5FAloC/gNuwpeoVKiV41.EcIlpOlk5hzsqYpleSmOEEKgj0j7BX6"), None, 10 seconds)
   private val prefix = "/peers"
   private val settings = SparkzSettings.read(None)
   private val timeProvider = new NetworkTimeProvider(settings.ntp)
-  private val routes = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettings).route
-  private val routesWithApiKey = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettingsWithApiKey).route
 
   private val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
   private val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
+
+  private val restApiSettingsWithApiKey = RESTApiSettings(addr, Some(BCrypt.hashpw(credentials.password(), BCrypt.gensalt())), None, 10 seconds)
+  private val routes = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettings).route
+  private val routesWithApiKey = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettingsWithApiKey).route
 
   val peersResp: String = peers.map { case (address, peerInfo) =>
     PeerInfoResponse.fromAddressAndInfo(address, peerInfo).asJson
