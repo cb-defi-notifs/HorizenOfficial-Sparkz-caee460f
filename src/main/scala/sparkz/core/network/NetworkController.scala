@@ -15,9 +15,10 @@ import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer._
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.TimeProvider.Time
-import sparkz.core.utils.{NetworkUtils, TimeProvider}
+import sparkz.core.utils.{LRUSimpleCache, NetworkUtils, TimeProvider}
 
 import java.net._
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.{existentials, postfixOps}
@@ -61,7 +62,7 @@ class NetworkController(settings: NetworkSettings,
   private var connections = Map.empty[InetSocketAddress, ConnectedPeer]
   private var unconfirmedConnections = Set.empty[InetSocketAddress]
   private val maxConnections = settings.maxIncomingConnections + settings.maxOutgoingConnections
-  private var peersLastConnectionAttempts = Map.empty[InetSocketAddress, TimeProvider.Time]
+  private val peersLastConnectionAttempts = new LRUSimpleCache[InetSocketAddress, TimeProvider.Time](10000)
 
   private val tryNewConnectionAttemptDelay = 5.seconds
 
@@ -214,7 +215,7 @@ class NetworkController(settings: NetworkSettings,
   }
 
   private def updateLastConnectionAttemptTimestamp(remoteAddress: InetSocketAddress): Unit = {
-    peersLastConnectionAttempts += remoteAddress -> sparkzContext.timeProvider.time()
+    peersLastConnectionAttempts.put(remoteAddress, sparkzContext.timeProvider.time())
   }
 
   private def isNewConnectionAndStillHaveRoom(remoteAddress: InetSocketAddress) = {
@@ -301,7 +302,7 @@ class NetworkController(settings: NetworkSettings,
     val delta = (settings.knownPeers.size + 1) * 5
     val thresholdInMillis = (tryNewConnectionAttemptDelay * delta).toMillis
 
-    peersLastConnectionAttempts.map {
+    peersLastConnectionAttempts.asScala.map {
       case entry if now - entry._2 < thresholdInMillis => Some(entry._1)
       case _ => None
     }.toSeq
