@@ -71,6 +71,7 @@ object PosBlockSerializer extends SparkzSerializer[PosBlock] with SparkzEncoding
   }
 }
 
+@SuppressWarnings(Array("org.wartremover.warts.PublicInference"))
 object PosBlock extends SparkzEncoding {
   val MaxBlockSize = 512 * 1024 //512K
   val ModifierTypeId: ModifierTypeId = sparkz.core.ModifierTypeId @@ 4.toByte

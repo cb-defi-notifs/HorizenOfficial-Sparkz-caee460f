@@ -7,7 +7,7 @@ import examples.commons.SimpleBoxTransactionMemPool
 import examples.hybrid.HybridApp
 import examples.hybrid.blocks.{PosBlock, PosBlockSerializer, PowBlock, PowBlockSerializer}
 import examples.hybrid.history.HybridSyncInfoMessageSpec
-import io.iohk.iodb.ByteArrayWrapper
+import examples.persistence.ByteArrayWrapper
 import sparkz.core._
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, ChangedMempool}
 import sparkz.core.network._

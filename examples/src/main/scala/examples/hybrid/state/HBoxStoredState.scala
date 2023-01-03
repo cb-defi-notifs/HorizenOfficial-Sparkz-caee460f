@@ -1,11 +1,10 @@
 package examples.hybrid.state
 
 import java.io.File
-
 import com.google.common.primitives.Longs
 import examples.commons._
 import examples.hybrid.blocks.{HybridBlock, PosBlock, PowBlock}
-import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import examples.persistence.{ByteArrayWrapper, LSMStore}
 import sparkz.core._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
@@ -17,7 +16,7 @@ import sparkz.util.SparkzLogging
 
 import scala.util.{Failure, Success, Try}
 
-
+@SuppressWarnings(Array("org.wartremover.warts.JavaSerializable"))
 case class HBoxStoredState(store: LSMStore, override val version: VersionTag) extends
   BoxMinimalState[PublicKey25519Proposition,
     PublicKey25519NoncedBox,
@@ -120,14 +119,14 @@ object HBoxStoredState {
 
           val (toRemove: Seq[ADKey@unchecked], toAdd: Seq[PublicKey25519NoncedBox], reward) =
             ps.transactions.foldLeft(initial) { case ((sr, sa, f), tx) =>
-              ((sr ++ tx.boxIdsToOpen.toSet).map(id => ADKey @@ id), sa ++ tx.newBoxes.toSet, f + tx.fee)
+              ((sr ++ tx.boxIdsToOpen.toSet).map(id => id), sa ++ tx.newBoxes.toSet, f + tx.fee)
             }
 
           //for PoS forger reward box, we use block Id as a nonce
           val forgerNonce = Nonce @@ Longs.fromByteArray(idToBytes(ps.id).take(8))
           val forgerBox = PublicKey25519NoncedBox(ps.generatorBox.proposition, forgerNonce, Value @@ reward)
 
-          @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
+          @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable", "org.wartremover.warts.JavaSerializable"))
           val ops: Seq[BoxStateChangeOperation[PublicKey25519Proposition, PublicKey25519NoncedBox]] =
             toRemove.map(id => Removal[PublicKey25519Proposition, PublicKey25519NoncedBox](id)) ++
               toAdd.map(b => Insertion[PublicKey25519Proposition, PublicKey25519NoncedBox](b)) ++

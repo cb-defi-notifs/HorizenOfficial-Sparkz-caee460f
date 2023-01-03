@@ -2,8 +2,8 @@ package hybrid.history
 
 import examples.commons._
 import examples.hybrid.blocks.{HybridBlock, PosBlock, PowBlock}
+import examples.persistence.{ByteArrayWrapper, LSMStore}
 import hybrid.HybridGenerators
-import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
 import org.scalacheck.Gen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Outcome, propspec}

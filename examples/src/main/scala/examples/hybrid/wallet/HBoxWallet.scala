@@ -1,13 +1,12 @@
 package examples.hybrid.wallet
 
 import java.io.File
-
 import com.google.common.primitives.Ints
 import examples.commons._
 import examples.hybrid.blocks.HybridBlock
 import examples.hybrid.mining.WalletSettings
 import examples.hybrid.state.HBoxStoredState
-import io.iohk.iodb.{ByteArrayWrapper, LSMStore}
+import examples.persistence.{ByteArrayWrapper, LSMStore}
 import sparkz.core._
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion, PrivateKey25519Serializer}
@@ -19,6 +18,7 @@ import sparkz.util.SparkzLogging
 
 import scala.util.Try
 
+@SuppressWarnings(Array("org.wartremover.warts.PublicInference"))
 case class HBoxWallet(seed: Array[Byte], store: LSMStore)
   extends BoxWallet[PublicKey25519Proposition, SimpleBoxTransaction, HybridBlock, HBoxWallet]
     with SparkzLogging with SparkzEncoding {
@@ -148,7 +148,7 @@ object HBoxWallet {
   }
 }
 
-
+@SuppressWarnings(Array("org.wartremover.warts.PublicInference"))
 object GenesisStateGenerator extends App with SparkzEncoding {
   private val w1 = HBoxWallet(Base58.decode("minerNode1").get, new LSMStore(new File("/tmp/w1")))
   private val w2 = HBoxWallet(Base58.decode("minerNode2").get, new LSMStore(new File("/tmp/w2")))

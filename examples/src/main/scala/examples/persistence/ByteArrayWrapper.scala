@@ -26,7 +26,7 @@ case class ByteArrayWrapper(data: Array[Byte])
   /** alternative constructor which takes array size and creates new empty array */
   def this(size:Int) = this(new Array[Byte](size))
 
-  def size = data.length
+  def size: Int = data.length
 
   require(data != null)
 

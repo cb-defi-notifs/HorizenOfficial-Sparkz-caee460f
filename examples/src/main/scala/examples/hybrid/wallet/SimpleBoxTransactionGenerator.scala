@@ -62,7 +62,7 @@ class SimpleBoxTransactionGenerator(viewHolderRef: ActorRef)(implicit ec: Execut
     if (pubkeys.size < 10) wallet.generateNewSecret()
     val recipients = scala.util.Random.shuffle(pubkeys).take(Random.nextInt(pubkeys.size))
       .map(r => (r, Value @@ Random.nextInt(100).toLong))
-    val tx = SimpleBoxTransaction.create(wallet, recipients, Random.nextInt(100), ex)
+    val tx = SimpleBoxTransaction.create(wallet, recipients, Random.nextInt(100), ex.toSeq)
     tx.map(t => t.boxIdsToOpen.foreach(id => ex += id))
     tx
   }

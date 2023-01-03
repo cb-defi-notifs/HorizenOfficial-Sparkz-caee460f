@@ -1,6 +1,6 @@
 package examples
 
-import io.iohk.iodb.ByteArrayWrapper
+import examples.persistence.ByteArrayWrapper
 import sparkz.core.{VersionTag, versionToBytes}
 import sparkz.util.{ModifierId, idToBytes}
 import supertagged.TaggedType

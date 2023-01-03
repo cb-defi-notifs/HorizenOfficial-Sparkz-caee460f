@@ -13,7 +13,7 @@ import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.util.encode.Base58
 import sparkz.crypto.signatures.PublicKey
-import sparkz.util.SparkzLogging
+import sparkz.util.{SparkzEncoding, SparkzLogging}
 
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,9 +24,10 @@ import scala.util.Try
 /**
   * Private chain attack simulation
   */
+@SuppressWarnings(Array("org.wartremover.warts.PublicInference"))
 object PrivateChain extends App with SparkzLogging with SparkzEncoding {
 
-  val proposition: PublicKey25519Proposition = PublicKey25519Proposition(PublicKey @@ scorex.utils.Random.randomBytes(32))
+  val proposition: PublicKey25519Proposition = PublicKey25519Proposition(PublicKey @@ sparkz.utils.Random.randomBytes(32))
 
   def genesisState(): (HybridHistory, HBoxStoredState, HBoxWallet, SimpleBoxTransactionMemPool)  = {
     HybridNodeViewHolder.generateGenesisState(hybridSettings, new NetworkTimeProvider(settings.ntp))

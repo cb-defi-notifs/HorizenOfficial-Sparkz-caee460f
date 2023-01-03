@@ -68,7 +68,7 @@ class QuickStore(
   override def get(key: K): Option[V] = {
     lock.readLock().lock()
     try {
-      return keyvals.get(key)
+      keyvals.get(key)
     } finally {
       lock.readLock().unlock()
     }
@@ -93,8 +93,8 @@ class QuickStore(
         newValue = value)
     }
 
-    for ((key) <- toRemove) {
-      changes += new QuickChange(key = key,
+    for (key <- toRemove) {
+      changes += QuickChange(key = key,
         oldValue = keyvals.getOrElse(key, Store.tombstone),
         newValue = Store.tombstone)
     }
@@ -119,7 +119,7 @@ class QuickStore(
       for ((key, value) <- toUpdate) {
         keyvals.put(key, value)
       }
-      for ((key) <- toRemove) {
+      for (key <- toRemove) {
         keyvals.remove(key)
       }
     } finally {
@@ -156,7 +156,7 @@ class QuickStore(
     val out3 = ByteBuffer.wrap(b)
     out3.putInt(8, b.size)
     out3.putLong(0, Utils.checksum(b))
-    return b
+    b
   }
 
 
@@ -166,7 +166,7 @@ class QuickStore(
       return Store.tombstone
     val r = new ByteArrayWrapper(size)
     in.readFully(r.data)
-    return r
+    r
   }
 
   protected[persistence] def deserializeUpdate(in: DataInputStream, offset: Long, skipChecksum: Boolean = false): QuickUpdate = {
@@ -197,7 +197,7 @@ class QuickStore(
     //    val changes =
     //      if(skipData) Nil
     //      else (0 until keyCount).map(i => new QuickChange(read(), read(), read())).toBuffer
-    return new QuickUpdate(offset = offset, length = length, versionID = versionID, prevVersionID = prevVersionID, changeCount = keyCount)
+    QuickUpdate(offset = offset, length = length, versionID = versionID, prevVersionID = prevVersionID, changeCount = keyCount)
   }
 
 
@@ -217,7 +217,7 @@ class QuickStore(
   }
 
   protected def deserializeChange(in: DataInput) =
-    new QuickChange(
+    QuickChange(
       key = readByteArray(in),
       oldValue = readByteArray(in),
       newValue = readByteArray(in))
@@ -232,7 +232,7 @@ class QuickStore(
 
         //create buffered stream, it can not be reused, `fin` will seek and buffer would become invalid
         val din = new DataInputStream(new BufferedInputStream(fin))
-        for (i <- 0L until update.changeCount) {
+        for (_ <- 0L until update.changeCount) {
           val change = deserializeChange(din)
           consumer(change, update)
         }
@@ -246,7 +246,7 @@ class QuickStore(
     lock.readLock().lock()
     try {
       val versionID2 = versionID
-      return if ((versionID2 eq null) || (versionID2 eq Store.tombstone)) None
+      if ((versionID2 eq null) || (versionID2 eq Store.tombstone)) None
       else Some(versionID2)
     } finally {
       lock.readLock().unlock()
@@ -306,7 +306,7 @@ class QuickStore(
       deserializeAllUpdates { u =>
         v += u.versionID
       }
-      return v
+      v
     } finally {
       lock.readLock().unlock()
     }

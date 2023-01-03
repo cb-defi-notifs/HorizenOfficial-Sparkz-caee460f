@@ -89,7 +89,7 @@ trait Store {
     getAll { (k: K, v: V) =>
       ret += ((k, v))
     }
-    return ret.iterator
+    ret.iterator
   }
 
   /**

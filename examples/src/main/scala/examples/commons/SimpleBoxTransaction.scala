@@ -2,9 +2,9 @@ package examples.commons
 
 import com.google.common.primitives.{Ints, Longs}
 import examples.hybrid.wallet.HBoxWallet
+import examples.persistence.ByteArrayWrapper
 import io.circe.Encoder
 import io.circe.syntax._
-import io.iohk.iodb.ByteArrayWrapper
 import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.BoxTransaction

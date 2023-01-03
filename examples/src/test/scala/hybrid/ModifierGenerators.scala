@@ -4,7 +4,7 @@ import examples.commons.{Nonce, PublicKey25519NoncedBox, PublicKey25519NoncedBox
 import examples.hybrid.blocks._
 import examples.hybrid.history.HybridHistory
 import examples.hybrid.state.HBoxStoredState
-import io.iohk.iodb.ByteArrayWrapper
+import examples.persistence.ByteArrayWrapper
 import org.scalacheck.Gen
 import sparkz.core.versionToId
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
@@ -168,7 +168,7 @@ trait ModifierGenerators {
 
     assert(parentIds.size == mods.count(_.isInstanceOf[PosBlock]))
 
-    val posBlocks: mutable.Buffer[HybridBlock] = validPosBlocks(state, parentIds).toBuffer
+    val posBlocks: mutable.Buffer[HybridBlock] = validPosBlocks(state, parentIds.toSeq).toBuffer
 
     val validMods: Seq[HybridBlock] = mods.map {
       case pw: PowBlock => pw

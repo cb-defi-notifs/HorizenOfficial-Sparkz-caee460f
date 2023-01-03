@@ -23,6 +23,8 @@ import scala.util.Random
   * currently it is starting to work on getting a (PoW; PoS) block references
   * and stops on a new PoW block found (when PoS ref is unknown)
   */
+
+@SuppressWarnings(Array("org.wartremover.warts.JavaSerializable"))
 class PowMiner(viewHolderRef: ActorRef, settings: HybridMiningSettings)(implicit ec: ExecutionContext)
   extends Actor with SparkzLogging with SparkzEncoding {
 
