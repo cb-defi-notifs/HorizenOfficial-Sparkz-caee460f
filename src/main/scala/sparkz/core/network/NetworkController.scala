@@ -142,7 +142,7 @@ class NetworkController(settings: NetworkSettings,
     case PenalizePeer(peerAddress, penaltyType) =>
       penalize(peerAddress, penaltyType)
 
-    case Blacklisted(peerAddress) =>
+    case DisconnectFromAddress(peerAddress) =>
       closeConnection(peerAddress)
   }
 

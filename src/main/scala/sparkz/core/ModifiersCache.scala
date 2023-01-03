@@ -54,8 +54,8 @@ trait ModifiersCache[PMOD <: PersistentNodeViewModifier, H <: HistoryReader[PMOD
 
   def put(key: K, value: V): Unit = {
     if (!contains(key)) {
-      onPut(key)
       cache.put(key, value)
+      onPut(key)
     }
   }
 

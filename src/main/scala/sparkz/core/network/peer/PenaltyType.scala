@@ -35,4 +35,8 @@ object PenaltyType {
     // We want to ban right away a peer with this penalty: +1 to go beyond the threshold
     override val penaltyScore: Int = networkSettings.penaltyScoreThreshold + 1
   }
+
+  case class CustomPenaltyDuration(penaltyDurationInMinutes: Long) extends PenaltyType {
+    override val penaltyScore: Int = 0
+  }
 }

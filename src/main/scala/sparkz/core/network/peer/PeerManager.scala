@@ -54,12 +54,12 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
         )
       }
 
-    case Penalize(peerAddress, penaltyType) =>
-      log.info(s"$peerAddress penalized, penalty: $penaltyType")
-      if (peerDatabase.peerPenaltyScoreOverThreshold(peerAddress, penaltyType)) {
-        log.info(s"$peerAddress blacklisted")
-        peerDatabase.addToBlacklist(peerAddress, penaltyType)
-        sender() ! Blacklisted(peerAddress)
+    case Penalize(peer, penaltyType) =>
+      log.info(s"$peer penalized, penalty: $penaltyType")
+      if (peerDatabase.peerPenaltyScoreOverThreshold(peer, penaltyType)) {
+        log.info(s"$peer blacklisted")
+        peerDatabase.addToBlacklist(peer, penaltyType)
+        sender() ! DisconnectFromAddress(peer)
       }
 
     case AddPeersIfEmpty(peersSpec) =>
@@ -76,6 +76,15 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
             PeerDatabaseValue(address, peerInfo, PeerConfidence.Unknown)
         }
       peerDatabase.addOrUpdateKnownPeers(filteredPeers)
+
+    case AddToBlacklist(address, penaltyType) =>
+      penaltyType match {
+        case Some(penalty) => peerDatabase.addToBlacklist(address, penalty)
+        case _ => peerDatabase.addToBlacklist(address, PenaltyType.MisbehaviorPenalty)
+      }
+
+    case RemoveFromBlacklist(address) =>
+      peerDatabase.removeFromBlacklist(address.getAddress)
 
     case RemovePeer(address) =>
       peerDatabase.remove(address)
@@ -122,6 +131,11 @@ object PeerManager {
     case class Penalize(remote: InetSocketAddress, penaltyType: PenaltyType)
 
     case class Blacklisted(remote: InetSocketAddress)
+    case class DisconnectFromAddress(remote: InetSocketAddress)
+
+    case class AddToBlacklist(remote: InetSocketAddress, penalty: Option[PenaltyType] = None)
+
+    case class RemoveFromBlacklist(remote: InetSocketAddress)
 
     // peerListOperations messages
     /**
@@ -171,6 +185,38 @@ object PeerManager {
     }
 
     case class RandomPeerForConnectionExcluding(excludedPeers: Seq[Option[InetSocketAddress]]) extends GetPeers[Option[PeerInfo]] {
+      private val secureRandom = new SecureRandom()
+
+      override def choose(peers: Map[InetSocketAddress, PeerDatabaseValue],
+                          blacklistedPeers: Seq[InetAddress],
+                          sparkzContext: SparkzContext): Option[PeerInfo] = {
+        var response: Option[PeerInfo] = None
+
+        val highConfidencePeers = peers.filter(_._2.confidence == PeerConfidence.High)
+        val highConfidenceCandidates = highConfidencePeers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
+
+        if (highConfidenceCandidates.nonEmpty) {
+          response = Some(highConfidenceCandidates(secureRandom.nextInt(highConfidenceCandidates.size)).peerInfo)
+        } else {
+          val candidates = peers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
+
+          if (candidates.nonEmpty)
+            response = Some(candidates(secureRandom.nextInt(candidates.size)).peerInfo)
+        }
+
+        response
+      }
+    }
+
+    case class GetPeer(peerAddress: InetSocketAddress) extends GetPeers[Option[PeerDatabaseValue]] {
+      override def choose(peers: Map[InetSocketAddress, PeerDatabaseValue],
+                          blacklistedPeers: Seq[InetAddress],
+                          sparkzContext: SparkzContext): Option[PeerDatabaseValue] = {
+        peers.get(peerAddress)
+      }
+    }
+
+    case class RandomPeerExcluding(excludedPeers: Seq[Option[InetSocketAddress]]) extends GetPeers[Option[PeerInfo]] {
       private val secureRandom = new SecureRandom()
 
       override def choose(peers: Map[InetSocketAddress, PeerDatabaseValue],
