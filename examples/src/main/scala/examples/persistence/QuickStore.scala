@@ -4,7 +4,6 @@ import java.io._
 import java.nio.ByteBuffer
 import java.nio.file.{Files, StandardOpenOption}
 import java.util.concurrent.locks.ReentrantReadWriteLock
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 import examples.persistence.Store._
 
 import scala.collection.mutable
@@ -128,7 +127,7 @@ class QuickStore(
   }
 
   protected[persistence] def serializeUpdate(versionID: VersionID, prevVersionID: VersionID, changes: Iterable[QuickChange]): Array[Byte] = {
-    val out = new ByteOutputStream()
+    val out = new ByteArrayOutputStream()
     val out2 = new DataOutputStream(out)
     //skip place for update size and checksum
     out2.writeLong(0L) //checksum
@@ -152,7 +151,7 @@ class QuickStore(
       write(c.oldValue)
       write(c.newValue)
     }
-    val b = out.getBytes
+    val b = out.toByteArray
     val out3 = ByteBuffer.wrap(b)
     out3.putInt(8, b.size)
     out3.putLong(0, Utils.checksum(b))

@@ -97,14 +97,10 @@ object FileAccess {
       if (buf.limit() == file.length())
         return fileHandle
 
-      //file size has changed, remap
-      Utils.unmap(buf)
-      return (mmap(file.getPath), file)
+      (mmap(file.getPath), file)
     }
 
-    override def close(file: Any): Unit = {
-      Utils.unmap(castBuf(file))
-    }
+    override def close(file: Any): Unit = {}
 
     /**
       * gets file size of given file

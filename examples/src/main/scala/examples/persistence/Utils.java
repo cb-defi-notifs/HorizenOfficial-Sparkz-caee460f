@@ -2,8 +2,6 @@ package examples.persistence;
 
 import net.jpountz.xxhash.XXHash64;
 import net.jpountz.xxhash.XXHashFactory;
-import sun.misc.Cleaner;
-import sun.nio.ch.DirectBuffer;
 
 import java.io.EOFException;
 import java.io.File;
@@ -119,8 +117,6 @@ class Utils {
     }
 
     static int unsafeBinarySearch(ByteBuffer keys, byte[] key, int baseKeyOffset, int keyCount) {
-        long bufAddress = ((sun.nio.ch.DirectBuffer) keys).address() + baseKeyOffset;
-
         long[] keyParsed = parseKey(key);
         int keySize = key.length;
 
@@ -128,7 +124,7 @@ class Utils {
         int hi = keyCount - 1; // key count offset
         while (lo <= hi) {
             int mid = (lo + hi) / 2;
-            int comp = unsafeCompare(bufAddress, mid, keySize, keyParsed);
+            int comp = unsafeCompare(baseKeyOffset, mid, keySize, keyParsed);
             if (comp < 0)
                 lo = mid + 1;
             else if (comp > 0)
@@ -151,30 +147,6 @@ class Utils {
             offset = Math.min(keySize - 8, offset + 7); //TODO this does not work with small keys
         }
         return 0;
-    }
-
-
-    /**
-     * Hack to unmap MappedByteBuffer.
-     * Unmap is necessary on Windows, otherwise file is locked until JVM exits or BB is GCed.
-     * There is no public JVM API to unmap buffer, so this tries to use SUN proprietary API for unmap.
-     * Any error is silently ignored (for example SUN API does not exist on Android).
-     */
-    protected static boolean unmap(ByteBuffer b) {
-        if (!(b instanceof DirectBuffer))
-            return false;
-
-        // need to dispose old direct buffer, see bug
-        // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4724038
-        DirectBuffer bb = (DirectBuffer) b;
-        Cleaner c = bb.cleaner();
-        if (c != null) {
-            c.clean();
-            return true;
-        }
-        Object attachment = bb.attachment();
-        return attachment != null && attachment instanceof DirectBuffer && unmap(b);
-
     }
 
     protected static File[] listFiles(File dir, String extension) {

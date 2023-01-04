@@ -10,7 +10,10 @@ libraryDependencies ++= Seq(
   "org.scalacheck" %% "scalacheck" % "1.17.0" % "test",
   "com.novocode" % "junit-interface" % "0.11" % "test",
   "org.rocksdb" % "rocksdbjni" % "7.6.0" % "test",
-  "org.iq80.leveldb" % "leveldb" % "0.12" % "test"
+  "org.iq80.leveldb" % "leveldb" % "0.12" % "test",
+  "javax.xml.bind" % "jaxb-api" % "2.3.1",
+  "com.sun.xml.bind" % "jaxb-core" % "4.0.1",
+  "com.sun.xml.bind" % "jaxb-impl" % "4.0.1"
 )
 
 assembly / mainClass := Some("examples.hybrid.HybridApp")
