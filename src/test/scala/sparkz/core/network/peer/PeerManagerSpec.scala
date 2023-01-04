@@ -24,7 +24,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
 
     val selfAddress = settings.network.bindAddress
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, Some(selfAddress))
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, Some(selfAddress))
     val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
     val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
     val peerInfo = getPeerInfo(selfAddress)
@@ -43,7 +43,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
     val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
     val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
@@ -66,7 +66,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
     val peerDatabase = new InMemoryPeerDatabase(settingsWithKnownPeer.network, sparkzContext)
     val peerManager = PeerManagerRef(settingsWithKnownPeer, sparkzContext, peerDatabase)(system)
 
@@ -88,7 +88,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
   it should "exclude peers from stored peers" in {
     // Arrange
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
 
     val peerAddressOne = new InetSocketAddress("127.0.0.1", DefaultPort)
     val peerAddressTwo = new InetSocketAddress("127.0.0.2", DefaultPort)
@@ -113,7 +113,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
   it should "exclude blacklisted peers" in {
     // Arrange
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
 
     val peerAddressOne = new InetSocketAddress("127.0.0.1", DefaultPort)
     val peerAddressTwo = new InetSocketAddress("127.0.0.2", DefaultPort)
@@ -138,7 +138,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
   it should "exclude peers from known peers" in {
     // Arrange
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
 
     val peerAddressOne = new InetSocketAddress("127.0.0.1", DefaultPort)
     val peerAddressTwo = new InetSocketAddress("127.0.0.2", DefaultPort)
@@ -171,7 +171,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
     val peerDatabase = new InMemoryPeerDatabase(settingsWithKnownPeer.network, sparkzContext)
     val peerManager = PeerManagerRef(settingsWithKnownPeer, sparkzContext, peerDatabase)(system)
 
@@ -196,7 +196,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
     val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
     val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
@@ -220,7 +220,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
     val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
     val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
@@ -241,7 +241,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
     val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
     val peerManager = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
     val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
@@ -284,7 +284,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
     val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
     val peerManagerRef = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
 
@@ -331,7 +331,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
     val p = TestProbe("p")(system)
     implicit val defaultSender: ActorRef = p.testActor
 
-    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
     val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
     val peerManagerRef = PeerManagerRef(settings, sparkzContext, peerDatabase)(system)
 

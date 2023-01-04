@@ -18,7 +18,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
   private val peerAddress1 = new InetSocketAddress("1.1.1.1", 27017)
   private val peerAddress2 = new InetSocketAddress("2.2.2.2", 27017)
   private val storedPeersLimit = 10
-  private val sparkzContext = SparkzContext(Seq.empty, Seq.empty, timeProvider, None)
+  private val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
 
   private def withDb(test: InMemoryPeerDatabase => Assertion): Assertion =
     test(new InMemoryPeerDatabase(settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds), sparkzContext))

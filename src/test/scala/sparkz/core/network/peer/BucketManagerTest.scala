@@ -13,8 +13,8 @@ import java.net.InetSocketAddress
 class BucketManagerTest extends NetworkTests {
   private val bucketConf = BucketConfig(256, 64, 8)
   private val nKey = 1234
-  private val newBucket = PeerBucketStorageImpl(bucketConf, nKey, timeProvider)
-  private val triedBucket = PeerBucketStorageImpl(bucketConf, nKey, timeProvider)
+  private val newBucket = PeerBucketStorageImpl(bucketConf, nKey, mockTimeProvider)
+  private val triedBucket = PeerBucketStorageImpl(bucketConf, nKey, mockTimeProvider)
 
   "BucketManager" should "be empty when created" in {
     // Arrange
@@ -111,8 +111,8 @@ class BucketManagerTest extends NetworkTests {
     val bucket = 1
     val bucketPosition = 1
     val bucketConfig = BucketConfig(10, 10, 10)
-    val newBucketMock = spy(PeerBucketStorageImpl(bucketConfig, nKey, timeProvider))
-    val triedBucketMock = spy(PeerBucketStorageImpl(bucketConfig, nKey, timeProvider))
+    val newBucketMock = spy(PeerBucketStorageImpl(bucketConfig, nKey, mockTimeProvider))
+    val triedBucketMock = spy(PeerBucketStorageImpl(bucketConfig, nKey, mockTimeProvider))
 
     doReturn(bucket).when(triedBucketMock).getBucket(any())
     doReturn(bucketPosition).when(triedBucketMock).getBucketPosition(any(), any())

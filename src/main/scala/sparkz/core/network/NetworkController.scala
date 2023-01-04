@@ -62,7 +62,7 @@ class NetworkController(settings: NetworkSettings,
   private var connections = Map.empty[InetSocketAddress, ConnectedPeer]
   private var unconfirmedConnections = Set.empty[InetSocketAddress]
   private val maxConnections = settings.maxIncomingConnections + settings.maxOutgoingConnections
-  private val peersLastConnectionAttempts = new LRUSimpleCache[InetSocketAddress, TimeProvider.Time](10000)
+  private val peersLastConnectionAttempts = new LRUSimpleCache[InetSocketAddress, TimeProvider.Time](threshold = 10000)
 
   private val tryNewConnectionAttemptDelay = 5.seconds
 
