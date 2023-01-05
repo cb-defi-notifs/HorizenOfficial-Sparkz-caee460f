@@ -11,7 +11,7 @@ import io.circe.syntax._
 import sparkz.core.bytesToId
 import sparkz.core.api.http.{ApiResponse, ApiRouteWithFullView}
 import sparkz.core.settings.RESTApiSettings
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 
 import scala.util.Try
 

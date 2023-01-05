@@ -4,7 +4,6 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props, SupervisorS
 import akka.io.Tcp
 import akka.io.Tcp._
 import akka.util.{ByteString, CompactByteString}
-import scorex.util.ScorexLogging
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.{Handshaked, PenalizePeer}
 import sparkz.core.network.PeerConnectionHandler.ReceivableMessages
@@ -13,6 +12,7 @@ import sparkz.core.network.message.{HandshakeSpec, MessageSerializer}
 import sparkz.core.network.peer.{PeerInfo, PenaltyType}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
+import sparkz.util.SparkzLogging
 
 import scala.annotation.tailrec
 import scala.collection.immutable.TreeMap
@@ -25,7 +25,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
                             sparkzContext: SparkzContext,
                             connectionDescription: ConnectionDescription
                            )(implicit ec: ExecutionContext)
-  extends Actor with ScorexLogging {
+  extends Actor with SparkzLogging {
 
   import PeerConnectionHandler.ReceivableMessages._
 
@@ -54,7 +54,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
 
   private var outMessagesCounter: Long = 0
 
-  override def preStart: Unit = {
+  override def preStart(): Unit = {
     context watch connection
     connection ! Register(self, keepOpenOnPeerClosed = false, useResumeWriting = true)
     connection ! ResumeReading

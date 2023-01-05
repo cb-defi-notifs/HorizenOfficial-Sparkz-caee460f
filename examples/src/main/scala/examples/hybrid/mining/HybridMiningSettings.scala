@@ -9,7 +9,7 @@ import net.ceedubs.ficus.readers.ValueReader
 import sparkz.core.bytesToId
 import sparkz.core.settings.SparkzSettings.readConfigFromPath
 import sparkz.core.settings._
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.duration._
 
@@ -31,7 +31,7 @@ case class HybridMiningSettings(offlineGeneration: Boolean,
   lazy val GenesisParentId = bytesToId(Array.fill(32)(1: Byte))
 }
 
-object HybridSettings extends ScorexLogging with SettingsReaders {
+object HybridSettings extends SparkzLogging with SettingsReaders {
   def read(userConfigPath: Option[String]): HybridSettings = {
     fromConfig(readConfigFromPath(userConfigPath, "sparkz"))
   }

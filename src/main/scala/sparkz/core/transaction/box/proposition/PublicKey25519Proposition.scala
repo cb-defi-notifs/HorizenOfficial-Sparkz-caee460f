@@ -1,19 +1,19 @@
 package sparkz.core.transaction.box.proposition
 
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.state.PrivateKey25519
-import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.hash.Blake2b256
-import scorex.crypto.signatures.{Curve25519, PublicKey, Signature}
+import sparkz.util.SparkzEncoding
+import sparkz.crypto.hash.Blake2b256
+import sparkz.crypto.signatures.{Ed25519, PublicKey, Signature}
 
 import scala.util.{Failure, Success, Try}
 
 case class PublicKey25519Proposition(pubKeyBytes: PublicKey)
   extends ProofOfKnowledgeProposition[PrivateKey25519] with SparkzEncoding {
 
-  require(pubKeyBytes.length == Curve25519.KeyLength,
-    s"Incorrect pubKey length, ${Curve25519.KeyLength} expected, ${pubKeyBytes.length} found")
+  require(pubKeyBytes.length == Ed25519.KeyLength,
+    s"Incorrect pubKey length, ${Ed25519.KeyLength} expected, ${pubKeyBytes.length} found")
 
   import PublicKey25519Proposition._
 
@@ -23,7 +23,7 @@ case class PublicKey25519Proposition(pubKeyBytes: PublicKey)
 
   override def toString: String = address
 
-  def verify(message: Array[Byte], signature: Signature): Boolean = Curve25519.verify(signature, message, pubKeyBytes)
+  def verify(message: Array[Byte], signature: Signature): Boolean = Ed25519.verify(signature, message, pubKeyBytes)
 
   override type M = PublicKey25519Proposition
 
@@ -45,7 +45,7 @@ object PublicKey25519PropositionSerializer extends SparkzSerializer[PublicKey255
   }
 
   override def parse(r: Reader): PublicKey25519Proposition = {
-    PublicKey25519Proposition(PublicKey @@ r.getBytes(Curve25519.KeyLength))
+    PublicKey25519Proposition(PublicKey @@ r.getBytes(Ed25519.KeyLength))
   }
 }
 

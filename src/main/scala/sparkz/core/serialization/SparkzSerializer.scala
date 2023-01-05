@@ -2,8 +2,8 @@ package sparkz.core.serialization
 
 import java.nio.ByteBuffer
 import akka.util.ByteString
-import scorex.util.ByteArrayBuilder
-import scorex.util.serialization._
+import sparkz.util.ByteArrayBuilder
+import sparkz.util.serialization._
 import sparkz.util.serialization.{VLQByteStringReader, VLQByteStringWriter}
 
 import scala.util.Try

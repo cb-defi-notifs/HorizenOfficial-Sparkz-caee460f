@@ -2,7 +2,7 @@ package sparkz.core
 
 import sparkz.core.consensus.{ContainsModifiers, HistoryReader}
 import sparkz.core.validation.RecoverableModifierError
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -19,12 +19,12 @@ import scala.util.{Failure, Success}
 trait ModifiersCache[PMOD <: PersistentNodeViewModifier, H <: HistoryReader[PMOD, _]] extends ContainsModifiers[PMOD] {
   require(maxSize >= 1)
 
-  type K = scorex.util.ModifierId
+  type K = sparkz.util.ModifierId
   type V = PMOD
 
   protected val cache: mutable.Map[K, V] = mutable.Map[K, V]()
 
-  override def modifierById(modifierId: scorex.util.ModifierId): Option[PMOD] = cache.get(modifierId)
+  override def modifierById(modifierId: sparkz.util.ModifierId): Option[PMOD] = cache.get(modifierId)
 
   def size: Int = cache.size
 
@@ -108,7 +108,7 @@ trait LRUCache[PMOD <: PersistentNodeViewModifier, HR <: HistoryReader[PMOD, _]]
 }
 
 class DefaultModifiersCache[PMOD <: PersistentNodeViewModifier, HR <: HistoryReader[PMOD, _]]
-(override val maxSize: Int) extends ModifiersCache[PMOD, HR] with LRUCache[PMOD, HR] with ScorexLogging {
+(override val maxSize: Int) extends ModifiersCache[PMOD, HR] with LRUCache[PMOD, HR] with SparkzLogging {
 
   /**
     * Default implementation is just about to scan. Not efficient at all and should be probably rewritten in a

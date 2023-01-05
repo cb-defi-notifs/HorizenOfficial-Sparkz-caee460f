@@ -5,9 +5,9 @@ import sparkz.core.network._
 import sparkz.core.network.message.Message.MessageCode
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-import scorex.util.Extensions._
-import scorex.util.serialization.{Reader, Writer}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
+import sparkz.util.Extensions._
+import sparkz.util.serialization.{Reader, Writer}
+import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 
 import scala.collection.immutable
 
@@ -125,7 +125,7 @@ object ModifiersSpec {
 /**
   * The `Modifier` message is a reply to a `RequestModifier` message which requested these modifiers.
   */
-class ModifiersSpec(maxMessageSize: Int) extends MessageSpecV1[ModifiersData] with ScorexLogging {
+class ModifiersSpec(maxMessageSize: Int) extends MessageSpecV1[ModifiersData] with SparkzLogging {
 
   import ModifiersSpec._
 

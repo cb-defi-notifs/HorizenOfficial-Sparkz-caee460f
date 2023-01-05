@@ -5,7 +5,7 @@ import sparkz.core.app.SparkzContext
 import sparkz.core.network._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.NetworkUtils
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import java.net.{InetAddress, InetSocketAddress}
 import scala.util.Random
@@ -15,7 +15,7 @@ import java.security.SecureRandom
   * Peer manager takes care of peers connected and in process, and also chooses a random peer to connect
   * Must be singleton
   */
-class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext) extends Actor with ScorexLogging {
+class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext) extends Actor with SparkzLogging {
 
   import PeerManager.ReceivableMessages._
 

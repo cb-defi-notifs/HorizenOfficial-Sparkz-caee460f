@@ -6,7 +6,7 @@ import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction._
 import sparkz.core.transaction.box.proposition.Proposition
 import sparkz.core.{NodeViewModifier, TransactionsCarryingPersistentNodeViewModifier}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.NodeViewModifier
 
 /**

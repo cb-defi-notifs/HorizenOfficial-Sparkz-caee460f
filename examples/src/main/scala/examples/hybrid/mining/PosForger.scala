@@ -8,12 +8,12 @@ import examples.hybrid.state.HBoxStoredState
 import examples.hybrid.wallet.HBoxWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.transaction.state.PrivateKey25519
-import scorex.crypto.hash.Blake2b256
-import scorex.util.ScorexLogging
-import scorex.utils.Random
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.SparkzLogging
+import sparkz.utils.Random
 
 
-class PosForger(settings: HybridSettings, viewHolderRef: ActorRef) extends Actor with ScorexLogging {
+class PosForger(settings: HybridSettings, viewHolderRef: ActorRef) extends Actor with SparkzLogging {
 
   import PosForger.ReceivableMessages._
   import PosForger._
@@ -56,7 +56,7 @@ class PosForger(settings: HybridSettings, viewHolderRef: ActorRef) extends Actor
   }
 }
 
-object PosForger extends ScorexLogging {
+object PosForger extends SparkzLogging {
 
   import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 

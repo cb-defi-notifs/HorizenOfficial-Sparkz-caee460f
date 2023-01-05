@@ -15,14 +15,14 @@ import sparkz.core.settings.NetworkSettings
 import sparkz.core.transaction.state.StateReader
 import sparkz.core.transaction.wallet.VaultReader
 import sparkz.core.transaction.{MempoolReader, Transaction}
-import sparkz.core.utils.{NetworkTimeProvider, SparkzEncoding}
+import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.validation.MalformedModifierError
 import sparkz.core.{ModifierTypeId, NodeViewModifier, PersistentNodeViewModifier, idsToString}
-import scorex.util.serialization.{VLQByteBufferReader, VLQReader}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.serialization.{VLQByteBufferReader, VLQReader}
+import sparkz.util.{ModifierId, SparkzEncoding, SparkzLogging}
 
 import java.nio.ByteBuffer
-import scala.annotation.tailrec
+import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -52,7 +52,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
  networkSettings: NetworkSettings,
  timeProvider: NetworkTimeProvider,
  modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]])(implicit ec: ExecutionContext)
-  extends Actor with Synchronizer with ScorexLogging with SparkzEncoding {
+  extends Actor with Synchronizer with SparkzLogging with SparkzEncoding {
 
   protected val deliveryTimeout: FiniteDuration = networkSettings.deliveryTimeout
   protected val maxDeliveryChecks: Int = networkSettings.maxDeliveryChecks
@@ -130,7 +130,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     case ChangedMempool(reader: MR) =>
       mempoolReaderOpt = Some(reader)
 
-    case ModifiersProcessingResult(applied: Seq[PMOD], cleared: Seq[PMOD]) =>
+    case ModifiersProcessingResult(applied: Seq[_], cleared: Seq[_]) =>
       // stop processing for cleared modifiers
       // applied modifiers state was already changed at `SyntacticallySuccessfulModifier`
       cleared.foreach(m => deliveryTracker.setUnknown(m.id))
@@ -143,7 +143,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     * when our modifier is not synced yet, but no modifiers are expected from other peers
     * or request modifiers we need with known ids, that are not applied yet.
     */
-  protected def requestMoreModifiers(applied: Seq[PMOD]): Unit = {}
+  protected def requestMoreModifiers(applied: Seq[_]): Unit = {}
 
   protected def peerManagerEvents: Receive = {
     case HandshakedPeer(remote) =>
@@ -188,7 +188,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
   }
 
   // Send history extension to the (less developed) peer 'remote' which does not have it.
-  def sendExtension(remote: ConnectedPeer,
+  @nowarn def sendExtension(remote: ConnectedPeer,
                     status: HistoryComparisonResult,
                     ext: Seq[(ModifierTypeId, ModifierId)]): Unit =
     ext.groupBy(_._1).mapValues(_.map(_._2)).foreach {

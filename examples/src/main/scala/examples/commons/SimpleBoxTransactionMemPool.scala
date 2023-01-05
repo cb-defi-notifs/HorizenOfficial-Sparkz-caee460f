@@ -1,7 +1,7 @@
 package examples.commons
 
 import sparkz.core.transaction.MemoryPool
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.collection.concurrent.TrieMap
 import scala.util.{Success, Try}

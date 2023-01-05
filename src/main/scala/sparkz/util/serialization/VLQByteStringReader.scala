@@ -1,16 +1,15 @@
 package sparkz.util.serialization
 
 import java.nio.ByteOrder
-import akka.util.ByteString
-import scorex.util.serialization.{Reader, VLQReader}
+import akka.util.{ByteIterator, ByteString}
 
 class VLQByteStringReader(byteString: ByteString) extends VLQReader {
 
   type CH = ByteString
 
-  private var it = byteString.iterator
-  private var _position = 0
-  private var _mark = 0
+  private var it: ByteIterator = byteString.iterator
+  private var _position: Int = 0
+  private var _mark: Int = 0
   private implicit val byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN
 
   @inline

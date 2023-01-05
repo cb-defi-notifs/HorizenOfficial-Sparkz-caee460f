@@ -13,7 +13,10 @@ The main characteristic of the implementation are:
 
 * A Bitcoin-like transaction model with a transaction having multiple inputs and outputs (with no [scripts](https://en.bitcoin.it/wiki/Script), however);
 
-* Persistence through the [IODB](https://github.com/input-output-hk/iodb) versioned key-value database.
+* Persistence through the IODB versioned key-value database.
+
+:warning: :warning: **The examples module uses unsafe operations in the persistence module that makes the project itself not production ready, but just an example of a concrete implementation using Sparkz**
+:warning: :warning:
 
 
 ### Execution

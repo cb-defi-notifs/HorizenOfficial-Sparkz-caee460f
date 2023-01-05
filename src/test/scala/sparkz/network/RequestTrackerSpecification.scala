@@ -136,7 +136,7 @@ class RequestTrackerSpecification extends NetworkTests with ObjectGenerators {
 
       //spam penalty
       networkControllerProbe.expectMsg(PenalizePeer(connectedPeer.connectionId.remoteAddress, SpamPenalty))
-      peerSynchronizerProbe.expectNoMessage
+      peerSynchronizerProbe.expectNoMessage()
     }
   }
 

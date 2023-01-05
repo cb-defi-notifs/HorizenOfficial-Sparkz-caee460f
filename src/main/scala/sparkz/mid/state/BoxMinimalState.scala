@@ -52,9 +52,10 @@ trait BoxMinimalState[P <: Proposition,
         partialRes.flatMap { partialSum =>
           closedBox(unlocker.closedBoxId) match {
             case Some(box) =>
-              unlocker.boxKey.isValid(box.proposition, tx.messageToSign) match {
-                case true => Success(partialSum + box.value)
-                case false => Failure(new Exception("Incorrect unlocker"))
+              if (unlocker.boxKey.isValid(box.proposition, tx.messageToSign)) {
+                Success(partialSum + box.value)
+              } else {
+                Failure(new Exception("Incorrect unlocker"))
               }
             case None => Failure(new Exception(s"Box for unlocker $unlocker is not in the state"))
           }
@@ -62,9 +63,10 @@ trait BoxMinimalState[P <: Proposition,
       }
 
       boxesSumTry flatMap { openSum =>
-        tx.newBoxes.map(_.value).sum == openSum - tx.fee match {
-          case true => Success[Unit](Unit)
-          case false => Failure(new Exception("Negative fee"))
+        if (tx.newBoxes.map(_.value).sum == openSum - tx.fee) {
+          Success(())
+        } else {
+          Failure(new Exception("Negative fee"))
         }
       }
     }

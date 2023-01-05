@@ -3,7 +3,7 @@ package sparkz.core.network.peer
 import java.net.{InetAddress, InetSocketAddress}
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.TimeProvider
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
 
 import scala.concurrent.duration._
@@ -12,7 +12,7 @@ import scala.concurrent.duration._
   * In-memory peer database implementation supporting temporal blacklisting.
   */
 final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimeProvider)
-  extends PeerDatabase with ScorexLogging {
+  extends PeerDatabase with SparkzLogging {
 
   private val safeInterval = settings.penaltySafeInterval.toMillis
 

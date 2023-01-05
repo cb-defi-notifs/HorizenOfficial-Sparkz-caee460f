@@ -4,7 +4,7 @@ import akka.actor._
 import akka.testkit.TestProbe
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.ObjectGenerators
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetDataFromCurrentView, LocallyGeneratedModifier, ModifiersFromRemote}
@@ -30,7 +30,7 @@ HT <: History[PM, SI, HT],
 MPool <: MemoryPool[TX, MPool]]
   extends AnyPropSpec
     with Matchers
-    with ScorexLogging
+    with SparkzLogging
     with SyntacticallyTargetedModifierProducer[PM, SI, HT]
     with TotallyValidModifierProducer[PM, ST, SI, HT]
     with SemanticallyInvalidModifierProducer[PM, ST]
