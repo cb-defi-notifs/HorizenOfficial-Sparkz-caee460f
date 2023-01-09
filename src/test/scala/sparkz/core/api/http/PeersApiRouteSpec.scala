@@ -7,6 +7,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit.{TestDuration, TestProbe}
 import io.circe.Json
 import io.circe.syntax._
+import org.mindrot.jbcrypt.BCrypt
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.api.http.PeersApiRoute.PeerInfoResponse
@@ -28,17 +29,18 @@ class PeersApiRouteSpec extends AnyFlatSpec
 
   private val addr = new InetSocketAddress("127.0.0.1", 8080)
   private val restApiSettings = RESTApiSettings(addr, None, None, 10 seconds)
-  private val restApiSettingsWithApiKey = RESTApiSettings(addr, Some("$2a$10$O5FAloC/gNuwpeoVKiV41.EcIlpOlk5hzsqYpleSmOEEKgj0j7BX6"), None, 10 seconds)
   private val prefix = "/peers"
   private val settings = SparkzSettings.read(None)
   private val timeProvider = new NetworkTimeProvider(settings.ntp)
-  private val routes = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettings).route
-  private val routesWithApiKey = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettingsWithApiKey).route
 
   private val credentials = HttpCredentials.createBasicHttpCredentials("username","password")
   private val badCredentials = HttpCredentials.createBasicHttpCredentials("username","wrong_password")
   private val body = HttpEntity("localhost:8080".asJson.toString).withContentType(ContentTypes.`application/json`)
   private val badBody = HttpEntity("badBodyContent".asJson.toString).withContentType(ContentTypes.`application/json`)
+
+  private val restApiSettingsWithApiKey = RESTApiSettings(addr, Some(BCrypt.hashpw(credentials.password(), BCrypt.gensalt())), None, 10 seconds)
+  private val routes = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettings).route
+  private val routesWithApiKey = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettingsWithApiKey).route
 
   val peersResp: String = peers.map { case (address, peerInfo) =>
     PeerInfoResponse.fromAddressAndInfo(address, peerInfo).asJson
@@ -85,18 +87,17 @@ class PeersApiRouteSpec extends AnyFlatSpec
     }
   }
 
-  //can't check it cause original node using now() timestamp for last seen field
   it should "get connected peers" in {
     Get(prefix + "/connected") ~> Route.seal(routes) ~> check {
-      status.intValue() shouldBe StatusCodes.InternalServerError.intValue
+      status shouldBe StatusCodes.OK
     }
   }
 
   //can't check it cause original node using now() timestamp for last seen field.
   //We can check only that the authorization passed
   it should "get connected peers with Basich Auth" in {
-    Get(prefix + "/connected").addCredentials(credentials) ~> Route.seal(routesWithApiKey) ~> check {
-      status.intValue() shouldBe StatusCodes.InternalServerError.intValue
+    Get(prefix + "/connected").addCredentials(credentials) ~> routesWithApiKey ~> check {
+      status shouldBe StatusCodes.OK
     }
   }
 
