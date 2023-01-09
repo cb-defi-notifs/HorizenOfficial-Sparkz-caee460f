@@ -45,4 +45,5 @@ object ApiResponse {
   def apply(keyValue: (String, String)): Route = apply(Map(keyValue))
 
   object OK extends ApiResponse(StatusCodes.OK)
+  object BAD_REQUEST extends ApiResponse(StatusCodes.BadRequest)
 }

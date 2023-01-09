@@ -4,8 +4,8 @@ import akka.http.scaladsl.server.directives.{AuthenticationDirective, Credential
 import akka.http.scaladsl.server.{AuthorizationFailedRejection, Directive0}
 import org.mindrot.jbcrypt.BCrypt
 import sparkz.core.settings.RESTApiSettings
-import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.hash.Blake2b256
+import sparkz.util.SparkzEncoding
+import sparkz.crypto.hash.Blake2b256
 
 trait ApiDirectives extends CorsHandler with SparkzEncoding {
   val settings: RESTApiSettings
@@ -25,13 +25,13 @@ trait ApiDirectives extends CorsHandler with SparkzEncoding {
   lazy val withBasicAuth: AuthenticationDirective[String] = authenticateBasic(realm = "secure api", basicAuthentication)
 
   def basicAuthentication(credentials: Credentials): Option[String] = {
-    settings.apiKeyHash.isEmpty match {
-      case true => Some(DEFAULT_USER)
-      case false =>
-            credentials match {
-              case p @ Credentials.Provided(id) if p.provideVerify(verifyApiKey) => Some(id)
-              case _ => None
-            }
+    if (settings.apiKeyHash.isEmpty) {
+      Some(DEFAULT_USER)
+    } else {
+      credentials match {
+        case p@Credentials.Provided(id) if p.provideVerify(verifyApiKey) => Some(id)
+        case _ => None
+      }
     }
   }
 

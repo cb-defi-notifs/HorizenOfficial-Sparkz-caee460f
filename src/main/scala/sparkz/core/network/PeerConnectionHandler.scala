@@ -9,10 +9,11 @@ import sparkz.core.network.NetworkController.ReceivableMessages.{Handshaked, Pen
 import sparkz.core.network.PeerConnectionHandler.ReceivableMessages
 import sparkz.core.network.PeerFeature.Serializers
 import sparkz.core.network.message.{HandshakeSpec, MessageSerializer}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.AddOrUpdatePeer
 import sparkz.core.network.peer.{PeerInfo, PenaltyType}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.annotation.tailrec
 import scala.collection.immutable.TreeMap
@@ -25,7 +26,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
                             sparkzContext: SparkzContext,
                             connectionDescription: ConnectionDescription
                            )(implicit ec: ExecutionContext)
-  extends Actor with ScorexLogging {
+  extends Actor with SparkzLogging {
 
   import PeerConnectionHandler.ReceivableMessages._
 
@@ -54,7 +55,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
 
   private var outMessagesCounter: Long = 0
 
-  override def preStart: Unit = {
+  override def preStart(): Unit = {
     context watch connection
     connection ! Register(self, keepOpenOnPeerClosed = false, useResumeWriting = true)
     connection ! ResumeReading
@@ -85,6 +86,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
       selfPeer = Some(peer)
 
       networkControllerRef ! Handshaked(peerInfo)
+
       handshakeTimeoutCancellableOpt.map(_.cancel())
       connection ! ResumeReading
       context become workingCycleWriting
@@ -99,9 +101,9 @@ class PeerConnectionHandler(val settings: NetworkSettings,
 
         case Failure(t) =>
           log.info(s"Error during parsing a handshake", t)
-          //ban the peer for the wrong handshake message
+          //penalise the peer for the wrong handshake message and disconnect from it
           //peer will be added to the blacklist and the network controller will send CloseConnection
-          selfPeer.foreach(c => networkControllerRef ! PenalizePeer(c.connectionId.remoteAddress, PenaltyType.PermanentPenalty))
+          selfPeer.foreach(c => networkControllerRef ! PenalizePeer(c.connectionId.remoteAddress, PenaltyType.DisconnectPenalty(settings)))
       }
   }
 
@@ -204,7 +206,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
               case MaliciousBehaviorException(msg) =>
                 log.warn(s"Banning peer for malicious behaviour($msg): ${connectionId.toString}")
                 //peer will be added to the blacklist and the network controller will send CloseConnection
-                networkControllerRef ! PenalizePeer(connectionId.remoteAddress, PenaltyType.PermanentPenalty)
+                networkControllerRef ! PenalizePeer(connectionId.remoteAddress, PenaltyType.DisconnectPenalty(settings))
               //non-malicious corruptions
               case _ =>
                 log.info(s"Corrupted data from ${connectionId.toString}: ${e.getMessage}")
@@ -268,7 +270,6 @@ object PeerConnectionHandler {
     final case class Ack(id: Long) extends Tcp.Event
 
   }
-
 }
 
 object PeerConnectionHandlerRef {

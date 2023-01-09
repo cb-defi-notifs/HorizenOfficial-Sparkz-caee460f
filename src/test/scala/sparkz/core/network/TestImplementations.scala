@@ -1,7 +1,6 @@
 package sparkz.core.network
 
-import scorex.util.ModifierId
-import scorex.util.serialization.{Reader, Writer}
+
 import sparkz.core.{ModifierTypeId, PersistentNodeViewModifier}
 import sparkz.core.consensus.History.ModifierIds
 import sparkz.core.consensus.{History, HistoryReader, ModifierSemanticValidity, SyncInfo}
@@ -12,6 +11,8 @@ import sparkz.core.transaction.account.PublicKeyNoncedBox
 import sparkz.core.transaction.box.Box.Amount
 import sparkz.core.transaction.box.BoxUnlocker
 import sparkz.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
+import sparkz.util.ModifierId
+import sparkz.util.serialization.{Reader, Writer}
 
 import scala.util.Try
 
@@ -42,9 +43,9 @@ trait TestImplementations {
   class TestHistory extends HistoryReader[TestModifier, TestSyncInfo] {
     override def isEmpty: Boolean = ???
     override def applicableTry(modifier: TestModifier): Try[Unit] = ???
-    override def modifierById(modifierId: scorex.util.ModifierId): Option[TestModifier] = ???
-    override def isSemanticallyValid(modifierId: scorex.util.ModifierId): ModifierSemanticValidity = ???
-    override def openSurfaceIds(): Seq[scorex.util.ModifierId] = ???
+    override def modifierById(modifierId: sparkz.util.ModifierId): Option[TestModifier] = ???
+    override def isSemanticallyValid(modifierId: sparkz.util.ModifierId): ModifierSemanticValidity = ???
+    override def openSurfaceIds(): Seq[sparkz.util.ModifierId] = ???
     override def continuationIds(info: TestSyncInfo, size: Int): ModifierIds = ???
     override def syncInfo: TestSyncInfo = ???
     override def compare(other: TestSyncInfo): History.HistoryComparisonResult = ???
@@ -69,8 +70,8 @@ trait TestImplementations {
 
   case class TestTransaction(override val fee: Long, override val timestamp: Long) extends BoxTransaction[PublicKey25519Proposition, TestBox] {
     override type M = TestTransaction
-    override val unlockers: Traversable[BoxUnlocker[PublicKey25519Proposition]] = Seq()
-    override val newBoxes: Traversable[TestBox] = Seq()
+    override val unlockers: Iterable[BoxUnlocker[PublicKey25519Proposition]] = Seq()
+    override val newBoxes: Iterable[TestBox] = Seq()
     override val messageToSign: Array[Byte] = Array()
     override def serializer: SparkzSerializer[TestTransaction] = ???
   }

@@ -229,7 +229,7 @@ where:
       clustering algorithm~\cite{parallelKMeans}%http://vldb.org/pvldb/vol5/p622_bahmanbahmani_vldb2012.pdf
 \item \param{numberOfClusters} is the configurable parameter specifying 
       how many clusters should be generated.
-      It defaults to \param{maxConnections}.
+      It defaults to \param{maxIncomingConnections} plus \param{maxOutgoingConnections}.
 \item $\mathrm{toVector}^{\featureFunction}_{F_c}(p)$ transforms a peer $p$ 
       into its vector of feature values $\mathrm{map}(\lambda f. \feature{p}{f}, F_c)$.
 \item $F_c$ is the vector of features relevant for clustering, which has
@@ -437,7 +437,7 @@ TODO: Show an example table
 
 The peer management system maintains a non-persistent table of
 \textbf{ConnectedPeers} to which the peer is currently connected.
-There are at most \conf{maxConnections}{Int} peers in
+There are at most \conf{maxConnections}{Int} peers (\conf{maxIncomingConnections}{Int} + \conf{maxOutgoingConnections}{Int}) in
 \textbf{ConnectedPeers}.
 
 \section{Conclusion}

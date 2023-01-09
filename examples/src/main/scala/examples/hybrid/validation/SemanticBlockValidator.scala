@@ -2,7 +2,7 @@ package examples.hybrid.validation
 
 import examples.hybrid.blocks.{HybridBlock, PosBlock, PowBlock}
 import sparkz.core.block.BlockValidator
-import scorex.crypto.hash.{CryptographicHash, Digest}
+import sparkz.crypto.hash.{CryptographicHash, Digest}
 
 import scala.util.Try
 

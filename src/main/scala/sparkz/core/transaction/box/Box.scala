@@ -2,7 +2,7 @@ package sparkz.core.transaction.box
 
 import sparkz.core.serialization.BytesSerializable
 import sparkz.core.transaction.box.proposition.Proposition
-import scorex.crypto.authds._
+import sparkz.crypto.authds._
 
 /**
   * Box is a state element locked by some proposition.

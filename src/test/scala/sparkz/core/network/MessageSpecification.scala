@@ -8,7 +8,7 @@ import sparkz.ObjectGenerators
 import sparkz.core.network.message._
 import sparkz.core.ModifierTypeId
 import sparkz.core.app.Version
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.util.Try
 

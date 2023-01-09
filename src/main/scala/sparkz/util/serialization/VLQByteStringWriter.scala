@@ -1,8 +1,7 @@
 package sparkz.util.serialization
 
 import java.nio.ByteOrder
-import akka.util.ByteString
-import scorex.util.serialization.{VLQWriter, Writer}
+import akka.util.{ByteString, ByteStringBuilder}
 
 class VLQByteStringWriter extends VLQWriter {
   override type CH = ByteString
@@ -13,7 +12,7 @@ class VLQByteStringWriter extends VLQWriter {
     new VLQByteStringWriter()
   }
 
-  private val builder = ByteString.createBuilder
+  private val builder: ByteStringBuilder = ByteString.createBuilder
 
   @inline
   override def length(): Int = builder.length

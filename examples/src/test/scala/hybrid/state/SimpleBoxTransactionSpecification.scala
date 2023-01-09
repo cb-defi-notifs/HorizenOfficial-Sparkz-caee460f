@@ -9,9 +9,9 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.proof.{Signature25519, Signature25519Serializer}
 import sparkz.core.transaction.state.PrivateKey25519Companion
-import scorex.util.encode.Base58
-import scorex.crypto.hash.Sha256
-import scorex.crypto.signatures.{PublicKey, Signature}
+import sparkz.util.encode.Base58
+import sparkz.crypto.hash.Sha256
+import sparkz.crypto.signatures.{PublicKey, Signature}
 
 @SuppressWarnings(Array("org.wartremover.warts.TraversableOps"))
 class SimpleBoxTransactionSpecification extends AnyPropSpec
@@ -31,16 +31,16 @@ class SimpleBoxTransactionSpecification extends AnyPropSpec
     val tx = SimpleBoxTransaction(IndexedSeq(genesisAccount -> Nonce @@ 0L), icoMembers.map(_ -> GenesisBalance), 0L, 0L)
     tx.newBoxes.toSeq shouldBe
       Vector(
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("8EjkXVSTxMFjCvNNsTo8RBMDEVQmk7gYkW4SCDuvdsBG").get), Nonce @@ 5440538097828856759L, Value @@ 100000L),
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("FJKTv1un7qsnyKdwKez7B67JJp3oCU5ntCVXcRsWEjtg").get), Nonce @@ -1616008834867344494L, Value @@ 100000L),
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("6FbDRScGruVdATaNWzD51xJkTfYCVwxSZDb7gzqCLzwf").get), Nonce @@ 8479754679609603533L, Value @@ 100000L),
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("64J4UGtfZqfnvxWCwU1aSMN62xqxLiS61iEPuD9JWxAm").get), Nonce @@ -4288295896200546936L, Value @@ 100000L),
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("H6eJWWkvryDNAeocEv5VejKHhG1sR8kWt4jqPmks2TDN").get), Nonce @@ -6878427772037923352L, Value @@ 100000L),
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("GcVQWfSWUKoPuxbhoqx18hD4JKs2L1cvVvJZFzXKWaQ2").get), Nonce @@ 8815511758437892756L, Value @@ 100000L),
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("99NTyZ796bpvwLLhMmsfwo8J3Wu3rUioUQsHE9CSYQKz").get), Nonce @@ -7463379991470698374L, Value @@ 100000L),
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("3zFqfiRPEoshgaZY7qCcSk6mihDhgnGodBDgqP92stci").get), Nonce @@ -3238799622036337810L, Value @@ 100000L),
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("2hw8D3T2Jrf7QZ9k53gDxDWjrnCXLLtDv1oonKGzKw74").get), Nonce @@ -6037688402013706435L, Value @@ 100000L),
-        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("5zv52oTnDQas6WWnftRRhtZiudNaNTJ72WZWfDjRtKCQ").get), Nonce @@ -8390758926615640787L, Value @@ 100000L)
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("8EjkXVSTxMFjCvNNsTo8RBMDEVQmk7gYkW4SCDuvdsBG").get), Nonce @@ -8612101699978236906L, Value @@ 100000L),
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("FJKTv1un7qsnyKdwKez7B67JJp3oCU5ntCVXcRsWEjtg").get), Nonce @@ -6038862632095057270L, Value @@ 100000L),
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("6FbDRScGruVdATaNWzD51xJkTfYCVwxSZDb7gzqCLzwf").get), Nonce @@ -6319822574586975799L, Value @@ 100000L),
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("64J4UGtfZqfnvxWCwU1aSMN62xqxLiS61iEPuD9JWxAm").get), Nonce @@ 4610166304814149839L, Value @@ 100000L),
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("H6eJWWkvryDNAeocEv5VejKHhG1sR8kWt4jqPmks2TDN").get), Nonce @@ -531382682558316042L, Value @@ 100000L),
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("GcVQWfSWUKoPuxbhoqx18hD4JKs2L1cvVvJZFzXKWaQ2").get), Nonce @@ 6358937655729700602L, Value @@ 100000L),
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("99NTyZ796bpvwLLhMmsfwo8J3Wu3rUioUQsHE9CSYQKz").get), Nonce @@ -7438876774889521805L, Value @@ 100000L),
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("3zFqfiRPEoshgaZY7qCcSk6mihDhgnGodBDgqP92stci").get), Nonce @@ -4842378841653883632L, Value @@ 100000L),
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("2hw8D3T2Jrf7QZ9k53gDxDWjrnCXLLtDv1oonKGzKw74").get), Nonce @@ -4372129634778285755L, Value @@ 100000L),
+        PublicKey25519NoncedBox(PublicKey25519Proposition(PublicKey @@ Base58.decode("5zv52oTnDQas6WWnftRRhtZiudNaNTJ72WZWfDjRtKCQ").get), Nonce @@ 5116201946461723322L, Value @@ 100000L)
       )
   }
 

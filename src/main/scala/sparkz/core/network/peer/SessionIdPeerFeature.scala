@@ -3,7 +3,7 @@ package sparkz.core.network.peer
 import sparkz.core.network.PeerFeature
 import sparkz.core.network.PeerFeature.Id
 import sparkz.core.network.message.Message
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 
 /**

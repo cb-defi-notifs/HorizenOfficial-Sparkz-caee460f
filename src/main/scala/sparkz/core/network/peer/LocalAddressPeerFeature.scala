@@ -4,9 +4,9 @@ import java.net.{InetAddress, InetSocketAddress}
 
 import sparkz.core.network.PeerFeature
 import sparkz.core.network.PeerFeature.Id
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.Extensions._
+import sparkz.util.Extensions._
 
 case class LocalAddressPeerFeature(address: InetSocketAddress) extends PeerFeature {
   override type M = LocalAddressPeerFeature

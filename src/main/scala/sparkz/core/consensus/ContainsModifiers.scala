@@ -1,7 +1,7 @@
 package sparkz.core.consensus
 
 import sparkz.core.NodeViewModifier
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 /**
   * Object that contains modifiers of type `MOD`

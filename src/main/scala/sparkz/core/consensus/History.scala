@@ -1,11 +1,9 @@
 package sparkz.core.consensus
 
 import sparkz.core.consensus.History.ProgressInfo
-import sparkz.core.utils.SparkzEncoder
 import sparkz.core.{ModifierTypeId, PersistentNodeViewModifier}
-import scorex.util.ModifierId
+import sparkz.util.{ModifierId, SparkzEncoder}
 import sparkz.core.PersistentNodeViewModifier
-import sparkz.core.utils.SparkzEncoder
 
 import scala.util.Try
 

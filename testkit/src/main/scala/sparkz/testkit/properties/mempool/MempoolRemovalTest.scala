@@ -9,7 +9,7 @@ import sparkz.core.consensus.{History, SyncInfo}
 import sparkz.core.transaction.{MemoryPool, Transaction}
 import sparkz.testkit.TestkitHelpers
 import sparkz.testkit.generators.ArbitraryTransactionsCarryingModifierProducer
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 trait MempoolRemovalTest[
 TX <: Transaction,
@@ -20,7 +20,7 @@ HT <: History[PM, SI, HT],
 SI <: SyncInfo] extends AnyPropSpec
   with ScalaCheckPropertyChecks
   with Matchers
-  with ScorexLogging
+  with SparkzLogging
   with TestkitHelpers
   with MemoryPoolTest[TX, MPool]
   with ArbitraryTransactionsCarryingModifierProducer[TX, MPool, PM, CTM] {

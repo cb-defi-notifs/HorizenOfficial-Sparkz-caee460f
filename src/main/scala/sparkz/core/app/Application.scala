@@ -8,16 +8,16 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import sparkz.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import sparkz.core.network._
 import sparkz.core.network.message._
-import sparkz.core.network.peer.PeerManagerRef
+import sparkz.core.network.peer.{InMemoryPeerDatabase, PeerManagerRef}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{NodeViewHolder, PersistentNodeViewModifier}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.ExecutionContext
 
-trait Application extends ScorexLogging {
+trait Application extends SparkzLogging {
 
   import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
@@ -41,15 +41,10 @@ trait Application extends ScorexLogging {
   protected val additionalMessageSpecs: Seq[MessageSpec[_]]
   private val featureSerializers: PeerFeature.Serializers = features.map(f => f.featureId -> f.serializer).toMap
 
-  //p2p
-  private val upnpGateway: Option[UPnPGateway] = if (settings.network.upnpEnabled) UPnP.getValidGateway(settings.network) else None
-  // TODO use available port on gateway instead settings.network.bindAddress.getPort
-  upnpGateway.foreach(_.addPort(settings.network.bindAddress.getPort))
-
   private lazy val basicSpecs = {
     val invSpec = new InvSpec(settings.network.maxInvObjects)
     val requestModifierSpec = new RequestModifierSpec(settings.network.maxInvObjects)
-    val modifiersSpec = new ModifiersSpec(settings.network.maxPacketSize)
+    val modifiersSpec = new ModifiersSpec(settings.network.maxModifiersSpecMessageSize)
     Seq(
       GetPeersSpec,
       new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects),
@@ -69,21 +64,17 @@ trait Application extends ScorexLogging {
 
   //an address to send to peers
   lazy val externalSocketAddress: Option[InetSocketAddress] = {
-    settings.network.declaredAddress orElse {
-      // TODO use available port on gateway instead settings.bindAddress.getPort
-      upnpGateway.map(u => new InetSocketAddress(u.externalAddress, settings.network.bindAddress.getPort))
-    }
+    settings.network.declaredAddress
   }
 
-  val sparkzContext = SparkzContext(
+  val sparkzContext: SparkzContext = SparkzContext(
     messageSpecs = basicSpecs ++ additionalMessageSpecs,
     features = features,
-    upnpGateway = upnpGateway,
     timeProvider = timeProvider,
     externalNodeAddress = externalSocketAddress
   )
 
-  val peerManagerRef = PeerManagerRef(settings, sparkzContext)
+  val peerManagerRef: ActorRef = PeerManagerRef(settings, sparkzContext, new InMemoryPeerDatabase(settings.network, sparkzContext))
 
   val networkControllerRef: ActorRef = NetworkControllerRef(
     "networkController", settings.network, peerManagerRef, sparkzContext)
@@ -106,7 +97,7 @@ trait Application extends ScorexLogging {
 
     //on unexpected shutdown
     Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run() {
+      override def run(): Unit = {
         log.error("Unexpected shutdown")
         stopAll()
       }
@@ -115,7 +106,6 @@ trait Application extends ScorexLogging {
 
   def stopAll(): Unit = synchronized {
     log.info("Stopping network services")
-    upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))
     networkControllerRef ! ShutdownNetwork
 
     log.info("Stopping actors (incl. block generator)")

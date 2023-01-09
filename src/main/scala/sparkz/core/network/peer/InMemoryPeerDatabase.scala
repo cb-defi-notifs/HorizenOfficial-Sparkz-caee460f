@@ -1,22 +1,38 @@
 package sparkz.core.network.peer
 
+import sparkz.core.app.SparkzContext
+import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
+import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
+
 import java.net.{InetAddress, InetSocketAddress}
-
 import sparkz.core.settings.NetworkSettings
-import sparkz.core.utils.TimeProvider
-import scorex.util.ScorexLogging
+import sparkz.core.utils.{NetworkUtils, TimeProvider}
+import sparkz.util.SparkzLogging
+import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
 
+import java.net.{InetAddress, InetSocketAddress}
+import java.security.SecureRandom
 import scala.concurrent.duration._
 
 /**
   * In-memory peer database implementation supporting temporal blacklisting.
   */
-final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimeProvider)
-  extends PeerDatabase with ScorexLogging {
+final class InMemoryPeerDatabase(settings: NetworkSettings, sparkzContext: SparkzContext)
+  extends PeerDatabase with SparkzLogging {
+
+  private val timeProvider = sparkzContext.timeProvider
+
+  private val nKey: Int = new SecureRandom().nextInt()
+  private val newBucketConfig: BucketConfig = BucketConfig(buckets = 1024, bucketPositions = 64, bucketSubgroups = 64)
+  private val triedBucketConfig: BucketConfig = BucketConfig(buckets = 256, bucketPositions = 64, bucketSubgroups = 8)
+  private val triedBucket: PeerBucketStorageImpl = PeerBucketStorageImpl(triedBucketConfig, nKey, timeProvider)
+  private val newBucket: PeerBucketStorageImpl = PeerBucketStorageImpl(newBucketConfig, nKey, timeProvider)
+
+  private val bucketManager: BucketManager = new BucketManager(newBucket, triedBucket)
 
   private val safeInterval = settings.penaltySafeInterval.toMillis
 
-  private var peers = Map.empty[InetSocketAddress, (PeerInfo, TimeProvider.Time)]
+  private var knownPeers: Map[InetSocketAddress, PeerDatabaseValue] = Map.empty
 
   /**
     * banned peer ip -> ban expiration timestamp
@@ -28,52 +44,45 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     */
   private var penaltyBook = Map.empty[InetAddress, (Int, Long)]
 
-  override def get(peer: InetSocketAddress): Option[PeerInfo] = peers.get(peer).map(_._1)
-
-  private def addPeer(peerInfo: PeerInfo): Unit = {
-    peerInfo.peerSpec.address.foreach { address =>
-      log.debug(s"Updating peer info for $address")
-      peers += address -> (peerInfo, timeProvider.time())
+  // fill database with known peers
+  settings.knownPeers.foreach { address =>
+    if (!NetworkUtils.isSelf(address, settings.bindAddress, sparkzContext.externalNodeAddress)) {
+      knownPeers += address -> PeerDatabaseValue(address, PeerInfo.fromAddress(address), PeerConfidence.High)
     }
   }
 
-  /**
-   * Adds a peer to the in-memory database ignoring the configurable limit.
-   * Used for high-priority peers, like peers from config file or connected peers
-   */
-  override def addOrUpdateKnownPeer(peerInfo: PeerInfo): Unit = {
-    if (!peerInfo.peerSpec.declaredAddress.exists(x => isBlacklisted(x.getAddress))) {
-      addPeer(peerInfo)
+  override def get(peer: InetSocketAddress): Option[PeerDatabaseValue] = {
+    if (knownPeers.contains(peer)) {
+      knownPeers.get(peer)
+    } else {
+      bucketManager.getPeer(peer) match {
+        case Some(peerBucketValue) => Some(peerBucketValue.peerDatabaseValue)
+        case _ => None
+      }
     }
   }
 
-  override def addOrUpdateKnownPeers(peersInfo: Seq[PeerInfo]): Unit = {
-    val validPeers = peersInfo.filterNot {_.peerSpec.declaredAddress.exists(x => isBlacklisted(x.getAddress))}
-    if (peers.size + validPeers.size > settings.storedPeersLimit) {
-      addOrReplaceOldPeers(validPeers)
+  override def addOrUpdateKnownPeer(peerDatabaseValue: PeerDatabaseValue): Unit = {
+    if (peerIsNotBlacklistedAndNotKnownPeer(peerDatabaseValue)) {
+      bucketManager.addOrUpdatePeerIntoBucket(peerDatabaseValue)
     }
-    else
-      validPeers.foreach(addPeer)
   }
 
-  private def addOrReplaceOldPeers(validPeers: Seq[PeerInfo]): Unit = {
-    val needToRemove = peers.size + validPeers.size - settings.storedPeersLimit
-    //it can be that all peers are connected, so we won't make enough place
-    val canRemove = peers.toSeq
-      .filter { p => p._2._1.connectionType.isEmpty || p._2._1.lastHandshake == 0 }
-      .sortBy { p => p._2._2 }(Ordering.Long)
-      .take(needToRemove)
-    canRemove
-      .foreach(p => remove(p._1))
+  private def peerIsNotBlacklistedAndNotKnownPeer(peerDatabaseValue: PeerDatabaseValue): Boolean = {
+    !isBlacklisted(peerDatabaseValue.address) &&
+      !knownPeers.contains(peerDatabaseValue.address)
+  }
 
-    validPeers
-      .take(validPeers.size - (needToRemove - canRemove.size))
-      .foreach(addPeer)
+  override def addOrUpdateKnownPeers(peersDatabaseValue: Seq[PeerDatabaseValue]): Unit = {
+    val validPeers = peersDatabaseValue.filterNot { p =>
+      isBlacklisted(p.address)
+    }
+    validPeers.foreach(peer => addOrUpdateKnownPeer(peer))
   }
 
   override def addToBlacklist(socketAddress: InetSocketAddress,
                               penaltyType: PenaltyType): Unit = {
-    peers -= socketAddress
+    remove(socketAddress)
     Option(socketAddress.getAddress).foreach { address =>
       penaltyBook -= address
       if (!blacklist.keySet.contains(address))
@@ -88,10 +97,10 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
   }
 
   override def remove(address: InetSocketAddress): Unit = {
-    peers -= address
+    bucketManager.removePeer(address)
   }
 
-  override def knownPeers: Map[InetSocketAddress, PeerInfo] = peers.transform { (_, info_time) => info_time._1 }
+  override def allPeers: Map[InetSocketAddress, PeerDatabaseValue] = knownPeers ++ bucketManager.getTriedPeers ++ bucketManager.getNewPeers
 
   override def blacklistedPeers: Seq[InetAddress] = blacklist
     .map { case (address, bannedTill) =>
@@ -100,7 +109,7 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     }
     .toSeq
 
-  override def isEmpty: Boolean = peers.isEmpty
+  override def isEmpty: Boolean = bucketManager.isEmpty
 
   override def isBlacklisted(address: InetAddress): Boolean =
     blacklist.get(address).exists(checkBanned(address, _))
@@ -113,17 +122,17 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     *
     * @return - `true` if penalty threshold is reached, `false` otherwise.
     */
-  def penalize(socketAddress: InetSocketAddress, penaltyType: PenaltyType): Boolean =
+  override def peerPenaltyScoreOverThreshold(socketAddress: InetSocketAddress, penaltyType: PenaltyType): Boolean =
     Option(socketAddress.getAddress).exists { address =>
       val (newPenaltyScore, penaltyTs) = penaltyBook.get(address) match {
         case Some((penaltyScoreAcc, lastPenaltyTs)) =>
           val currentTime = timeProvider.time()
           if (currentTime - lastPenaltyTs - safeInterval > 0 || penaltyType.isPermanent)
-            (penaltyScoreAcc + penaltyScore(penaltyType), timeProvider.time())
+            (penaltyScoreAcc + penaltyType.penaltyScore, timeProvider.time())
           else
             (penaltyScoreAcc, lastPenaltyTs)
         case None =>
-          (penaltyScore(penaltyType), timeProvider.time())
+          (penaltyType.penaltyScore, timeProvider.time())
       }
       if (newPenaltyScore > settings.penaltyScoreThreshold)
         true
@@ -148,24 +157,21 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, timeProvider: TimePr
     stillBanned
   }
 
-  private def penaltyScore(penaltyType: PenaltyType): Int =
-    penaltyType match {
-      case PenaltyType.NonDeliveryPenalty =>
-        PenaltyType.NonDeliveryPenalty.penaltyScore
-      case PenaltyType.MisbehaviorPenalty =>
-        PenaltyType.MisbehaviorPenalty.penaltyScore
-      case PenaltyType.SpamPenalty =>
-        PenaltyType.SpamPenalty.penaltyScore
-      case PenaltyType.PermanentPenalty =>
-        PenaltyType.PermanentPenalty.penaltyScore
-    }
-
   private def penaltyDuration(penalty: PenaltyType): Long =
     penalty match {
-      case PenaltyType.NonDeliveryPenalty | PenaltyType.MisbehaviorPenalty | PenaltyType.SpamPenalty =>
+      case PenaltyType.NonDeliveryPenalty | PenaltyType.MisbehaviorPenalty | PenaltyType.SpamPenalty | _: DisconnectPenalty =>
         settings.temporalBanDuration.toMillis
+      case customPenalty: PenaltyType.CustomPenaltyDuration =>
+        customPenalty.penaltyDurationInMinutes.minutes.toMillis
       case PenaltyType.PermanentPenalty =>
         (360 * 10).days.toMillis
     }
 
+  override def randomPeersSubset: Map[InetSocketAddress, PeerDatabaseValue] = knownPeers ++ bucketManager.getRandomPeers
+
+  override def updatePeer(peerDatabaseValue: PeerDatabaseValue): Unit = {
+    if (peerIsNotBlacklistedAndNotKnownPeer(peerDatabaseValue)) {
+      bucketManager.makeTried(peerDatabaseValue)
+    }
+  }
 }

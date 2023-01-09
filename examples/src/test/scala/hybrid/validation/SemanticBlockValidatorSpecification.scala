@@ -5,7 +5,7 @@ import hybrid.HybridGenerators
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 
 class SemanticBlockValidatorSpecification extends AnyPropSpec

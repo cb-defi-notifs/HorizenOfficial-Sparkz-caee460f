@@ -7,7 +7,7 @@ import sparkz.core.network.message.Message
 import sparkz.core.network.message.Message.MessageCode
 import sparkz.core.network.peer.PenaltyType
 import sparkz.core.utils.ActorHelper
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -23,7 +23,7 @@ class RequestTracker(
                       trackedResponseCode: MessageCode,
                       deliveryTimeout: FiniteDuration,
                       penalizeNonDelivery: Boolean)(implicit ec: ExecutionContext)
-  extends Actor with ScorexLogging with ActorHelper {
+  extends Actor with SparkzLogging with ActorHelper {
 
   private var handler: Option[ActorRef] = None
 
