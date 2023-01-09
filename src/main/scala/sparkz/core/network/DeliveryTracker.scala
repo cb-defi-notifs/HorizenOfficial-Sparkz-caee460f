@@ -4,9 +4,9 @@ import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import sparkz.core.consensus.ContainsModifiers
 import sparkz.core.network.ModifiersStatus._
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.CheckDelivery
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -38,7 +38,7 @@ class DeliveryTracker(system: ActorSystem,
                       deliveryTimeout: FiniteDuration,
                       maxDeliveryChecks: Int,
                       maxRequestedPerPeer: Int,
-                      nvsRef: ActorRef) extends ScorexLogging with SparkzEncoding {
+                      nvsRef: ActorRef) extends SparkzLogging with SparkzEncoding {
 
   protected case class RequestedInfo(peer: ConnectedPeer, cancellable: Cancellable, checks: Int)
 

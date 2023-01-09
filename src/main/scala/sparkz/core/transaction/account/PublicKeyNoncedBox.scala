@@ -3,8 +3,8 @@ package sparkz.core.transaction.account
 import com.google.common.primitives.Longs
 import sparkz.core.transaction.box.Box
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
-import scorex.crypto.authds.ADKey
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.authds.ADKey
+import sparkz.crypto.hash.Blake2b256
 
 trait PublicKeyNoncedBox[PKP <: PublicKey25519Proposition] extends Box[PKP] {
   val nonce: Long
@@ -14,7 +14,7 @@ trait PublicKeyNoncedBox[PKP <: PublicKey25519Proposition] extends Box[PKP] {
   lazy val publicKey: PKP = proposition
 
   override def equals(obj: Any): Boolean = obj match {
-    case acc: PublicKeyNoncedBox[PKP] => java.util.Arrays.equals(acc.id, this.id) && acc.value == this.value
+    case acc: PublicKeyNoncedBox[_] => java.util.Arrays.equals(acc.id, this.id) && acc.value == this.value
     case _ => false
   }
 

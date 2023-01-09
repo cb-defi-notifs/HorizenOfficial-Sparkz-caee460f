@@ -1,6 +1,6 @@
 package sparkz.core.utils
 
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.serialization.{Reader, Writer}
 import sparkz.core.network.message.Message.MessageCode
 import sparkz.core.network.message.MessageSpecV1
 

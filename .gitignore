@@ -1,5 +1,6 @@
 # IDE/Editor files
 .idea
+.bsp
 .ensime
 .ensime_cache/
 sparkz.yaml

@@ -1,12 +1,14 @@
 package sparkz.core.network.peer
 
-import scorex.util.ScorexLogging
 import sparkz.core.app.SparkzContext
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
-import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
+
+import java.net.{InetAddress, InetSocketAddress}
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.{NetworkUtils, TimeProvider}
+import sparkz.util.SparkzLogging
+import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
 
 import java.net.{InetAddress, InetSocketAddress}
 import java.security.SecureRandom
@@ -16,7 +18,7 @@ import scala.concurrent.duration._
   * In-memory peer database implementation supporting temporal blacklisting.
   */
 final class InMemoryPeerDatabase(settings: NetworkSettings, sparkzContext: SparkzContext)
-  extends PeerDatabase with ScorexLogging {
+  extends PeerDatabase with SparkzLogging {
 
   private val timeProvider = sparkzContext.timeProvider
 

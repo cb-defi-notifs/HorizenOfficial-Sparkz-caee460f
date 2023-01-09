@@ -2,7 +2,6 @@ package sparkz.core.network
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
-import scorex.util.ModifierId
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, TransactionsFromRemote}
 import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs}
 import sparkz.core.network.message._
@@ -12,6 +11,7 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.util.ModifierId
 
 import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext

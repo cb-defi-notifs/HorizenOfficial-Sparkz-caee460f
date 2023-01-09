@@ -3,12 +3,12 @@ package sparkz.core.consensus
 import sparkz.core.ModifierTypeId
 import sparkz.core.block.Block
 import sparkz.core.transaction.Transaction
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.util.Try
 
 trait BlockChain[TX <: Transaction, B <: Block[TX], SI <: SyncInfo, BT <: BlockChain[TX, B, SI, BT]]
-  extends History[B, SI, BT] with ScorexLogging {
+  extends History[B, SI, BT] with SparkzLogging {
 
   import BlockChain.Score
 

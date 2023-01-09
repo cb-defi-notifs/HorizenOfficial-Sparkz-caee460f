@@ -1,9 +1,10 @@
 package sparkz.core.app
 
+import java.net.InetSocketAddress
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
-import scorex.util.ScorexLogging
 import sparkz.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import sparkz.core.network._
 import sparkz.core.network.message._
@@ -12,11 +13,11 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{NodeViewHolder, PersistentNodeViewModifier}
+import sparkz.util.SparkzLogging
 
-import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext
 
-trait Application extends ScorexLogging {
+trait Application extends SparkzLogging {
 
   import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
@@ -96,7 +97,7 @@ trait Application extends ScorexLogging {
 
     //on unexpected shutdown
     Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run() {
+      override def run(): Unit = {
         log.error("Unexpected shutdown")
         stopAll()
       }

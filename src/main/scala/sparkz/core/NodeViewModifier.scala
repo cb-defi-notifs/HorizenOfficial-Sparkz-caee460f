@@ -3,7 +3,7 @@ package sparkz.core
 import com.typesafe.config.ConfigFactory
 import sparkz.core.serialization.BytesSerializable
 import sparkz.core.transaction.Transaction
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 
 import scala.util.Try
 
@@ -13,7 +13,7 @@ sealed trait NodeViewModifier extends BytesSerializable with SparkzEncoding {
   val modifierTypeId: ModifierTypeId
 
   //todo: check statically or dynamically output size
-  def id: scorex.util.ModifierId
+  def id: sparkz.util.ModifierId
 
   def encodedId: String = encoder.encodeId(id)
 
@@ -45,7 +45,7 @@ trait PersistentNodeViewModifier extends NodeViewModifier {
   /**
     * Id modifier, which should be applied to the node view before this modifier
     */
-  def parentId: scorex.util.ModifierId
+  def parentId: sparkz.util.ModifierId
 }
 
 

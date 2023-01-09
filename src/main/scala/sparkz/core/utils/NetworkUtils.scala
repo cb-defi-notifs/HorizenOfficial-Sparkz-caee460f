@@ -1,7 +1,7 @@
 package sparkz.core.utils
 
 import java.net.{Inet4Address, InetAddress, InetSocketAddress, NetworkInterface}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object NetworkUtils {
   def isLocalAddress(address: InetAddress): Boolean = {

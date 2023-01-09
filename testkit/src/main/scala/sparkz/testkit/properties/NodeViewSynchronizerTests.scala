@@ -15,11 +15,11 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.network._
 import sparkz.core.network.message._
 import sparkz.core.network.peer.PenaltyType
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import sparkz.core.transaction.state.MinimalState
 import sparkz.core.transaction.{MemoryPool, Transaction}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 import sparkz.testkit.generators.{SyntacticallyTargetedModifierProducer, TotallyValidModifierProducer}
 import sparkz.testkit.utils.AkkaFixture
 
@@ -37,7 +37,7 @@ trait NodeViewSynchronizerTests[TX <: Transaction,
                                 MP <: MemoryPool[TX, MP]
 ] extends AnyPropSpec
   with Matchers
-  with ScorexLogging
+  with SparkzLogging
   with SyntacticallyTargetedModifierProducer[PM, SI, HT]
   with TotallyValidModifierProducer[PM, ST, SI, HT] {
 

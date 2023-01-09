@@ -3,13 +3,13 @@ package sparkz.core.network
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import scorex.util.ScorexLogging
-import shapeless.syntax.typeable._
 import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
 import sparkz.core.network.message.{GetPeersSpec, Message, MessageSpec, PeersSpec}
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, SeenPeers}
 import sparkz.core.network.peer.{PeerInfo, PenaltyType}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, SeenPeers}
 import sparkz.core.settings.NetworkSettings
+import sparkz.util.SparkzLogging
+import shapeless.syntax.typeable._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -21,7 +21,7 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
                        peerManager: ActorRef,
                        settings: NetworkSettings,
                        featureSerializers: PeerFeature.Serializers)
-                      (implicit ec: ExecutionContext) extends Actor with Synchronizer with ScorexLogging {
+                      (implicit ec: ExecutionContext) extends Actor with Synchronizer with SparkzLogging {
 
   private val peersSpec = new PeersSpec(featureSerializers, settings.maxPeerSpecObjects)
 
@@ -33,12 +33,12 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
       gossipPeers(remote)
   }
 
-  override def preStart: Unit = {
+  override def preStart(): Unit = {
     super.preStart()
 
     networkControllerRef ! RegisterMessageSpecs(Seq(GetPeersSpec, peersSpec), self)
 
-    val msg = Message[Unit](GetPeersSpec, Right(Unit), None)
+    val msg = Message[Unit](GetPeersSpec, Right(()), None)
     val stn = SendToNetwork(msg, SendToRandom)
     context.system.scheduler.scheduleWithFixedDelay(2.seconds, settings.getPeersInterval, networkControllerRef, stn)
   }

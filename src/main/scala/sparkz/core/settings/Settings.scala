@@ -8,7 +8,7 @@ import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import sparkz.core.network.message.Message
 import sparkz.core.utils.NetworkTimeProviderSettings
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.duration._
 
@@ -61,7 +61,7 @@ case class SparkzSettings(dataDir: File,
                           ntp: NetworkTimeProviderSettings)
 
 
-object SparkzSettings extends ScorexLogging with SettingsReaders {
+object SparkzSettings extends SparkzLogging with SettingsReaders {
 
   protected val configPath: String = "sparkz"
 

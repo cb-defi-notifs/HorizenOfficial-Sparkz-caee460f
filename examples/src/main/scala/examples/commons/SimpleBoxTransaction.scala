@@ -2,10 +2,10 @@ package examples.commons
 
 import com.google.common.primitives.{Ints, Longs}
 import examples.hybrid.wallet.HBoxWallet
+import examples.persistence.ByteArrayWrapper
 import io.circe.Encoder
 import io.circe.syntax._
-import io.iohk.iodb.ByteArrayWrapper
-import scorex.util.serialization._
+import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.BoxTransaction
 import sparkz.core.transaction.account.PublicKeyNoncedBox
@@ -13,12 +13,12 @@ import sparkz.core.transaction.box.BoxUnlocker
 import sparkz.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
 import sparkz.core.transaction.proof.{Proof, Signature25519, Signature25519Serializer}
 import sparkz.core.transaction.state.{PrivateKey25519, PrivateKey25519Companion}
-import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.authds.ADKey
-import scorex.crypto.hash.Blake2b256
-import scorex.crypto.signatures.Signature
-import scorex.util.ByteArrayBuilder
-import scorex.util.Extensions._
+import sparkz.util.SparkzEncoding
+import sparkz.crypto.authds.ADKey
+import sparkz.crypto.hash.Blake2b256
+import sparkz.crypto.signatures.Signature
+import sparkz.util.ByteArrayBuilder
+import sparkz.util.Extensions._
 
 import scala.util.Try
 

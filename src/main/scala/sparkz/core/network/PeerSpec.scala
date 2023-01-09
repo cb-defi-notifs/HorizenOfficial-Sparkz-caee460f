@@ -5,8 +5,8 @@ import java.net.{InetAddress, InetSocketAddress}
 import sparkz.core.app.{ApplicationVersionSerializer, Version}
 import sparkz.core.network.peer.LocalAddressPeerFeature
 import sparkz.core.serialization.SparkzSerializer
-import scorex.util.Extensions._
-import scorex.util.serialization.{Reader, Writer}
+import sparkz.util.Extensions._
+import sparkz.util.serialization.{Reader, Writer}
 
 /**
   * Declared information about peer

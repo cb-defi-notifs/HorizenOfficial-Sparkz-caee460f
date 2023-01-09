@@ -1,12 +1,13 @@
 package sparkz.core.network.peer
 
 import com.google.common.primitives.{Bytes, Ints}
-import scorex.crypto.hash.Blake2b256
 import sparkz.core.network.peer.BucketManager.PeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, BucketHashContent, NOT_FOUND_PEER_INDEXES}
 import sparkz.core.network.peer.PeerDatabase.PeerDatabaseValue
 import sparkz.core.utils.TimeProvider.Time
 import sparkz.core.utils.{NetworkAddressWrapper, TimeProvider}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util
 
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer

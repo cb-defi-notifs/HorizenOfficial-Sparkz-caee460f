@@ -21,7 +21,7 @@ import sparkz.core.network.peer._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.LocalTimeProvider
 
-import java.net.InetSocketAddress
+import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
@@ -652,7 +652,7 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
     * Send GetPeers message to node
     */
   def sendGetPeers(): Unit = {
-    val msg = Message[Unit](GetPeersSpec, Right(Unit), None)
+    val msg = Message[Unit](GetPeersSpec, Right(()), None)
     sendMessage(msg)
   }
 

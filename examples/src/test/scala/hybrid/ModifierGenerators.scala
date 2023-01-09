@@ -4,14 +4,14 @@ import examples.commons.{Nonce, PublicKey25519NoncedBox, PublicKey25519NoncedBox
 import examples.hybrid.blocks._
 import examples.hybrid.history.HybridHistory
 import examples.hybrid.state.HBoxStoredState
-import io.iohk.iodb.ByteArrayWrapper
+import examples.persistence.ByteArrayWrapper
 import org.scalacheck.Gen
 import sparkz.core.versionToId
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.PrivateKey25519
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 import sparkz.testkit.generators.{CoreGenerators, ModifierProducerTemplateItem, SynInvalid, Valid}
-import scorex.util.{ModifierId, bytesToId}
+import sparkz.util.{ModifierId, bytesToId}
 
 import scala.collection.mutable
 
@@ -168,7 +168,7 @@ trait ModifierGenerators {
 
     assert(parentIds.size == mods.count(_.isInstanceOf[PosBlock]))
 
-    val posBlocks: mutable.Buffer[HybridBlock] = validPosBlocks(state, parentIds).toBuffer
+    val posBlocks: mutable.Buffer[HybridBlock] = validPosBlocks(state, parentIds.toSeq).toBuffer
 
     val validMods: Seq[HybridBlock] = mods.map {
       case pw: PowBlock => pw
