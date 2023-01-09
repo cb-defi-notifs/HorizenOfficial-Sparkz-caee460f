@@ -14,7 +14,14 @@ import sparkz.core.network.{ConnectionDirection, PeerSpec}
   */
 case class PeerInfo(peerSpec: PeerSpec,
                     lastHandshake: Long,
-                    connectionType: Option[ConnectionDirection] = None)
+                    connectionType: Option[ConnectionDirection] = None) {
+  override def hashCode(): Int = super.hashCode()
+
+  override def equals(obj: Any): Boolean = obj match {
+    case other: PeerInfo => peerSpec == other.peerSpec && lastHandshake == other.lastHandshake && connectionType == other.connectionType
+    case _ => false
+  }
+}
 
 /**
   * Information about P2P layer status

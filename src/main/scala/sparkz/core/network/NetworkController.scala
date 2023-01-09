@@ -14,10 +14,11 @@ import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer._
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.TimeProvider.Time
-import sparkz.core.utils.{NetworkUtils, TimeProvider}
+import sparkz.core.utils.{LRUSimpleCache, NetworkUtils, TimeProvider}
 import sparkz.util.SparkzLogging
 
 import java.net._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.{existentials, postfixOps}
@@ -61,6 +62,9 @@ class NetworkController(settings: NetworkSettings,
   private var connections = Map.empty[InetSocketAddress, ConnectedPeer]
   private var unconfirmedConnections = Set.empty[InetSocketAddress]
   private val maxConnections = settings.maxIncomingConnections + settings.maxOutgoingConnections
+  private val peersLastConnectionAttempts = new LRUSimpleCache[InetSocketAddress, TimeProvider.Time](threshold = 10000)
+
+  private val tryNewConnectionAttemptDelay = 5.seconds
 
   private val mySessionIdFeature = SessionIdPeerFeature(settings.magicBytes)
   /**
@@ -196,6 +200,7 @@ class NetworkController(settings: NetworkSettings,
     val connectionId = ConnectionId(remoteAddress, localAddress, connectionDirection)
 
     log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
+    updateLastConnectionAttemptTimestamp(remoteAddress)
 
     val handlerRef = sender()
     if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection) {
@@ -207,6 +212,10 @@ class NetworkController(settings: NetworkSettings,
       log.info(s"Connection to address ${connectionId.remoteAddress} refused; there is no room left for a new peer")
       handlerRef ! Close
     }
+  }
+
+  private def updateLastConnectionAttemptTimestamp(remoteAddress: InetSocketAddress): Unit = {
+    peersLastConnectionAttempts.put(remoteAddress, sparkzContext.timeProvider.time())
   }
 
   private def isNewConnectionAndStillHaveRoom(remoteAddress: InetSocketAddress) = {
@@ -245,7 +254,7 @@ class NetworkController(settings: NetworkSettings,
     * Schedule a periodic connection to a random known peer
     */
   private def scheduleConnectionToPeer(): Unit = {
-    context.system.scheduler.scheduleWithFixedDelay(5.seconds, 5.seconds) {
+    context.system.scheduler.scheduleWithFixedDelay(5.seconds, tryNewConnectionAttemptDelay) {
       () => {
         if (canEstablishNewOutgoingConnection) {
           log.trace(s"Looking for a new random connection")
@@ -276,11 +285,27 @@ class NetworkController(settings: NetworkSettings,
     val unconfirmedConnectionsAddressSeq = unconfirmedConnections.map(connection => PeerInfo.fromAddress(connection)).toSeq
     val mergedSeq = connectionsAddressSeq ++ unconfirmedConnectionsAddressSeq
     val peersAddresses = mergedSeq.map(getPeerAddress)
-    val randomPeerF = peerManagerRef ? RandomPeerExcluding(peersAddresses)
+
+    val peersAlreadyTriedFewTimeBefore = getPeersWeAlreadyTriedToConnectFewTimeAgo
+
+    val randomPeerF = peerManagerRef ? RandomPeerForConnectionExcluding(peersAddresses ++ peersAlreadyTriedFewTimeBefore)
     randomPeerF.mapTo[Option[PeerInfo]].foreach {
       case Some(peerInfo) => self ! ConnectTo(peerInfo)
       case None => log.warn("Could not find a peer to connect to, skipping this connectionToPeer round")
     }
+  }
+
+  private def getPeersWeAlreadyTriedToConnectFewTimeAgo: Seq[Option[InetSocketAddress]] = {
+    val now = sparkzContext.timeProvider.time()
+    // This delta is to make sure we wait for enough time before trying another connection attempt to the same peer
+    // In this case we take into account the size of the known peers since they are always prioritized over other peers
+    val delta = (settings.knownPeers.size + 1) * 5
+    val thresholdInMillis = (tryNewConnectionAttemptDelay * delta).toMillis
+
+    peersLastConnectionAttempts.asScala.map {
+      case entry if now - entry._2 < thresholdInMillis => Some(entry._1)
+      case _ => None
+    }.toSeq
   }
 
   /**
@@ -390,7 +415,7 @@ class NetworkController(settings: NetworkSettings,
         peerManagerRef ! RemovePeer(peerAddress)
         connections -= connectedPeer.connectionId.remoteAddress
       } else {
-        peerManagerRef ! AddOrUpdatePeer(peerInfo)
+        peerManagerRef ! UpdatePeer(peerInfo)
 
         val updatedConnectedPeer = connectedPeer.copy(peerInfo = Some(peerInfo))
         connections += remoteAddress -> updatedConnectedPeer

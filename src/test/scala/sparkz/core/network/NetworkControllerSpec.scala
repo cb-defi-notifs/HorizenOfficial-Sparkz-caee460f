@@ -4,28 +4,29 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.io.Tcp
 import akka.io.Tcp.{Bind, Bound, Connect, Connected, Message => TcpMessage}
 import akka.testkit.TestProbe
-import akka.util.ByteString
+import akka.util.{ByteString, Timeout}
 import akka.io.Tcp.{Message => _, _}
+import akka.pattern.ask
 import org.scalatest.EitherValues._
 import org.scalatest.OptionValues._
 import org.scalatest.TryValues._
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.Internal.ConnectionToPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
 import sparkz.core.network.message._
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.AddOrUpdatePeer
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, GetAllPeers, RandomPeerForConnectionExcluding}
 import sparkz.core.network.peer._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.LocalTimeProvider
 
-import java.net.InetSocketAddress
-import scala.annotation.nowarn
+import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 
-@nowarn("msg=deprecated")
-class NetworkControllerSpec extends NetworkTests {
+class NetworkControllerSpec extends NetworkTests with ScalaFutures {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -115,9 +116,12 @@ class NetworkControllerSpec extends NetworkTests {
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
     val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr))
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, peerManager: ActorRef) = createNetworkController(settings2, tcpManagerProbe)
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     val peer1Addr = new InetSocketAddress("88.77.66.55", 5678)
+
+    peerManager ! AddOrUpdatePeer(getPeerInfo(peer1Addr))
+
     testPeer1.connectAndExpectSuccessfulMessages(peer1Addr, nodeAddr, Tcp.ResumeReading)
     testPeer1.receiveHandshake
     testPeer1.sendHandshake(Some(peer1Addr), None)
@@ -126,6 +130,9 @@ class NetworkControllerSpec extends NetworkTests {
 
     val peer2Addr = new InetSocketAddress("88.77.66.56", 5678)
     val testPeer2 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
+
+    peerManager ! AddOrUpdatePeer(getPeerInfo(peer2Addr))
+
     testPeer2.connectAndExpectSuccessfulMessages(peer2Addr, nodeAddr, Tcp.ResumeReading)
     testPeer2.receiveHandshake
     testPeer2.sendHandshake(Some(peer2Addr), None)
@@ -143,11 +150,14 @@ class NetworkControllerSpec extends NetworkTests {
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
     val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr))
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, peerManagerRef) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
     val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
     val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
+
+    peerManagerRef ! AddOrUpdatePeer(getPeerInfo(peer1DecalredAddr))
+
     testPeer1.connectAndExpectSuccessfulMessages(peer1LocalAddr, nodeAddr, Tcp.ResumeReading)
     testPeer1.receiveHandshake
     testPeer1.sendHandshake(Some(peer1DecalredAddr), Some(peer1LocalAddr))
@@ -157,43 +167,55 @@ class NetworkControllerSpec extends NetworkTests {
     val peer2DeclaredAddr = new InetSocketAddress("88.77.66.56", 5678)
     val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
     val testPeer2 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
+
+    peerManagerRef ! AddOrUpdatePeer(getPeerInfo(peer2DeclaredAddr))
+
     testPeer2.connectAndExpectSuccessfulMessages(peer2LocalAddr, nodeAddr, Tcp.ResumeReading)
     testPeer2.receiveHandshake
     testPeer2.sendHandshake(Some(peer2DeclaredAddr), Some(peer2LocalAddr))
 
     testPeer1.sendGetPeers()
-    testPeer1.receivePeers.flatMap(_.localAddressOpt) should contain theSameElementsAs Seq(peer1LocalAddr, peer2LocalAddr)
+    testPeer1.receivePeers.flatMap(_.address) should contain theSameElementsAs Seq(peer1DecalredAddr, peer2DeclaredAddr)
 
     system.terminate()
   }
 
   it should "send close message when maxIncomingConnections threshold is reached" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
+    implicit val timeout: Timeout = Timeout(60.seconds)
 
     val tcpManagerProbe = TestProbe()
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
     val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxIncomingConnections = 1))
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, peerManagerRef: ActorRef) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer1 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
-    val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
+    val peer1DecalredAddr = new InetSocketAddress("88.77.66.54", 5678)
     val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
-    testPeer1.connectAndExpectSuccessfulMessages(peer1LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer1.connectAndExpectSuccessfulMessages(peer1DecalredAddr, peer1LocalAddr, Tcp.ResumeReading)
     testPeer1.receiveHandshake
     testPeer1.sendHandshake(Some(peer1DecalredAddr), Some(peer1LocalAddr))
     testPeer1.receiveGetPeers
     testPeer1.sendPeers(Seq.empty)
 
     val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
+    val peer2DeclaredAddr = new InetSocketAddress("88.77.66.53", 5678)
     val testPeer2 = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
-    testPeer2.connectAndExpectMessage(peer2LocalAddr, nodeAddr, Tcp.Close)
+    testPeer2.connectAndExpectMessage(peer2DeclaredAddr, peer2LocalAddr, Tcp.Close)
+
+    val futureResponse = peerManagerRef ? GetAllPeers
+    whenReady(futureResponse.mapTo[Map[InetSocketAddress, PeerInfo]]) {
+      peersMap =>
+        peersMap.size shouldBe 1
+        peersMap.contains(peer1DecalredAddr) shouldBe true
+    }
 
     system.terminate()
   }
 
   it should "send close message when maxOutgoingConnections threshold is reached" in {
-    implicit val system = ActorSystem()
+    implicit val system: ActorSystem = ActorSystem()
 
     val tcpManagerProbe = TestProbe()
 
@@ -256,10 +278,13 @@ class NetworkControllerSpec extends NetworkTests {
     val tcpManagerProbe = TestProbe()
 
     val nodeAddr = new InetSocketAddress("127.0.0.1", settings.network.bindAddress.getPort)
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
+    val (networkControllerRef: ActorRef, peerManager: ActorRef) = createNetworkController(settings, tcpManagerProbe)
     val testPeer = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
 
     val peerLocalAddress = new InetSocketAddress("192.168.1.2", settings.network.bindAddress.getPort)
+
+    // Act
+    peerManager ! AddOrUpdatePeer(getPeerInfo(peerLocalAddress))
 
     testPeer.connectAndExpectSuccessfulMessages(new InetSocketAddress("192.168.1.2", 5678), nodeAddr, Tcp.ResumeReading)
 
@@ -315,7 +340,7 @@ class NetworkControllerSpec extends NetworkTests {
     implicit val system: ActorSystem = ActorSystem()
     val tcpManagerProbe = TestProbe()
 
-    val (networkControllerRef, peerManager) = createNetworkController(settings, tcpManagerProbe)
+    val (networkControllerRef, peerManagerRef) = createNetworkController(settings, tcpManagerProbe)
 
     val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
     val peerInfoOne = getPeerInfo(peerAddressOne)
@@ -326,8 +351,11 @@ class NetworkControllerSpec extends NetworkTests {
     unconfirmedConnections += peerAddressOne
 
     // Act
-    peerManager ! AddOrUpdatePeer(peerInfoOne)
+    peerManagerRef ! AddOrUpdatePeer(peerInfoOne)
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // We have to wait for some time before any message is sent to the TcpManager actor
+    Thread.sleep(100)
 
     // Assert
     tcpManagerProbe.expectNoMessage()
@@ -384,6 +412,9 @@ class NetworkControllerSpec extends NetworkTests {
     // Act
     peerManagerRef ! AddOrUpdatePeer(peerInfoOne)
     networkControllerRef ! ConnectionToPeer(activeConnections, unconfirmedConnections)
+
+    // We have to wait for some time before any message is sent to the TcpManager actor
+    Thread.sleep(100)
 
     // Assert
     tcpManagerProbe.expectNoMessage()
@@ -464,6 +495,41 @@ class NetworkControllerSpec extends NetworkTests {
     system.terminate()
   }
 
+  /**
+    * This test is forcing the normal flow for testing purposes.
+    * We send a Connect message to the network controller so it can track the peer's last connection attempt.
+    * Then we tell the network controller to look for another connection to establish passing an empty
+    * activeConnections, which in reality will be populated with the active connection.
+    * This to make sure the only criteria the network controller uses to discard the peer from another connection attempt
+    * is that the last connection attempt was too early
+    */
+  it should "skip connection attempt if the only connection in PeerManager failed to connect earlier" in {
+    // Arrange
+    implicit val system: ActorSystem = ActorSystem()
+    val tcpManagerProbe = TestProbe()
+
+    val peerManagerProbe = TestProbe("peerManager")
+    val (networkControllerRef, _) = createNetworkController(settings, tcpManagerProbe, Some(peerManagerProbe))
+
+    val peerAddressOne = new InetSocketAddress("88.77.66.55", 12345)
+
+    val emptyActiveConnections = Map.empty[InetSocketAddress, ConnectedPeer]
+    val emptyUnconfirmedConnections = Set.empty[InetSocketAddress]
+
+    // Act
+    networkControllerRef ! Connected(peerAddressOne, peerAddressOne)
+    peerManagerProbe.expectMsgClass(classOf[ConfirmConnection])
+
+    val expectedMessage = RandomPeerForConnectionExcluding(Seq(Some(peerAddressOne)))
+    networkControllerRef ! ConnectionToPeer(emptyActiveConnections, emptyUnconfirmedConnections)
+    peerManagerProbe.expectMsg(expectedMessage)
+
+    // Assert
+    tcpManagerProbe.expectNoMessage()
+
+    system.terminate()
+  }
+
   private def extractLocalAddrFeat(handshakeFromNode: Handshake): Option[InetSocketAddress] = {
     handshakeFromNode.peerSpec.localAddressOpt
   }
@@ -471,7 +537,10 @@ class NetworkControllerSpec extends NetworkTests {
   /**
     * Create NetworkControllerActor
     */
-  private def createNetworkController(settings: SparkzSettings, tcpManagerProbe: TestProbe)(implicit system: ActorSystem) = {
+  private def createNetworkController(
+                                       settings: SparkzSettings,
+                                       tcpManagerProbe: TestProbe,
+                                       peerManagerMock: Option[TestProbe] = None)(implicit system: ActorSystem) = {
     val timeProvider = LocalTimeProvider
     val externalAddr = settings.network.declaredAddress
 
@@ -479,7 +548,12 @@ class NetworkControllerSpec extends NetworkTests {
     val messageSpecs = Seq(GetPeersSpec, peersSpec)
     val sparkzContext = SparkzContext(messageSpecs, Seq.empty, timeProvider, externalAddr)
 
-    val peerManagerRef = PeerManagerRef(settings, sparkzContext)
+    val peerManagerRef = peerManagerMock match {
+      case Some(testProbe) => testProbe.ref
+      case _ =>
+        val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
+        PeerManagerRef(settings, sparkzContext, peerDatabase)
+    }
 
     val networkControllerRef: ActorRef = NetworkControllerRef(
       "networkController", settings.network,
@@ -487,7 +561,6 @@ class NetworkControllerSpec extends NetworkTests {
 
     val peerSynchronizer: ActorRef = PeerSynchronizerRef("PeerSynchronizer",
       networkControllerRef, peerManagerRef, settings.network, featureSerializers)
-
 
     tcpManagerProbe.expectMsg(Bind(networkControllerRef, settings.network.bindAddress, options = Nil))
 
@@ -525,11 +598,11 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
   /**
     * Connect peer to node
     *
-    * @param peerAddr - peer address
-    * @param nodeAddr - node address
+    * @param remoteAddress - peer address
+    * @param localAddress - node address
     */
-  def connectAndExpectSuccessfulMessages(peerAddr: InetSocketAddress, nodeAddr: InetSocketAddress, expectedMessage: TcpMessage): Unit = {
-    tcpManagerProbe.send(networkControllerRef, Connected(peerAddr, nodeAddr))
+  def connectAndExpectSuccessfulMessages(remoteAddress: InetSocketAddress, localAddress: InetSocketAddress, expectedMessage: TcpMessage): Unit = {
+    tcpManagerProbe.send(networkControllerRef, Connected(remoteAddress, localAddress))
 
     connectionHandler = tcpManagerProbe.expectMsgPF() {
       case Tcp.Register(handler, _, _) => handler

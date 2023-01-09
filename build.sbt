@@ -29,10 +29,10 @@ lazy val commonSettings = Seq(
   licenses := Seq("CC0" -> url("https://creativecommons.org/publicdomain/zero/1.0/legalcode")),
   homepage := Some(url("https://github.com/HorizenOfficial/Sparkz")),
   pomExtra :=
-      <scm>
-        <url>https://github.com/HorizenOfficial/Sparkz</url>
-        <connection>scm:git:git@github.com:HorizenOfficial/Sparkz.git</connection>
-      </scm>
+    <scm>
+      <url>https://github.com/HorizenOfficial/Sparkz</url>
+      <connection>scm:git:git@github.com:HorizenOfficial/Sparkz.git</connection>
+    </scm>
       <developers>
         <developer>
           <id>HorizenOfficial</id>
@@ -79,16 +79,16 @@ val testingDependencies = Seq(
   "org.scalatest" %% "scalatest" % "3.2.12" % "test",
   "org.scalacheck" %% "scalacheck" % "1.16.0",
   "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2" % Test,
-  "org.mockito" % "mockito-scala_2.11" % "0.3.0" % "test"
+  "org.mockito" %% "mockito-scala" % "1.17.12" % Test
 )
 
 libraryDependencies ++= Seq(
   "com.iheart" %% "ficus" % "1.5.2",
-  "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1",
+  "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1"
 ) ++ networkDependencies ++ apiDependencies ++ loggingDependencies ++ testingDependencies
 
 
-scalacOptions ++= Seq("-Xfatal-warnings", "-feature", "-deprecation")
+scalacOptions ++= Seq("-Wconf:cat=unused-nowarn:s")
 
 javaOptions ++= Seq(
   "-server"

@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import sparkz.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import sparkz.core.network._
 import sparkz.core.network.message._
-import sparkz.core.network.peer.PeerManagerRef
+import sparkz.core.network.peer.{InMemoryPeerDatabase, PeerManagerRef}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
@@ -67,14 +67,14 @@ trait Application extends SparkzLogging {
     settings.network.declaredAddress
   }
 
-  val sparkzContext = SparkzContext(
+  val sparkzContext: SparkzContext = SparkzContext(
     messageSpecs = basicSpecs ++ additionalMessageSpecs,
     features = features,
     timeProvider = timeProvider,
     externalNodeAddress = externalSocketAddress
   )
 
-  val peerManagerRef = PeerManagerRef(settings, sparkzContext)
+  val peerManagerRef: ActorRef = PeerManagerRef(settings, sparkzContext, new InMemoryPeerDatabase(settings.network, sparkzContext))
 
   val networkControllerRef: ActorRef = NetworkControllerRef(
     "networkController", settings.network, peerManagerRef, sparkzContext)

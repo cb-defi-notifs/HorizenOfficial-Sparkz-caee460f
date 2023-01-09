@@ -6,13 +6,15 @@ import akka.http.scaladsl.server.Route
 import io.circe.generic.auto.exportDecoder
 import io.circe.generic.semiauto._
 import io.circe.syntax._
-import io.circe.{Encoder, Json}
+import io.circe.{Encoder, Decoder, Json}
 import sparkz.core.api.http.PeersApiRoute.PeerApiRequest.AddToBlacklistBodyRequest
+import sparkz.core.api.http.PeersApiRoute.Request.ConnectBodyRequest
 import sparkz.core.api.http.PeersApiRoute.{BlacklistedPeers, PeerInfoResponse, PeersStatusResponse}
 import sparkz.core.network.ConnectedPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
 import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, GetAllPeers, GetBlacklistedPeers}
 import sparkz.core.network.peer.{PeerInfo, PeersStatus}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
@@ -108,14 +110,22 @@ case class PeersApiRoute(peerManager: ActorRef,
   // WRITE OPERATIONS //
   //////////////////////
 
-  def connect: Route = (path("connect") & post & withAuth & entity(as[Json])) { json =>
-    val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
+  def connect: Route = (path("connect") & post & withAuth & entity(as[ConnectBodyRequest])) { bodyRequest =>
+    val peerAddress = bodyRequest.address
+
+    val maybeAddress = addressAndPortRegexp.findFirstMatchIn(peerAddress)
     maybeAddress match {
       case None => ApiError.BadRequest
+
       case Some(addressAndPort) =>
         val host = InetAddress.getByName(addressAndPort.group(1))
         val port = addressAndPort.group(2).toInt
-        networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
+        val address = new InetSocketAddress(host, port)
+        val peerInfo = PeerInfo.fromAddress(address)
+
+        peerManager ! AddPeersIfEmpty(Seq(peerInfo.peerSpec))
+        networkController ! ConnectTo(peerInfo)
+
         ApiResponse.OK
     }
   }
@@ -193,6 +203,10 @@ object PeersApiRoute {
     )
   }
 
+  object Request {
+    case class ConnectBodyRequest(address: String)
+  }
+
   object PeerApiRequest {
     private val DEFAULT_BAN_DURATION: Long = 60
 
@@ -211,5 +225,8 @@ object PeersApiRoute {
 
   @SuppressWarnings(Array("org.wartremover.warts.PublicInference"))
   implicit val encodePeersStatusResponse: Encoder[PeersStatusResponse] = deriveEncoder
+
+  @SuppressWarnings(Array("org.wartremover.warts.PublicInference"))
+  implicit val decodeConnectBodyRequest: Decoder[ConnectBodyRequest] = deriveDecoder
 }
 
