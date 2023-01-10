@@ -1,16 +1,13 @@
-package sparkz.core.storage
+package sparkz.core.persistence
 
 import akka.actor.ActorSystem
 import org.mockito.MockitoSugar.mock
-import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import sparkz.core.network.NetworkTests
 import sparkz.core.network.peer.BucketManager.NewPeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
-import sparkz.core.persistence.ScheduledActor.ScheduledActorConfig
 import sparkz.core.persistence.StorageFilePersister.StorageFilePersisterConfig
-import sparkz.core.persistence.{MapPersister, PeerBucketPersister}
 import sparkz.core.utils.TimeProvider
 
 import java.net.{InetAddress, InetSocketAddress}
@@ -19,7 +16,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
-class ScheduledStorageFileWriterTest extends NetworkTests with BeforeAndAfterAll with BeforeAndAfterEach {
+class StorageFileWriterTest extends NetworkTests with BeforeAndAfterAll with BeforeAndAfterEach {
   private val tempDir = Files.createTempDirectory("temp-directory")
   private var tempFile: Option[Path] = None
   private val random = new Random()
@@ -39,7 +36,7 @@ class ScheduledStorageFileWriterTest extends NetworkTests with BeforeAndAfterAll
 
   private implicit val executionContext: ExecutionContext = mock[ExecutionContext]
 
-  "The ScheduledPeerBucketWriter" should "persist and restore the peers in a bucket" in {
+  "The PeerBucketWriter" should "persist and restore the peers in a bucket" in {
     // Arrange
     implicit val system: ActorSystem = ActorSystem()
 
@@ -79,7 +76,7 @@ class ScheduledStorageFileWriterTest extends NetworkTests with BeforeAndAfterAll
     system.terminate()
   }
 
-  "The ScheduledMapWriter" should "persist and restore the peers in a map" in {
+  "The MapWriter" should "persist and restore the peers in a map" in {
     // Arrange
     implicit val system: ActorSystem = ActorSystem()
 
