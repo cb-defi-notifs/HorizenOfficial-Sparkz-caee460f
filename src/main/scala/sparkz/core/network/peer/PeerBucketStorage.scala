@@ -7,7 +7,6 @@ import sparkz.core.network.peer.PeerDatabase.PeerDatabaseValue
 import sparkz.core.utils.TimeProvider.Time
 import sparkz.core.utils.{NetworkAddressWrapper, TimeProvider}
 import sparkz.crypto.hash.Blake2b256
-import sparkz.util
 
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
@@ -150,6 +149,13 @@ abstract class PeerBucketStorage[T <: BucketHashContent](
       .values
       .map { p => (p._1.peerDatabaseValue.address, p._1.peerDatabaseValue) }
       .toMap
+
+  def clear(): Unit = {
+    table.clear()
+    reverseTable.clear()
+  }
+
+  def getPeersAsBucketValue: Seq[PeerBucketValue] = table.values.map(value => value._1).toSeq
 }
 
 object PeerBucketStorage {

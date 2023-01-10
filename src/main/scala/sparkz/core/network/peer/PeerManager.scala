@@ -3,22 +3,46 @@ package sparkz.core.network.peer
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import sparkz.core.app.SparkzContext
 import sparkz.core.network._
+import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
+import sparkz.core.persistence.ScheduledActor.ScheduledActorConfig
+import sparkz.core.persistence.{PersistablePeerDatabase, ScheduledStoragePersister, StoragePersister, StoragePersisterContainer}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.NetworkUtils
 import sparkz.util.SparkzLogging
-import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 
 import java.net.{InetAddress, InetSocketAddress}
-import scala.util.Random
+import java.nio.file.Files
 import java.security.SecureRandom
+import scala.concurrent.ExecutionContext
+import scala.util.Random
 
 /**
   * Peer manager takes care of peers connected and in process, and also chooses a random peer to connect
   * Must be singleton
   */
-class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase) extends Actor with SparkzLogging {
+class PeerManager(
+                   settings: SparkzSettings,
+                   sparkzContext: SparkzContext,
+                   peerDatabase: PersistablePeerDatabase)(implicit ec: ExecutionContext)
+  extends Actor with SparkzLogging {
 
   import PeerManager.ReceivableMessages._
+
+  private val initializeStorageDirectory: () => Unit = () => Files.createDirectories(settings.dataDir.toPath)
+  private val storagePersisterContainer = new StoragePersisterContainer(
+    getAsScheduled,
+    initializeStorageDirectory
+  )
+  storagePersisterContainer.restoreAllStorages()
+
+  private def getAsScheduled: Seq[ScheduledStoragePersister] = {
+    val storagesToBackUp: Seq[StoragePersister[_]] = peerDatabase.storagesToPersist()
+    storagesToBackUp.map {
+      storage =>
+        val config = ScheduledActorConfig(settings.network.storageBackupDelay, settings.network.storageBackupInterval)
+        new ScheduledStoragePersister(storage, config)
+    }
+  }
 
   override def receive: Receive = peersManagement orElse {
     case a: Any =>
@@ -131,6 +155,7 @@ object PeerManager {
     case class Penalize(remote: InetSocketAddress, penaltyType: PenaltyType)
 
     case class Blacklisted(remote: InetSocketAddress)
+
     case class DisconnectFromAddress(remote: InetSocketAddress)
 
     case class AddToBlacklist(remote: InetSocketAddress, penalty: Option[PenaltyType] = None)
@@ -138,6 +163,7 @@ object PeerManager {
     case class RemoveFromBlacklist(remote: InetSocketAddress)
 
     // peerListOperations messages
+
     /**
       * @param data : information about peer to be stored in PeerDatabase
       * */
@@ -257,17 +283,18 @@ object PeerManager {
 
 object PeerManagerRef {
 
-  def props(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase): Props = {
+  def props(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PersistablePeerDatabase)
+           (implicit ec: ExecutionContext): Props = {
     Props(new PeerManager(settings, sparkzContext, peerDatabase))
   }
 
-  def apply(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase)
-           (implicit system: ActorSystem): ActorRef = {
+  def apply(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PersistablePeerDatabase)
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     system.actorOf(props(settings, sparkzContext, peerDatabase))
   }
 
-  def apply(name: String, settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase)
-           (implicit system: ActorSystem): ActorRef = {
+  def apply(name: String, settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PersistablePeerDatabase)
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     system.actorOf(props(settings, sparkzContext, peerDatabase), name)
   }
 

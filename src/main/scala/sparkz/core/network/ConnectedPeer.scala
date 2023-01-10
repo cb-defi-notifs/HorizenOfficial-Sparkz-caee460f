@@ -24,4 +24,9 @@ case class ConnectedPeer(connectionId: ConnectionId,
   }
 
   override def toString: String = s"ConnectedPeer($connectionId)"
+
 }
+
+case class SourcePeer(connectionId: ConnectionId,
+                      lastMessage: Long,
+                      peerInfo: Option[PeerInfo])
