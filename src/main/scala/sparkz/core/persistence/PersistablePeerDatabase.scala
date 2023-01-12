@@ -3,6 +3,6 @@ package sparkz.core.persistence
 import sparkz.core.network.peer.PeerDatabase
 
 trait PersistablePeerDatabase extends PeerDatabase {
-  def storagesToPersist(): Seq[StoragePersister[_]]
+  def storagesToBackup(): Seq[StorageBackupper[_]]
 }
 

@@ -27,6 +27,3 @@ case class ConnectedPeer(connectionId: ConnectionId,
 
 }
 
-case class SourcePeer(connectionId: ConnectionId,
-                      lastMessage: Long,
-                      peerInfo: Option[PeerInfo])

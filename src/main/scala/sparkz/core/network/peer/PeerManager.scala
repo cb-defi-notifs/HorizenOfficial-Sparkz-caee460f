@@ -5,7 +5,7 @@ import sparkz.core.app.SparkzContext
 import sparkz.core.network._
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 import sparkz.core.persistence.ScheduledActor.ScheduledActorConfig
-import sparkz.core.persistence.{PersistablePeerDatabase, ScheduledStoragePersister, StoragePersister, StoragePersisterContainer}
+import sparkz.core.persistence.{PersistablePeerDatabase, ScheduledStorageBackupper, StorageBackupper, StorageBackupperContainer}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.NetworkUtils
 import sparkz.util.SparkzLogging
@@ -29,18 +29,18 @@ class PeerManager(
   import PeerManager.ReceivableMessages._
 
   private val initializeStorageDirectory: () => Unit = () => Files.createDirectories(settings.dataDir.toPath)
-  private val storagePersisterContainer = new StoragePersisterContainer(
+  private val storageBackupperContainer = new StorageBackupperContainer(
     getAsScheduled,
     initializeStorageDirectory
   )
-  storagePersisterContainer.restoreAllStorages()
+  storageBackupperContainer.restoreAllStorages()
 
-  private def getAsScheduled: Seq[ScheduledStoragePersister] = {
-    val storagesToBackUp: Seq[StoragePersister[_]] = peerDatabase.storagesToPersist()
+  private def getAsScheduled: Seq[ScheduledStorageBackupper] = {
+    val storagesToBackUp: Seq[StorageBackupper[_]] = peerDatabase.storagesToBackup()
     storagesToBackUp.map {
       storage =>
         val config = ScheduledActorConfig(settings.network.storageBackupDelay, settings.network.storageBackupInterval)
-        new ScheduledStoragePersister(storage, config)
+        new ScheduledStorageBackupper(storage, config)
     }
   }
 

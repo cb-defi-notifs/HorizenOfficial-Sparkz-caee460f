@@ -4,8 +4,8 @@ import sparkz.core.app.SparkzContext
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
-import sparkz.core.persistence.StorageFilePersister.StorageFilePersisterConfig
-import sparkz.core.persistence.{MapPersister, PeerBucketPersister, PersistablePeerDatabase, StoragePersister}
+import sparkz.core.persistence.StorageFileBackupper.StorageFileBackupperConfig
+import sparkz.core.persistence.{MapBackupper, PeerBucketBackupper, PersistablePeerDatabase, StorageBackupper}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.{NetworkUtils, TimeProvider}
 import sparkz.util.SparkzLogging
@@ -177,12 +177,12 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
     }
   }
 
-  override def storagesToPersist(): Seq[StoragePersister[_]] = {
+  override def storagesToBackup(): Seq[StorageBackupper[_]] = {
     Seq(
-      new PeerBucketPersister[PeerBucketStorageImpl](newBucket, StorageFilePersisterConfig(sparkzSettings.dataDir, "NewBucket.dat")),
-      new PeerBucketPersister[PeerBucketStorageImpl](triedBucket, StorageFilePersisterConfig(sparkzSettings.dataDir, "TriedBucket.dat")),
-      new MapPersister(blacklist, StorageFilePersisterConfig(sparkzSettings.dataDir, "BlacklistPeers.dat")),
-      new MapPersister(penaltyBook, StorageFilePersisterConfig(sparkzSettings.dataDir, "PenaltyBook.dat"))
+      new PeerBucketBackupper[PeerBucketStorageImpl](newBucket, StorageFileBackupperConfig(sparkzSettings.dataDir, "NewBucket.dat")),
+      new PeerBucketBackupper[PeerBucketStorageImpl](triedBucket, StorageFileBackupperConfig(sparkzSettings.dataDir, "TriedBucket.dat")),
+      new MapBackupper(blacklist, StorageFileBackupperConfig(sparkzSettings.dataDir, "BlacklistPeers.dat")),
+      new MapBackupper(penaltyBook, StorageFileBackupperConfig(sparkzSettings.dataDir, "PenaltyBook.dat"))
     )
   }
 }

@@ -7,7 +7,7 @@ import sparkz.core.network.NetworkTests
 import sparkz.core.network.peer.BucketManager.NewPeerBucketValue
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
-import sparkz.core.persistence.StorageFilePersister.StorageFilePersisterConfig
+import sparkz.core.persistence.StorageFileBackupper.StorageFileBackupperConfig
 import sparkz.core.utils.TimeProvider
 
 import java.net.{InetAddress, InetSocketAddress}
@@ -47,11 +47,11 @@ class StorageFileWriterTest extends NetworkTests with BeforeAndAfterAll with Bef
 
     val writerConfig = tempFile match {
       case Some(file) =>
-        StorageFilePersisterConfig(tempDir.toFile, file.getFileName.toString)
+        StorageFileBackupperConfig(tempDir.toFile, file.getFileName.toString)
       case None => fail("")
     }
 
-    val storageWriter = new PeerBucketPersister(newB, writerConfig)
+    val storageWriter = new PeerBucketBackupper(newB, writerConfig)
     for (_ <- 1 to MAX_ELEMENTS_TO_INSERT) {
       val peerAddress = new InetSocketAddress(s"${random.nextInt(255)}.${random.nextInt(255)}.${random.nextInt(255)}.${random.nextInt(255)}", random.nextInt(35000))
       val peerInfo = getPeerInfo(peerAddress)
@@ -84,12 +84,12 @@ class StorageFileWriterTest extends NetworkTests with BeforeAndAfterAll with Bef
     val penaltyBook = mutable.Map.empty[InetAddress, (Int, Long)]
     val config = tempFile match {
       case Some(file) =>
-        StorageFilePersisterConfig(tempDir.toFile, file.getFileName.toString)
+        StorageFileBackupperConfig(tempDir.toFile, file.getFileName.toString)
       case None => fail("")
     }
 
-    val blacklistWriter = new MapPersister(blacklist, config)
-    val penaltyWriter = new MapPersister(penaltyBook, config)
+    val blacklistWriter = new MapBackupper(blacklist, config)
+    val penaltyWriter = new MapBackupper(penaltyBook, config)
 
     for (_ <- 1 to MAX_ELEMENTS_TO_INSERT) {
       val peerAddress = new InetSocketAddress(
