@@ -13,11 +13,9 @@ import scala.concurrent.duration.FiniteDuration
   * @param ec     - The actor's execution context
   */
 abstract class ScheduledActor(config: ScheduledActorConfig)(implicit ec: ExecutionContext) {
-  private val (initialDelay, scheduleInterval) = ScheduledActorConfig.unapply(config).getOrElse(throw new IllegalArgumentException())
-
-  private val job: Cancellable = ActorSystem("scheduledActor").scheduler.scheduleWithFixedDelay(initialDelay, scheduleInterval) {
-    () => scheduledJob()
-  }
+  private val job: Cancellable = ActorSystem("scheduledActor")
+    .scheduler
+    .scheduleWithFixedDelay(config.initialDelay, config.scheduleInterval) { () => scheduledJob() }
 
   /**
     * Method to cancel the current job

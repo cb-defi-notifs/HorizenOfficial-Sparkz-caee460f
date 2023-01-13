@@ -4,14 +4,11 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import sparkz.core.app.SparkzContext
 import sparkz.core.network._
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
-import sparkz.core.persistence.ScheduledActor.ScheduledActorConfig
-import sparkz.core.persistence.{PersistablePeerDatabase, ScheduledStorageBackupper, StorageBackupper, StorageBackupperContainer}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.NetworkUtils
 import sparkz.util.SparkzLogging
 
 import java.net.{InetAddress, InetSocketAddress}
-import java.nio.file.Files
 import java.security.SecureRandom
 import scala.concurrent.ExecutionContext
 import scala.util.Random
@@ -23,26 +20,10 @@ import scala.util.Random
 class PeerManager(
                    settings: SparkzSettings,
                    sparkzContext: SparkzContext,
-                   peerDatabase: PersistablePeerDatabase)(implicit ec: ExecutionContext)
+                   peerDatabase: PeerDatabase)
   extends Actor with SparkzLogging {
 
   import PeerManager.ReceivableMessages._
-
-  private val initializeStorageDirectory: () => Unit = () => Files.createDirectories(settings.dataDir.toPath)
-  private val storageBackupperContainer = new StorageBackupperContainer(
-    getAsScheduled,
-    initializeStorageDirectory
-  )
-  storageBackupperContainer.restoreAllStorages()
-
-  private def getAsScheduled: Seq[ScheduledStorageBackupper] = {
-    val storagesToBackUp: Seq[StorageBackupper[_]] = peerDatabase.storagesToBackup()
-    storagesToBackUp.map {
-      storage =>
-        val config = ScheduledActorConfig(settings.network.storageBackupDelay, settings.network.storageBackupInterval)
-        new ScheduledStorageBackupper(storage, config)
-    }
-  }
 
   override def receive: Receive = peersManagement orElse {
     case a: Any =>
@@ -60,7 +41,7 @@ class PeerManager(
       if (!isSelf(peerInfo.peerSpec)) {
         peerDatabase.addOrUpdateKnownPeer(
           PeerDatabaseValue(
-            extractAddressFromPeerInfoOrFeature(peerInfo),
+            extractAddressFromPeerInfo(peerInfo),
             peerInfo,
             PeerConfidence.Unknown
           )
@@ -71,7 +52,7 @@ class PeerManager(
       if (!isSelf(peerInfo.peerSpec)) {
         peerDatabase.updatePeer(
           PeerDatabaseValue(
-            extractAddressFromPeerInfoOrFeature(peerInfo),
+            extractAddressFromPeerInfo(peerInfo),
             peerInfo,
             PeerConfidence.Unknown
           )
@@ -90,11 +71,8 @@ class PeerManager(
       // We have received peers data from other peers. It might be modified and should not affect existing data if any
       val filteredPeers = peersSpec
         .collect {
-          case peerSpec if peerSpec.address.forall(a => peerDatabase.get(a).isEmpty) && !isSelf(peerSpec) =>
-            val address: InetSocketAddress = peerSpec.address.getOrElse(
-              peerSpec.features.find(f => f.featureId == LocalAddressPeerFeature.featureId)
-                .getOrElse(throw new IllegalArgumentException()).asInstanceOf[LocalAddressPeerFeature].address
-            )
+          case peerSpec if shouldAddPeer(peerSpec) =>
+            val address: InetSocketAddress = peerSpec.address.getOrElse(throw new IllegalArgumentException())
             val peerInfo: PeerInfo = PeerInfo(peerSpec, 0L, None)
             log.info(s"New discovered peer: $peerInfo")
             PeerDatabaseValue(address, peerInfo, PeerConfidence.Unknown)
@@ -121,13 +99,12 @@ class PeerManager(
       sender() ! get.choose(peerDatabase.allPeers, peerDatabase.blacklistedPeers, sparkzContext)
   }
 
-  private def extractAddressFromPeerInfoOrFeature(peerInfo: PeerInfo) = {
-    val address: InetSocketAddress = peerInfo.peerSpec.address.getOrElse(
-      peerInfo.peerSpec.features.find(f => f.featureId == LocalAddressPeerFeature.featureId)
-        .getOrElse(throw new IllegalArgumentException()).asInstanceOf[LocalAddressPeerFeature].address
-    )
-    address
+  private def shouldAddPeer(peerSpec: PeerSpec) = {
+    peerSpec.address.nonEmpty && peerSpec.address.forall(a => peerDatabase.get(a).isEmpty) && !isSelf(peerSpec)
   }
+
+  private def extractAddressFromPeerInfo(peerInfo: PeerInfo) =
+    peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException())
 
   /**
     * Given a peer's address, returns `true` if the peer is the same is this node.
@@ -283,17 +260,16 @@ object PeerManager {
 
 object PeerManagerRef {
 
-  def props(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PersistablePeerDatabase)
-           (implicit ec: ExecutionContext): Props = {
+  def props(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase): Props = {
     Props(new PeerManager(settings, sparkzContext, peerDatabase))
   }
 
-  def apply(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PersistablePeerDatabase)
+  def apply(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     system.actorOf(props(settings, sparkzContext, peerDatabase))
   }
 
-  def apply(name: String, settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PersistablePeerDatabase)
+  def apply(name: String, settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     system.actorOf(props(settings, sparkzContext, peerDatabase), name)
   }
