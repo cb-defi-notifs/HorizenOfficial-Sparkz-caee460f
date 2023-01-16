@@ -3,20 +3,25 @@ package sparkz.core.network.peer
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import sparkz.core.app.SparkzContext
 import sparkz.core.network._
+import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.NetworkUtils
 import sparkz.util.SparkzLogging
-import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 
 import java.net.{InetAddress, InetSocketAddress}
-import scala.util.Random
 import java.security.SecureRandom
+import scala.concurrent.ExecutionContext
+import scala.util.Random
 
 /**
   * Peer manager takes care of peers connected and in process, and also chooses a random peer to connect
   * Must be singleton
   */
-class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase) extends Actor with SparkzLogging {
+class PeerManager(
+                   settings: SparkzSettings,
+                   sparkzContext: SparkzContext,
+                   peerDatabase: PeerDatabase)
+  extends Actor with SparkzLogging {
 
   import PeerManager.ReceivableMessages._
 
@@ -36,7 +41,7 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
       if (!isSelf(peerInfo.peerSpec)) {
         peerDatabase.addOrUpdateKnownPeer(
           PeerDatabaseValue(
-            extractAddressFromPeerInfoOrFeature(peerInfo),
+            extractAddressFromPeerInfo(peerInfo),
             peerInfo,
             PeerConfidence.Unknown
           )
@@ -47,7 +52,7 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
       if (!isSelf(peerInfo.peerSpec)) {
         peerDatabase.updatePeer(
           PeerDatabaseValue(
-            extractAddressFromPeerInfoOrFeature(peerInfo),
+            extractAddressFromPeerInfo(peerInfo),
             peerInfo,
             PeerConfidence.Unknown
           )
@@ -66,11 +71,8 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
       // We have received peers data from other peers. It might be modified and should not affect existing data if any
       val filteredPeers = peersSpec
         .collect {
-          case peerSpec if peerSpec.address.forall(a => peerDatabase.get(a).isEmpty) && !isSelf(peerSpec) =>
-            val address: InetSocketAddress = peerSpec.address.getOrElse(
-              peerSpec.features.find(f => f.featureId == LocalAddressPeerFeature.featureId)
-                .getOrElse(throw new IllegalArgumentException()).asInstanceOf[LocalAddressPeerFeature].address
-            )
+          case peerSpec if shouldAddPeer(peerSpec) =>
+            val address: InetSocketAddress = peerSpec.address.getOrElse(throw new IllegalArgumentException())
             val peerInfo: PeerInfo = PeerInfo(peerSpec, 0L, None)
             log.info(s"New discovered peer: $peerInfo")
             PeerDatabaseValue(address, peerInfo, PeerConfidence.Unknown)
@@ -97,13 +99,12 @@ class PeerManager(settings: SparkzSettings, sparkzContext: SparkzContext, peerDa
       sender() ! get.choose(peerDatabase.allPeers, peerDatabase.blacklistedPeers, sparkzContext)
   }
 
-  private def extractAddressFromPeerInfoOrFeature(peerInfo: PeerInfo) = {
-    val address: InetSocketAddress = peerInfo.peerSpec.address.getOrElse(
-      peerInfo.peerSpec.features.find(f => f.featureId == LocalAddressPeerFeature.featureId)
-        .getOrElse(throw new IllegalArgumentException()).asInstanceOf[LocalAddressPeerFeature].address
-    )
-    address
+  private def shouldAddPeer(peerSpec: PeerSpec) = {
+    peerSpec.address.nonEmpty && peerSpec.address.forall(a => peerDatabase.get(a).isEmpty) && !isSelf(peerSpec)
   }
+
+  private def extractAddressFromPeerInfo(peerInfo: PeerInfo) =
+    peerInfo.peerSpec.address.getOrElse(throw new IllegalArgumentException())
 
   /**
     * Given a peer's address, returns `true` if the peer is the same is this node.
@@ -131,6 +132,7 @@ object PeerManager {
     case class Penalize(remote: InetSocketAddress, penaltyType: PenaltyType)
 
     case class Blacklisted(remote: InetSocketAddress)
+
     case class DisconnectFromAddress(remote: InetSocketAddress)
 
     case class AddToBlacklist(remote: InetSocketAddress, penalty: Option[PenaltyType] = None)
@@ -138,6 +140,7 @@ object PeerManager {
     case class RemoveFromBlacklist(remote: InetSocketAddress)
 
     // peerListOperations messages
+
     /**
       * @param data : information about peer to be stored in PeerDatabase
       * */
@@ -262,12 +265,12 @@ object PeerManagerRef {
   }
 
   def apply(settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase)
-           (implicit system: ActorSystem): ActorRef = {
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     system.actorOf(props(settings, sparkzContext, peerDatabase))
   }
 
   def apply(name: String, settings: SparkzSettings, sparkzContext: SparkzContext, peerDatabase: PeerDatabase)
-           (implicit system: ActorSystem): ActorRef = {
+           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     system.actorOf(props(settings, sparkzContext, peerDatabase), name)
   }
 

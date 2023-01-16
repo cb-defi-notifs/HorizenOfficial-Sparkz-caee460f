@@ -24,4 +24,6 @@ case class ConnectedPeer(connectionId: ConnectionId,
   }
 
   override def toString: String = s"ConnectedPeer($connectionId)"
+
 }
+

@@ -551,7 +551,7 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     val peerManagerRef = peerManagerMock match {
       case Some(testProbe) => testProbe.ref
       case _ =>
-        val peerDatabase = new InMemoryPeerDatabase(settings.network, sparkzContext)
+        val peerDatabase = new InMemoryPeerDatabase(settings, sparkzContext)
         PeerManagerRef(settings, sparkzContext, peerDatabase)
     }
 

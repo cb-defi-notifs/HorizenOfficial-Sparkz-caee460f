@@ -1,7 +1,5 @@
 package sparkz.core.app
 
-import java.net.InetSocketAddress
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
@@ -9,12 +7,15 @@ import sparkz.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, Com
 import sparkz.core.network._
 import sparkz.core.network.message._
 import sparkz.core.network.peer.{InMemoryPeerDatabase, PeerManagerRef}
-import sparkz.core.settings.SparkzSettings
+import sparkz.core.persistence.BackupAndBackupAndRestoreFromFileStrategy.FileBackupStrategyConfig
+import sparkz.core.persistence.{BackupAndBackupAndRestoreFromFileStrategy, BackupAndRestoreStrategy}
+import sparkz.core.settings.{NetworkSettings, SparkzSettings}
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{NodeViewHolder, PersistentNodeViewModifier}
 import sparkz.util.SparkzLogging
 
+import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext
 
 trait Application extends SparkzLogging {
@@ -34,7 +35,8 @@ trait Application extends SparkzLogging {
   implicit def exceptionHandler: ExceptionHandler = ApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
 
-  protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName)
+  private val networkSettings: NetworkSettings = settings.network
+  protected implicit lazy val actorSystem: ActorSystem = ActorSystem(networkSettings.agentName)
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
 
   protected val features: Seq[PeerFeature]
@@ -42,12 +44,12 @@ trait Application extends SparkzLogging {
   private val featureSerializers: PeerFeature.Serializers = features.map(f => f.featureId -> f.serializer).toMap
 
   private lazy val basicSpecs = {
-    val invSpec = new InvSpec(settings.network.maxInvObjects)
-    val requestModifierSpec = new RequestModifierSpec(settings.network.maxInvObjects)
-    val modifiersSpec = new ModifiersSpec(settings.network.maxModifiersSpecMessageSize)
+    val invSpec = new InvSpec(networkSettings.maxInvObjects)
+    val requestModifierSpec = new RequestModifierSpec(networkSettings.maxInvObjects)
+    val modifiersSpec = new ModifiersSpec(networkSettings.maxModifiersSpecMessageSize)
     Seq(
       GetPeersSpec,
-      new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects),
+      new PeersSpec(featureSerializers, networkSettings.maxPeerSpecObjects),
       invSpec,
       requestModifierSpec,
       modifiersSpec
@@ -64,7 +66,7 @@ trait Application extends SparkzLogging {
 
   //an address to send to peers
   lazy val externalSocketAddress: Option[InetSocketAddress] = {
-    settings.network.declaredAddress
+    networkSettings.declaredAddress
   }
 
   val sparkzContext: SparkzContext = SparkzContext(
@@ -74,18 +76,23 @@ trait Application extends SparkzLogging {
     externalNodeAddress = externalSocketAddress
   )
 
-  val peerManagerRef: ActorRef = PeerManagerRef(settings, sparkzContext, new InMemoryPeerDatabase(settings.network, sparkzContext))
+  protected val peerDatabase = new InMemoryPeerDatabase(settings, sparkzContext)
+  protected val peerDatabaseBackupStrategy: BackupAndRestoreStrategy = new BackupAndBackupAndRestoreFromFileStrategy(
+    FileBackupStrategyConfig(networkSettings.storageBackupDelay, networkSettings.storageBackupInterval),
+    peerDatabase.storagesToBackup()
+  )
+  val peerManagerRef: ActorRef = PeerManagerRef(settings, sparkzContext, peerDatabase)
 
   val networkControllerRef: ActorRef = NetworkControllerRef(
-    "networkController", settings.network, peerManagerRef, sparkzContext)
+    "networkController", networkSettings, peerManagerRef, sparkzContext)
 
   val peerSynchronizer: ActorRef = PeerSynchronizerRef("PeerSynchronizer",
-    networkControllerRef, peerManagerRef, settings.network, featureSerializers)
+    networkControllerRef, peerManagerRef, networkSettings, featureSerializers)
 
   lazy val combinedRoute: Route = CompositeHttpService(actorSystem, apiRoutes, settings.restApi, swaggerConfig).compositeRoute
 
   def run(): Unit = {
-    require(settings.network.agentName.length <= Application.ApplicationNameLimit)
+    require(networkSettings.agentName.length <= Application.ApplicationNameLimit)
 
     log.debug(s"Available processors: ${Runtime.getRuntime.availableProcessors}")
     log.debug(s"Max memory available: ${Runtime.getRuntime.maxMemory}")

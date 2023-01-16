@@ -3,23 +3,25 @@ package sparkz.core.network.peer
 import sparkz.core.app.SparkzContext
 import sparkz.core.network.peer.PeerBucketStorage.{BucketConfig, PeerBucketStorageImpl}
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
-
-import java.net.{InetAddress, InetSocketAddress}
-import sparkz.core.settings.NetworkSettings
+import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
+import sparkz.core.persistence.StorageFileBackupper.StorageFileBackupperConfig
+import sparkz.core.persistence.{MapBackupper, PeerBucketBackupper, PersistablePeerDatabase, StorageBackupper}
+import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.{NetworkUtils, TimeProvider}
 import sparkz.util.SparkzLogging
-import sparkz.core.network.peer.PenaltyType.DisconnectPenalty
 
 import java.net.{InetAddress, InetSocketAddress}
 import java.security.SecureRandom
+import scala.collection.mutable
 import scala.concurrent.duration._
 
 /**
   * In-memory peer database implementation supporting temporal blacklisting.
   */
-final class InMemoryPeerDatabase(settings: NetworkSettings, sparkzContext: SparkzContext)
-  extends PeerDatabase with SparkzLogging {
+final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: SparkzContext)
+  extends PersistablePeerDatabase with SparkzLogging {
 
+  private val settings = sparkzSettings.network
   private val timeProvider = sparkzContext.timeProvider
 
   private val nKey: Int = new SecureRandom().nextInt()
@@ -37,12 +39,12 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, sparkzContext: Spark
   /**
     * banned peer ip -> ban expiration timestamp
     */
-  private var blacklist = Map.empty[InetAddress, TimeProvider.Time]
+  private val blacklist = mutable.Map.empty[InetAddress, TimeProvider.Time]
 
   /**
     * penalized peer ip -> (accumulated penalty score, last penalty timestamp)
     */
-  private var penaltyBook = Map.empty[InetAddress, (Int, Long)]
+  private val penaltyBook = mutable.Map.empty[InetAddress, (Int, Long)]
 
   // fill database with known peers
   settings.knownPeers.foreach { address =>
@@ -173,5 +175,14 @@ final class InMemoryPeerDatabase(settings: NetworkSettings, sparkzContext: Spark
     if (peerIsNotBlacklistedAndNotKnownPeer(peerDatabaseValue)) {
       bucketManager.makeTried(peerDatabaseValue)
     }
+  }
+
+  override def storagesToBackup(): Seq[StorageBackupper[_]] = {
+    Seq(
+      new PeerBucketBackupper[PeerBucketStorageImpl](newBucket, StorageFileBackupperConfig(sparkzSettings.dataDir, "NewBucket.dat")),
+      new PeerBucketBackupper[PeerBucketStorageImpl](triedBucket, StorageFileBackupperConfig(sparkzSettings.dataDir, "TriedBucket.dat")),
+      new MapBackupper(blacklist, StorageFileBackupperConfig(sparkzSettings.dataDir, "BlacklistPeers.dat")),
+      new MapBackupper(penaltyBook, StorageFileBackupperConfig(sparkzSettings.dataDir, "PenaltyBook.dat"))
+    )
   }
 }

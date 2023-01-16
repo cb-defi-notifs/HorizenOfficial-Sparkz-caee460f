@@ -2,7 +2,7 @@ name := "sparkz-examples"
 
 libraryDependencies ++= Seq(
   "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2" % Test,
-  "com.typesafe.akka" %% "akka-testkit" % "2.6.19" % "test",
+  "com.typesafe.akka" %% "akka-testkit" % "2.7.0" % "test",
   "com.google.guava" % "guava" % "23.0",
   "net.jpountz.lz4" % "lz4" % "1.3.0",
   "org.slf4j" % "slf4j-api" % "2.0.4",
