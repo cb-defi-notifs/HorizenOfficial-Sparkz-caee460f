@@ -179,12 +179,12 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
   }
 
   override def storagesToBackup(pathToBackup: String): Seq[StorageBackupper[_]] = {
-    val path = Paths.get(pathToBackup)
+    val file = Paths.get(pathToBackup).toFile
     Seq(
-      new PeerBucketBackupper[PeerBucketStorageImpl](newBucket, StorageFileBackupperConfig(path.toFile, "NewBucket.dat")),
-      new PeerBucketBackupper[PeerBucketStorageImpl](triedBucket, StorageFileBackupperConfig(path.toFile, "TriedBucket.dat")),
-      new MapBackupper(blacklist, StorageFileBackupperConfig(path.toFile, "BlacklistPeers.dat")),
-      new MapBackupper(penaltyBook, StorageFileBackupperConfig(path.toFile, "PenaltyBook.dat"))
+      new PeerBucketBackupper[PeerBucketStorageImpl](newBucket, StorageFileBackupperConfig(file, "NewBucket.dat")),
+      new PeerBucketBackupper[PeerBucketStorageImpl](triedBucket, StorageFileBackupperConfig(file, "TriedBucket.dat")),
+      new MapBackupper(blacklist, StorageFileBackupperConfig(file, "BlacklistPeers.dat")),
+      new MapBackupper(penaltyBook, StorageFileBackupperConfig(file, "PenaltyBook.dat"))
     )
   }
 }
