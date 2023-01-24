@@ -25,7 +25,7 @@ lazy val commonSettings = Seq(
     Wart.OptionPartial),
   organization := "io.horizen",
   organizationName := "Zen Blockchain Foundation",
-  version := "2.0.0-RC10-SNAPSHOT",
+  version := "2.0.0-RC10-SNAPSHOT2",
   licenses := Seq("CC0" -> url("https://creativecommons.org/publicdomain/zero/1.0/legalcode")),
   homepage := Some(url("https://github.com/HorizenOfficial/Sparkz")),
   pomExtra :=
@@ -57,7 +57,7 @@ val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-parsing" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-protobuf" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-  "commons-net" % "commons-net" % "3.8.0"
+  "commons-net" % "commons-net" % "3.9.0"
 )
 
 val apiDependencies = Seq(

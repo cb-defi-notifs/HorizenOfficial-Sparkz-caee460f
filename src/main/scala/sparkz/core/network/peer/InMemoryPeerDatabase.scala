@@ -11,6 +11,7 @@ import sparkz.core.utils.{NetworkUtils, TimeProvider}
 import sparkz.util.SparkzLogging
 
 import java.net.{InetAddress, InetSocketAddress}
+import java.nio.file.Paths
 import java.security.SecureRandom
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -177,12 +178,13 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
     }
   }
 
-  override def storagesToBackup(): Seq[StorageBackupper[_]] = {
+  override def storagesToBackup(pathToBackup: String): Seq[StorageBackupper[_]] = {
+    val file = Paths.get(pathToBackup).toFile
     Seq(
-      new PeerBucketBackupper[PeerBucketStorageImpl](newBucket, StorageFileBackupperConfig(sparkzSettings.dataDir, "NewBucket.dat")),
-      new PeerBucketBackupper[PeerBucketStorageImpl](triedBucket, StorageFileBackupperConfig(sparkzSettings.dataDir, "TriedBucket.dat")),
-      new MapBackupper(blacklist, StorageFileBackupperConfig(sparkzSettings.dataDir, "BlacklistPeers.dat")),
-      new MapBackupper(penaltyBook, StorageFileBackupperConfig(sparkzSettings.dataDir, "PenaltyBook.dat"))
+      new PeerBucketBackupper[PeerBucketStorageImpl](newBucket, StorageFileBackupperConfig(file, "NewBucket.dat")),
+      new PeerBucketBackupper[PeerBucketStorageImpl](triedBucket, StorageFileBackupperConfig(file, "TriedBucket.dat")),
+      new MapBackupper(blacklist, StorageFileBackupperConfig(file, "BlacklistPeers.dat")),
+      new MapBackupper(penaltyBook, StorageFileBackupperConfig(file, "PenaltyBook.dat"))
     )
   }
 }

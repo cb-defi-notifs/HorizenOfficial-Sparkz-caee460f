@@ -497,11 +497,10 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
 
   /**
     * This test is forcing the normal flow for testing purposes.
-    * We send a Connect message to the network controller so it can track the peer's last connection attempt.
-    * Then we tell the network controller to look for another connection to establish passing an empty
-    * activeConnections, which in reality will be populated with the active connection.
-    * This to make sure the only criteria the network controller uses to discard the peer from another connection attempt
-    * is that the last connection attempt was too early
+    * We trigger the network controller to connect to a selected peer so it can track the peer's last connection attempt.
+    * The test emulates the connection attempt failure.
+    * After that, we trigger another connection attempt at the same address, but this time it's going to be discarded
+    * because of the last attempt.
     */
   it should "skip connection attempt if the only connection in PeerManager failed to connect earlier" in {
     // Arrange
@@ -517,15 +516,21 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     val emptyUnconfirmedConnections = Set.empty[InetSocketAddress]
 
     // Act
-    networkControllerRef ! Connected(peerAddressOne, peerAddressOne)
-    peerManagerProbe.expectMsgClass(classOf[ConfirmConnection])
 
-    val expectedMessage = RandomPeerForConnectionExcluding(Seq(Some(peerAddressOne)))
+    // First failing connection attempt
     networkControllerRef ! ConnectionToPeer(emptyActiveConnections, emptyUnconfirmedConnections)
+    peerManagerProbe.expectMsg(RandomPeerForConnectionExcluding(Seq()))
+    peerManagerProbe.reply(Some(getPeerInfo(peerAddressOne)))
+    // Wait for the message to be received
+    Thread.sleep(1)
+
+    // Second attempt, discarding the peer we tried just before
+    networkControllerRef ! ConnectionToPeer(emptyActiveConnections, emptyUnconfirmedConnections)
+    val expectedMessage = RandomPeerForConnectionExcluding(Seq(Some(peerAddressOne)))
     peerManagerProbe.expectMsg(expectedMessage)
 
     // Assert
-    tcpManagerProbe.expectNoMessage()
+    tcpManagerProbe.expectMsgClass(classOf[Connect])
 
     system.terminate()
   }
