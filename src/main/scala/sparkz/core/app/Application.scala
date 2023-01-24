@@ -6,9 +6,9 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import sparkz.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import sparkz.core.network._
 import sparkz.core.network.message._
-import sparkz.core.network.peer.{InMemoryPeerDatabase, PeerManagerRef}
-import sparkz.core.persistence.BackupAndBackupAndRestoreFromFileStrategy.FileBackupStrategyConfig
-import sparkz.core.persistence.{BackupAndBackupAndRestoreFromFileStrategy, BackupAndRestoreStrategy}
+import sparkz.core.network.peer.{InMemoryPeerDatabase, LocalAddressPeerFeature, PeerManagerRef}
+import sparkz.core.persistence.BackupAndRestoreFromFileStrategy.FileBackupStrategyConfig
+import sparkz.core.persistence.{BackupAndRestoreFromFileStrategy, BackupAndRestoreStrategy}
 import sparkz.core.settings.{NetworkSettings, SparkzSettings}
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
@@ -16,6 +16,7 @@ import sparkz.core.{NodeViewHolder, PersistentNodeViewModifier}
 import sparkz.util.SparkzLogging
 
 import java.net.InetSocketAddress
+import java.nio.file.{Path, Paths}
 import scala.concurrent.ExecutionContext
 
 trait Application extends SparkzLogging {
@@ -77,10 +78,17 @@ trait Application extends SparkzLogging {
   )
 
   protected val peerDatabase = new InMemoryPeerDatabase(settings, sparkzContext)
-  protected val peerDatabaseBackupStrategy: BackupAndRestoreStrategy = new BackupAndBackupAndRestoreFromFileStrategy(
-    FileBackupStrategyConfig(networkSettings.storageBackupDelay, networkSettings.storageBackupInterval),
-    peerDatabase.storagesToBackup()
+  private val backupDir: Path = Paths.get(settings.dataDir.getPath, "peers")
+  protected val peerDatabaseBackupStrategy: BackupAndRestoreStrategy = new BackupAndRestoreFromFileStrategy(
+    FileBackupStrategyConfig(
+      backupDir,
+      networkSettings.storageBackupDelay,
+      networkSettings.storageBackupInterval
+    ),
+    peerDatabase.storagesToBackup(backupDir.toString)
   )
+  peerDatabaseBackupStrategy.restore()
+
   val peerManagerRef: ActorRef = PeerManagerRef(settings, sparkzContext, peerDatabase)
 
   val networkControllerRef: ActorRef = NetworkControllerRef(

@@ -200,7 +200,6 @@ class NetworkController(settings: NetworkSettings,
     val connectionId = ConnectionId(remoteAddress, localAddress, connectionDirection)
 
     log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
-    updateLastConnectionAttemptTimestamp(remoteAddress)
 
     val handlerRef = sender()
     if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection) {
@@ -290,7 +289,11 @@ class NetworkController(settings: NetworkSettings,
 
     val randomPeerF = peerManagerRef ? RandomPeerForConnectionExcluding(peersAddresses ++ peersAlreadyTriedFewTimeBefore)
     randomPeerF.mapTo[Option[PeerInfo]].foreach {
-      case Some(peerInfo) => self ! ConnectTo(peerInfo)
+      case Some(peerInfo) =>
+        peerInfo.peerSpec.address.foreach(address => {
+          updateLastConnectionAttemptTimestamp(address)
+          self ! ConnectTo(peerInfo)
+        })
       case None => log.warn("Could not find a peer to connect to, skipping this connectionToPeer round")
     }
   }
