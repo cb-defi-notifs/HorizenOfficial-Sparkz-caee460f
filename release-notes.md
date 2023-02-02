@@ -16,8 +16,7 @@
 * configuration changes:
   * maxIncomingConnections & maxOutgoingConnections in place of maxConnections
   * storedPeersLimit: maximum number of PeerSpec objects stored in the in-memory database
-  * requestTrackerDeliveryTimeout: timeout waiting for a response by RequestTracker
-  * penalizeNonDelivery: penalize remote peers not answering our requests during requestTrackerDeliveryTimeout
+  * penalizeNonDelivery: penalize remote peers not answering our requests during deliveryTimeout
   * messageLengthBytesLimit: max message size
   * maxRequestedPerPeer: limit for the number of modifiers to request and process at once
   * maxModifiersSpecMessageSize in place of maxPacketSize: maximum modifier spec message size
