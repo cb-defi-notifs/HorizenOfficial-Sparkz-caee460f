@@ -15,7 +15,6 @@
   * Blacklisted [NetworkController.message] → DisconnectFromAddress
 * configuration changes:
   * maxIncomingConnections & maxOutgoingConnections in place of maxConnections
-  * storedPeersLimit: maximum number of PeerSpec objects stored in the in-memory database
   * penalizeNonDelivery: penalize remote peers not answering our requests during deliveryTimeout
   * messageLengthBytesLimit: max message size
   * maxRequestedPerPeer: limit for the number of modifiers to request and process at once
