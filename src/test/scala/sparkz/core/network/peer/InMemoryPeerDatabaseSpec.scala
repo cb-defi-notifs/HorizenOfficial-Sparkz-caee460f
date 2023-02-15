@@ -17,12 +17,11 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
 
   private val peerAddress1 = new InetSocketAddress("1.1.1.1", 27017)
   private val peerAddress2 = new InetSocketAddress("2.2.2.2", 27017)
-  private val storedPeersLimit = 10
   private val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
 
   private def withDb(test: InMemoryPeerDatabase => Assertion): Assertion =
     test(new InMemoryPeerDatabase(
-      settings.copy(network = settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds)), sparkzContext)
+      settings.copy(network = settings.network.copy(penaltySafeInterval = 1.seconds)), sparkzContext)
     )
 
   "new DB" should "be empty" in {
@@ -241,7 +240,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
 
     def withDbHavingKnownPeers(test: InMemoryPeerDatabase => Assertion): Assertion =
       test(new InMemoryPeerDatabase(
-        settings.copy(network = settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds, knownPeers = knownPeers)),
+        settings.copy(network = settings.network.copy(penaltySafeInterval = 1.seconds, knownPeers = knownPeers)),
         sparkzContext
       ))
 
@@ -266,7 +265,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
 
     def withDbHavingKnownPeers(test: InMemoryPeerDatabase => Assertion): Assertion =
       test(new InMemoryPeerDatabase(
-        settings.copy(network = settings.network.copy(storedPeersLimit = storedPeersLimit, penaltySafeInterval = 1.seconds, knownPeers = knownPeers)),
+        settings.copy(network = settings.network.copy(penaltySafeInterval = 1.seconds, knownPeers = knownPeers)),
         sparkzContext
       ))
 
