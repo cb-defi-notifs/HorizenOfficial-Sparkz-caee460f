@@ -6,15 +6,15 @@ import io.circe.Encoder
 import io.circe.Encoder.AsObject.importedAsObjectEncoder
 import io.circe.generic.auto.exportEncoder
 import io.circe.syntax._
-import scorex.crypto.hash.Blake2b256
-import scorex.util.Extensions._
-import scorex.util.serialization._
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.Extensions._
+import sparkz.util.serialization._
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 import sparkz.core.block.Block
 import sparkz.core.block.Block._
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.transaction.box.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer}
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import sparkz.util.serialization.VLQByteStringWriter
 

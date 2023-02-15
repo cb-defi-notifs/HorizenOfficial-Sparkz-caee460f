@@ -1,3 +1,27 @@
+2.0.0-RC10
+---------
+* UPnP module removed
+* DisconnectPenalty: new penalty that causes the node to close the connection with the peer
+* CustomPenaltyDuration(duration: Long): a class for a custom penalty duration time
+* added new endpoints:
+  * GET /peers/peer/{address} -> get peer by address
+  * DELETE /peers/peer -> delete a peer from the internal database
+  * DELETE /peers/blacklist -> remove a peer from the blacklist
+* existing endpoints changes:
+  * POST /peers/blacklist -> body {"address": String, "durationInMinutes": Int} (the durationInMinutes default value is 60)
+  * POST /peers/connect -> body {"address": String}
+* messages renaming:
+  * RandomPeerExcluding → RandomPeerForConnectionExcluding
+  * Blacklisted [NetworkController.message] → DisconnectFromAddress
+* configuration changes:
+  * maxIncomingConnections & maxOutgoingConnections in place of maxConnections
+  * penalizeNonDelivery: penalize remote peers not answering our requests during deliveryTimeout
+  * messageLengthBytesLimit: max message size
+  * maxRequestedPerPeer: limit for the number of modifiers to request and process at once
+  * maxModifiersSpecMessageSize in place of maxPacketSize: maximum modifier spec message size
+  * storageBackupInterval: interval to backup peers' storages
+  * storageBackupDelay: delay to start peers' backup
+
 2.0.0-RC9
 ---------
 * Hotfix - mistakenly penalizing peers during synchronization

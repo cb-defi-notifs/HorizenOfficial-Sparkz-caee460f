@@ -1,6 +1,6 @@
 package hybrid
 
-import io.iohk.iodb.{LSMStore, QuickStore}
+import examples.persistence.{LSMStore, QuickStore}
 import org.scalacheck.Gen
 import sparkz.testkit.utils.FileUtils
 

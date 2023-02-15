@@ -1,11 +1,11 @@
 package sparkz.core.network
 
 import sparkz.core.network.message.MessageSpec
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.util.{Failure, Success}
 
-trait Synchronizer extends ScorexLogging {
+trait Synchronizer extends SparkzLogging {
 
   // these are the case statements for identifying the message handlers
   protected val msgHandlers: PartialFunction[(MessageSpec[_], _, ConnectedPeer), Unit]

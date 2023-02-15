@@ -2,7 +2,7 @@ package hybrid
 
 import examples.commons.{Nonce, PublicKey25519NoncedBox, Value}
 import examples.hybrid.state.HBoxStoredState
-import io.iohk.iodb.LSMStore
+import examples.persistence.LSMStore
 import org.scalacheck.Gen
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
 import sparkz.core.transaction.state.{BoxStateChanges, Insertion, PrivateKey25519Companion}

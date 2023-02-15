@@ -1,8 +1,8 @@
 package hybrid.transaction
 
 import examples.commons.SimpleBoxTransaction
+import examples.persistence.ByteArrayWrapper
 import hybrid.HybridGenerators
-import io.iohk.iodb.ByteArrayWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks

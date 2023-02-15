@@ -1,7 +1,7 @@
 package sparkz.core.consensus
 
 import sparkz.core.{NodeViewComponent, PersistentNodeViewModifier}
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 
 import scala.util.Try
 

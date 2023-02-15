@@ -2,9 +2,8 @@ package sparkz.util
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import scorex.util.ScorexLogging
 
-class SparkzLoggingSpec extends AnyFlatSpec with Matchers with ScorexLogging {
+class SparkzLoggingSpec extends AnyFlatSpec with Matchers with SparkzLogging {
 
   "Logger" should "evaluate messages only if the respective log level is enabled" in {
     var i = 0

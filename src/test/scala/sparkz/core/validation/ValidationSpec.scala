@@ -4,7 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.bytesToId
 import sparkz.core.consensus.ModifierSemanticValidity
-import sparkz.core.utils.SparkzEncoding
+import sparkz.util.SparkzEncoding
 import sparkz.core.validation.ValidationResult._
 
 import scala.util.{Failure, Try}

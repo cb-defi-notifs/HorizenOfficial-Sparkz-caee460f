@@ -14,12 +14,11 @@ import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer._
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.TimeProvider.Time
-import sparkz.core.utils.{NetworkUtils, TimeProvider}
-import scorex.util.ScorexLogging
-import sparkz.core.app.SparkzContext
-import sparkz.core.settings.NetworkSettings
+import sparkz.core.utils.{LRUSimpleCache, NetworkUtils, TimeProvider}
+import sparkz.util.SparkzLogging
 
 import java.net._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.{existentials, postfixOps}
@@ -33,7 +32,7 @@ class NetworkController(settings: NetworkSettings,
                         peerManagerRef: ActorRef,
                         sparkzContext: SparkzContext,
                         tcpManager: ActorRef
-                       )(implicit ec: ExecutionContext) extends Actor with ScorexLogging {
+                       )(implicit ec: ExecutionContext) extends Actor with SparkzLogging {
 
   import NetworkController.ReceivableMessages._
   import PeerConnectionHandler.ReceivableMessages.CloseConnection
@@ -62,6 +61,10 @@ class NetworkController(settings: NetworkSettings,
 
   private var connections = Map.empty[InetSocketAddress, ConnectedPeer]
   private var unconfirmedConnections = Set.empty[InetSocketAddress]
+  private val maxConnections = settings.maxIncomingConnections + settings.maxOutgoingConnections
+  private val peersLastConnectionAttempts = new LRUSimpleCache[InetSocketAddress, TimeProvider.Time](threshold = 10000)
+
+  private val tryNewConnectionAttemptDelay = 5.seconds
 
   private val mySessionIdFeature = SessionIdPeerFeature(settings.magicBytes)
   /**
@@ -139,21 +142,18 @@ class NetworkController(settings: NetworkSettings,
     case PenalizePeer(peerAddress, penaltyType) =>
       penalize(peerAddress, penaltyType)
 
-    case Blacklisted(peerAddress) =>
+    case DisconnectFromAddress(peerAddress) =>
       closeConnection(peerAddress)
   }
 
   private def connectionEvents: Receive = {
-    case Connected(remoteAddress, localAddress) if connectionForPeerAddress(remoteAddress).isEmpty =>
-      val connectionDirection: ConnectionDirection =
-        if (unconfirmedConnections.contains(remoteAddress)) Outgoing else Incoming
-      val connectionId = ConnectionId(remoteAddress, localAddress, connectionDirection)
-      log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
-      if (connectionDirection.isOutgoing) createPeerConnectionHandler(connectionId, sender())
-      else peerManagerRef ! ConfirmConnection(connectionId, sender())
+    case Connected(remoteAddress, localAddress) if isNewConnectionAndStillHaveRoom(remoteAddress) =>
+      handleNewConnectionCreation(remoteAddress, localAddress)
 
     case Connected(remoteAddress, _) =>
-      log.warn(s"Connection to peer $remoteAddress is already established")
+      val logMessage = if (connections.size >= maxConnections) "Max connections limit reached"
+                       else s"Connection to peer $remoteAddress is already established"
+      log.warn(logMessage)
       sender() ! Close
 
     case ConnectionConfirmed(connectionId, handlerRef) =>
@@ -195,6 +195,32 @@ class NetworkController(settings: NetworkSettings,
       connectionToPeer(activeConnections, unconfirmedConnections)
   }
 
+  private def handleNewConnectionCreation(remoteAddress: InetSocketAddress, localAddress: InetSocketAddress): Unit = {
+    val connectionDirection: ConnectionDirection = if (unconfirmedConnections.contains(remoteAddress)) Outgoing else Incoming
+    val connectionId = ConnectionId(remoteAddress, localAddress, connectionDirection)
+
+    log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
+
+    val handlerRef = sender()
+    if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection) {
+      createPeerConnectionHandler(connectionId, handlerRef)
+    }
+    else if (connectionDirection.isIncoming && canEstablishNewIncomingConnection)
+      peerManagerRef ! ConfirmConnection(connectionId, handlerRef)
+    else {
+      log.info(s"Connection to address ${connectionId.remoteAddress} refused; there is no room left for a new peer")
+      handlerRef ! Close
+    }
+  }
+
+  private def updateLastConnectionAttemptTimestamp(remoteAddress: InetSocketAddress): Unit = {
+    peersLastConnectionAttempts.put(remoteAddress, sparkzContext.timeProvider.time())
+  }
+
+  private def isNewConnectionAndStillHaveRoom(remoteAddress: InetSocketAddress) = {
+    connectionForPeerAddress(remoteAddress).isEmpty && connections.size < maxConnections
+  }
+
   //calls from API / application
   private def interfaceCalls: Receive = {
     case GetPeersStatus =>
@@ -227,14 +253,30 @@ class NetworkController(settings: NetworkSettings,
     * Schedule a periodic connection to a random known peer
     */
   private def scheduleConnectionToPeer(): Unit = {
-    context.system.scheduler.scheduleWithFixedDelay(5.seconds, 5.seconds) {
+    context.system.scheduler.scheduleWithFixedDelay(5.seconds, tryNewConnectionAttemptDelay) {
       () => {
-        if (connections.size < settings.maxConnections) {
-          log.debug(s"Looking for a new random connection")
+        if (canEstablishNewOutgoingConnection) {
+          log.trace(s"Looking for a new random connection")
           connectionToPeer(connections, unconfirmedConnections)
         }
       }
     }
+  }
+
+  private def canEstablishNewOutgoingConnection: Boolean = {
+    getOutgoingConnectionsSize < settings.maxOutgoingConnections
+  }
+
+  private def canEstablishNewIncomingConnection: Boolean = {
+    getIncomingConnectionsSize < settings.maxIncomingConnections
+  }
+
+  private def getOutgoingConnectionsSize: Int = {
+    connections.count { p => p._2.connectionId.direction == Outgoing }
+  }
+
+  private def getIncomingConnectionsSize: Int = {
+    connections.count { p => p._2.connectionId.direction == Incoming }
   }
 
   private def connectionToPeer(activeConnections: Map[InetSocketAddress, ConnectedPeer], unconfirmedConnections: Set[InetSocketAddress]): Unit = {
@@ -242,11 +284,31 @@ class NetworkController(settings: NetworkSettings,
     val unconfirmedConnectionsAddressSeq = unconfirmedConnections.map(connection => PeerInfo.fromAddress(connection)).toSeq
     val mergedSeq = connectionsAddressSeq ++ unconfirmedConnectionsAddressSeq
     val peersAddresses = mergedSeq.map(getPeerAddress)
-    val randomPeerF = peerManagerRef ? RandomPeerExcluding(peersAddresses)
+
+    val peersAlreadyTriedFewTimeBefore = getPeersWeAlreadyTriedToConnectFewTimeAgo
+
+    val randomPeerF = peerManagerRef ? RandomPeerForConnectionExcluding(peersAddresses ++ peersAlreadyTriedFewTimeBefore)
     randomPeerF.mapTo[Option[PeerInfo]].foreach {
-      case Some(peerInfo) => self ! ConnectTo(peerInfo)
+      case Some(peerInfo) =>
+        peerInfo.peerSpec.address.foreach(address => {
+          updateLastConnectionAttemptTimestamp(address)
+          self ! ConnectTo(peerInfo)
+        })
       case None => log.warn("Could not find a peer to connect to, skipping this connectionToPeer round")
     }
+  }
+
+  private def getPeersWeAlreadyTriedToConnectFewTimeAgo: Seq[Option[InetSocketAddress]] = {
+    val now = sparkzContext.timeProvider.time()
+    // This delta is to make sure we wait for enough time before trying another connection attempt to the same peer
+    // In this case we take into account the size of the known peers since they are always prioritized over other peers
+    val delta = (settings.knownPeers.size + 1) * 5
+    val thresholdInMillis = (tryNewConnectionAttemptDelay * delta).toMillis
+
+    peersLastConnectionAttempts.asScala.map {
+      case entry if now - entry._2 < thresholdInMillis => Some(entry._1)
+      case _ => None
+    }.toSeq
   }
 
   /**
@@ -311,8 +373,7 @@ class NetworkController(settings: NetworkSettings,
           s"New outgoing connection to ${connectionId.remoteAddress} established (bound to local ${connectionId.localAddress})"
       }
     }
-    val isLocal = connectionId.remoteAddress.getAddress.isSiteLocalAddress ||
-      connectionId.remoteAddress.getAddress.isLoopbackAddress
+    val isLocal = NetworkUtils.isLocalAddress(connectionId.remoteAddress.getAddress)
     val mandatoryFeatures = sparkzContext.features :+ mySessionIdFeature
     val peerFeatures = if (isLocal) {
       val la = new InetSocketAddress(connectionId.localAddress.getAddress, settings.bindAddress.getPort)
@@ -357,7 +418,7 @@ class NetworkController(settings: NetworkSettings,
         peerManagerRef ! RemovePeer(peerAddress)
         connections -= connectedPeer.connectionId.remoteAddress
       } else {
-        peerManagerRef ! AddOrUpdatePeer(peerInfo)
+        peerManagerRef ! UpdatePeer(peerInfo)
 
         val updatedConnectedPeer = connectedPeer.copy(peerInfo = Some(peerInfo))
         connections += remoteAddress -> updatedConnectedPeer
@@ -412,7 +473,7 @@ class NetworkController(settings: NetworkSettings,
 
   /**
     * Returns local address of peer for local connections and WAN address of peer for
-    * external connections. When local address is not known, try to ask it at the UPnP gateway
+    * external connections.
     *
     * @param peer - known information about peer
     * @return socket address of the peer
@@ -421,11 +482,6 @@ class NetworkController(settings: NetworkSettings,
     (peer.peerSpec.localAddressOpt, peer.peerSpec.declaredAddress) match {
       case (Some(localAddr), _) =>
         Some(localAddr)
-
-      case (None, Some(declaredAddress))
-        if sparkzContext.externalNodeAddress.exists(_.getAddress == declaredAddress.getAddress) =>
-
-        sparkzContext.upnpGateway.flatMap(_.getLocalAddressForExternalPort(declaredAddress.getPort))
 
       case _ => peer.peerSpec.declaredAddress
     }
@@ -444,12 +500,11 @@ class NetworkController(settings: NetworkSettings,
         Some(extAddr)
 
       case None =>
-        if (!localAddr.isSiteLocalAddress && !localAddr.isLoopbackAddress
-          && localSocketAddress.getPort == settings.bindAddress.getPort) {
+        if (!NetworkUtils.isLocalAddress(localAddr) && localSocketAddress.getPort == settings.bindAddress.getPort) {
           Some(localSocketAddress)
         } else {
           val listenAddrs = NetworkUtils.getListenAddresses(settings.bindAddress)
-            .filterNot(addr => addr.getAddress.isSiteLocalAddress || addr.getAddress.isLoopbackAddress)
+            .filterNot(addr => NetworkUtils.isLocalAddress(addr.getAddress))
 
           listenAddrs.find(addr => localAddr == addr.getAddress).orElse(listenAddrs.headOption)
         }
@@ -465,15 +520,12 @@ class NetworkController(settings: NetworkSettings,
           val myAddress = InetAddress.getAllByName(myHost)
 
           val listenAddresses = NetworkUtils.getListenAddresses(bindAddress)
-          val upnpAddress = sparkzContext.upnpGateway.map(_.externalAddress)
-
-          val valid = listenAddresses.exists(myAddress.contains) || upnpAddress.exists(myAddress.contains)
+          val valid = listenAddresses.exists(addr => myAddress.contains(addr.getAddress))
 
           if (!valid) {
             log.error(
               s"""Declared address validation failed:
-                 | $mySocketAddress not match any of the listening address: $listenAddresses
-                 | or Gateway WAN address: $upnpAddress""".stripMargin)
+                 | $mySocketAddress not match any of the listening address: $listenAddresses""".stripMargin)
           }
         } recover { case t: Throwable =>
           log.error("Declared address validation failed: ", t)

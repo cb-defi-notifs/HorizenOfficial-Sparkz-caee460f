@@ -7,7 +7,7 @@ import akka.util.Timeout
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe.Printer
 import sparkz.core.utils.ActorHelper
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.language.implicitConversions
 
@@ -16,7 +16,7 @@ trait ApiRoute
     with ActorHelper
     with FailFastCirceSupport
     with PredefinedFromEntityUnmarshallers
-    with ScorexLogging {
+    with SparkzLogging {
 
   def context: ActorRefFactory
   def route: Route

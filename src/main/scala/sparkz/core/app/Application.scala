@@ -1,23 +1,25 @@
 package sparkz.core.app
 
-import java.net.InetSocketAddress
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import sparkz.core.api.http.{ApiErrorHandler, ApiRejectionHandler, ApiRoute, CompositeHttpService}
 import sparkz.core.network._
 import sparkz.core.network.message._
-import sparkz.core.network.peer.PeerManagerRef
-import sparkz.core.settings.SparkzSettings
+import sparkz.core.network.peer.{InMemoryPeerDatabase, LocalAddressPeerFeature, PeerManagerRef}
+import sparkz.core.persistence.BackupAndRestoreFromFileStrategy.FileBackupStrategyConfig
+import sparkz.core.persistence.{BackupAndRestoreFromFileStrategy, BackupAndRestoreStrategy}
+import sparkz.core.settings.{NetworkSettings, SparkzSettings}
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{NodeViewHolder, PersistentNodeViewModifier}
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
+import java.net.InetSocketAddress
+import java.nio.file.{Path, Paths}
 import scala.concurrent.ExecutionContext
 
-trait Application extends ScorexLogging {
+trait Application extends SparkzLogging {
 
   import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
@@ -34,25 +36,21 @@ trait Application extends ScorexLogging {
   implicit def exceptionHandler: ExceptionHandler = ApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
 
-  protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName)
+  private val networkSettings: NetworkSettings = settings.network
+  protected implicit lazy val actorSystem: ActorSystem = ActorSystem(networkSettings.agentName)
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
 
   protected val features: Seq[PeerFeature]
   protected val additionalMessageSpecs: Seq[MessageSpec[_]]
   private val featureSerializers: PeerFeature.Serializers = features.map(f => f.featureId -> f.serializer).toMap
 
-  //p2p
-  private val upnpGateway: Option[UPnPGateway] = if (settings.network.upnpEnabled) UPnP.getValidGateway(settings.network) else None
-  // TODO use available port on gateway instead settings.network.bindAddress.getPort
-  upnpGateway.foreach(_.addPort(settings.network.bindAddress.getPort))
-
   private lazy val basicSpecs = {
-    val invSpec = new InvSpec(settings.network.maxInvObjects)
-    val requestModifierSpec = new RequestModifierSpec(settings.network.maxInvObjects)
-    val modifiersSpec = new ModifiersSpec(settings.network.maxPacketSize)
+    val invSpec = new InvSpec(networkSettings.maxInvObjects)
+    val requestModifierSpec = new RequestModifierSpec(networkSettings.maxInvObjects)
+    val modifiersSpec = new ModifiersSpec(networkSettings.maxModifiersSpecMessageSize)
     Seq(
       GetPeersSpec,
-      new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects),
+      new PeersSpec(featureSerializers, networkSettings.maxPeerSpecObjects),
       invSpec,
       requestModifierSpec,
       modifiersSpec
@@ -69,32 +67,40 @@ trait Application extends ScorexLogging {
 
   //an address to send to peers
   lazy val externalSocketAddress: Option[InetSocketAddress] = {
-    settings.network.declaredAddress orElse {
-      // TODO use available port on gateway instead settings.bindAddress.getPort
-      upnpGateway.map(u => new InetSocketAddress(u.externalAddress, settings.network.bindAddress.getPort))
-    }
+    networkSettings.declaredAddress
   }
 
-  val sparkzContext = SparkzContext(
+  val sparkzContext: SparkzContext = SparkzContext(
     messageSpecs = basicSpecs ++ additionalMessageSpecs,
     features = features,
-    upnpGateway = upnpGateway,
     timeProvider = timeProvider,
     externalNodeAddress = externalSocketAddress
   )
 
-  val peerManagerRef = PeerManagerRef(settings, sparkzContext)
+  protected val peerDatabase = new InMemoryPeerDatabase(settings, sparkzContext)
+  private val backupDir: Path = Paths.get(settings.dataDir.getPath, "peers")
+  protected val peerDatabaseBackupStrategy: BackupAndRestoreStrategy = new BackupAndRestoreFromFileStrategy(
+    FileBackupStrategyConfig(
+      backupDir,
+      networkSettings.storageBackupDelay,
+      networkSettings.storageBackupInterval
+    ),
+    peerDatabase.storagesToBackup(backupDir.toString)
+  )
+  peerDatabaseBackupStrategy.restore()
+
+  val peerManagerRef: ActorRef = PeerManagerRef(settings, sparkzContext, peerDatabase)
 
   val networkControllerRef: ActorRef = NetworkControllerRef(
-    "networkController", settings.network, peerManagerRef, sparkzContext)
+    "networkController", networkSettings, peerManagerRef, sparkzContext)
 
   val peerSynchronizer: ActorRef = PeerSynchronizerRef("PeerSynchronizer",
-    networkControllerRef, peerManagerRef, settings.network, featureSerializers)
+    networkControllerRef, peerManagerRef, networkSettings, featureSerializers)
 
   lazy val combinedRoute: Route = CompositeHttpService(actorSystem, apiRoutes, settings.restApi, swaggerConfig).compositeRoute
 
   def run(): Unit = {
-    require(settings.network.agentName.length <= Application.ApplicationNameLimit)
+    require(networkSettings.agentName.length <= Application.ApplicationNameLimit)
 
     log.debug(s"Available processors: ${Runtime.getRuntime.availableProcessors}")
     log.debug(s"Max memory available: ${Runtime.getRuntime.maxMemory}")
@@ -106,7 +112,7 @@ trait Application extends ScorexLogging {
 
     //on unexpected shutdown
     Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run() {
+      override def run(): Unit = {
         log.error("Unexpected shutdown")
         stopAll()
       }
@@ -115,7 +121,6 @@ trait Application extends ScorexLogging {
 
   def stopAll(): Unit = synchronized {
     log.info("Stopping network services")
-    upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))
     networkControllerRef ! ShutdownNetwork
 
     log.info("Stopping actors (incl. block generator)")

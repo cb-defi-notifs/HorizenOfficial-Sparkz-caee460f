@@ -3,10 +3,10 @@ package sparkz.core
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import sparkz.core.consensus.{SyncInfo, History, HistoryReader, ModifierSemanticValidity}
+import sparkz.core.consensus.{History, HistoryReader, ModifierSemanticValidity, SyncInfo}
 import sparkz.core.consensus.History.ModifierIds
 import sparkz.core.serialization.SparkzSerializer
-import scorex.crypto.hash.Blake2b256
+import sparkz.crypto.hash.Blake2b256
 
 import scala.util.Try
 
@@ -15,9 +15,9 @@ class DefaultModifiersCacheSpecification extends AnyPropSpec
   with Matchers {
 
   private class FakeModifier extends PersistentNodeViewModifier {
-    override def parentId: scorex.util.ModifierId = ???
+    override def parentId: sparkz.util.ModifierId = ???
     override val modifierTypeId: ModifierTypeId = ModifierTypeId @@ (0: Byte)
-    override def id: scorex.util.ModifierId = ???
+    override def id: sparkz.util.ModifierId = ???
     override type M = this.type
     override def serializer: SparkzSerializer[FakeModifier.this.type] = ???
   }
@@ -31,9 +31,9 @@ class DefaultModifiersCacheSpecification extends AnyPropSpec
   private class FakeHr extends HistoryReader[FakeModifier, FakeSyncInfo] {
     override def isEmpty: Boolean = ???
     override def applicableTry(modifier: FakeModifier): Try[Unit] = ???
-    override def modifierById(modifierId: scorex.util.ModifierId): Option[FakeModifier] = ???
-    override def isSemanticallyValid(modifierId: scorex.util.ModifierId): ModifierSemanticValidity = ???
-    override def openSurfaceIds(): Seq[scorex.util.ModifierId] = ???
+    override def modifierById(modifierId: sparkz.util.ModifierId): Option[FakeModifier] = ???
+    override def isSemanticallyValid(modifierId: sparkz.util.ModifierId): ModifierSemanticValidity = ???
+    override def openSurfaceIds(): Seq[sparkz.util.ModifierId] = ???
     override def continuationIds(info: FakeSyncInfo, size: Int): ModifierIds = ???
     override def syncInfo: FakeSyncInfo = ???
     override def compare(other: FakeSyncInfo): History.HistoryComparisonResult = ???
@@ -100,5 +100,51 @@ class DefaultModifiersCacheSpecification extends AnyPropSpec
     cache.cleanOverfull().length shouldBe 1
     cache.contains(v2) shouldBe false
     cache.size shouldBe limit
+  }
+
+  property("Cache can clear the right amount of elements based on its limit") {
+    val limit = 10
+    val cache = new DefaultModifiersCache[FakeModifier, FakeHr](limit)
+    val elementsToStore = 200
+    for (index <- 1 to elementsToStore) {
+      cache.put(bytesToId(Blake2b256.hash(index.toString)), new FakeModifier)
+    }
+
+    cache.size shouldBe elementsToStore
+
+    val cleared = cache.cleanOverfull()
+
+    cleared.size shouldBe (elementsToStore - limit)
+    cache.size shouldBe limit
+  }
+
+  property("Cache can clear the right amount of elements after performing elements removal") {
+    val limit = 10
+    val cache = new DefaultModifiersCache[FakeModifier, FakeHr](limit)
+    val blocksNumber = 200
+    for (index <- 1 to blocksNumber) {
+      cache.put(bytesToId(Blake2b256.hash(index.toString)), new FakeModifier)
+    }
+    var expectedCacheSize = blocksNumber
+    cache.size shouldBe expectedCacheSize
+
+    for (index <- 1 to blocksNumber) {
+      cache.put(bytesToId(Blake2b256.hash(s"$index.$index")), new FakeModifier)
+    }
+
+    expectedCacheSize += blocksNumber
+    cache.size shouldBe expectedCacheSize
+
+    for (index <- 1 to 10) {
+      cache.remove(bytesToId(Blake2b256.hash(index.toString)))
+    }
+    expectedCacheSize -= 10
+    cache.size shouldBe expectedCacheSize
+
+    val cleared = cache.cleanOverfull()
+
+    cleared.size shouldBe (expectedCacheSize - limit)
+    expectedCacheSize = limit
+    cache.size shouldBe expectedCacheSize
   }
 }

@@ -8,7 +8,7 @@ import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import sparkz.core.network.message.Message
 import sparkz.core.utils.NetworkTimeProviderSettings
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 import scala.concurrent.duration._
 
@@ -22,11 +22,9 @@ case class NetworkSettings(nodeName: String,
                            localOnly: Boolean,
                            knownPeers: Seq[InetSocketAddress],
                            bindAddress: InetSocketAddress,
-                           maxConnections: Int,
+                           maxIncomingConnections: Int,
+                           maxOutgoingConnections: Int,
                            connectionTimeout: FiniteDuration,
-                           upnpEnabled: Boolean,
-                           upnpGatewayTimeout: Option[FiniteDuration],
-                           upnpDiscoverTimeout: Option[FiniteDuration],
                            declaredAddress: Option[InetSocketAddress],
                            handshakeTimeout: FiniteDuration,
                            deliveryTimeout: FiniteDuration,
@@ -35,7 +33,7 @@ case class NetworkSettings(nodeName: String,
                            maxRequestedPerPeer: Int,
                            appVersion: String,
                            agentName: String,
-                           maxPacketSize: Int,
+                           maxModifiersSpecMessageSize: Int,
                            maxHandshakeSize: Int,
                            maxInvObjects: Int,
                            desiredInvObjects: Int,
@@ -51,7 +49,8 @@ case class NetworkSettings(nodeName: String,
                            messageLengthBytesLimit: Int,
                            getPeersInterval: FiniteDuration,
                            maxPeerSpecObjects: Int,
-                           storedPeersLimit: Int,
+                           storageBackupInterval: FiniteDuration,
+                           storageBackupDelay: FiniteDuration,
                            temporalBanDuration: FiniteDuration,
                            penaltySafeInterval: FiniteDuration,
                            penaltyScoreThreshold: Int)
@@ -63,7 +62,7 @@ case class SparkzSettings(dataDir: File,
                           ntp: NetworkTimeProviderSettings)
 
 
-object SparkzSettings extends ScorexLogging with SettingsReaders {
+object SparkzSettings extends SparkzLogging with SettingsReaders {
 
   protected val configPath: String = "sparkz"
 

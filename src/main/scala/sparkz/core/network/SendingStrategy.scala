@@ -1,15 +1,16 @@
 package sparkz.core.network
 
-import scala.util.Random
+import java.security.SecureRandom
 
 trait SendingStrategy {
+  val secureRandom = new SecureRandom()
   def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer]
 }
 
 object SendToRandom extends SendingStrategy {
   override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = {
     if (peers.nonEmpty) {
-      Seq(peers(Random.nextInt(peers.length)))
+      Seq(peers(secureRandom.nextInt(peers.length)))
     } else {
       Seq.empty
     }
@@ -35,5 +36,5 @@ case class SendToPeers(chosenPeers: Seq[ConnectedPeer]) extends SendingStrategy 
 
 case class SendToRandomFromChosen(chosenPeers: Seq[ConnectedPeer]) extends SendingStrategy {
   override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] =
-    Seq(chosenPeers(Random.nextInt(chosenPeers.length)))
+    Seq(chosenPeers(secureRandom.nextInt(chosenPeers.length)))
 }

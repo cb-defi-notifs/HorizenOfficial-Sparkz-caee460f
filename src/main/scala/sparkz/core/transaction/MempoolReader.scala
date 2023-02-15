@@ -2,7 +2,7 @@ package sparkz.core.transaction
 
 import sparkz.core.consensus.ContainsModifiers
 import sparkz.core.NodeViewComponent
-import scorex.util.ModifierId
+import sparkz.util.ModifierId
 import sparkz.core.NodeViewComponent
 
 /**

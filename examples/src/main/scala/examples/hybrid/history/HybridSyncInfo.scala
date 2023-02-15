@@ -5,8 +5,8 @@ import sparkz.core.consensus.SyncInfo
 import sparkz.core.network.message.SyncInfoMessageSpec
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-import scorex.util.serialization.{Reader, Writer}
-import scorex.util.{ModifierId, bytesToId, idToBytes}
+import sparkz.util.serialization.{Reader, Writer}
+import sparkz.util.{ModifierId, bytesToId, idToBytes}
 
 /**
   * Stores up to 50 last PoW & Pos blocks

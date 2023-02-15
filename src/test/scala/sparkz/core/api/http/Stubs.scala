@@ -1,11 +1,12 @@
 package sparkz.core.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import sparkz.core.app.Version
+import sparkz.core.network.NetworkController.ReceivableMessages.GetConnectedPeers
 import sparkz.core.network.peer.PeerInfo
 import sparkz.core.network._
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.GetPeer
 
 trait Stubs {
 
@@ -24,12 +25,19 @@ trait Stubs {
     inetAddr2 -> PeerInfo(PeerSpec("app", version, "second", Some(inetAddr2), peerFeatures), ts1, Some(Outgoing))
   )
 
-   val protocolVersion: Version = Version("1.1.1")
+  def createPeerOption(address: InetSocketAddress): Option[PeerInfo] =
+    Some(
+      PeerInfo(PeerSpec("app", version, "first", Some(address), peerFeatures), ts1, Some(Incoming))
+    )
+
+  val protocolVersion: Version = Version("1.1.1")
 
   val connectedPeers: Seq[Handshake] = Seq(
     Handshake(PeerSpec("node_pop", protocolVersion, "first", Some(inetAddr1), peerFeatures), ts1),
     Handshake(PeerSpec("node_pop", protocolVersion, "second", Some(inetAddr2), peerFeatures), ts2)
   )
+
+  val emptyPeers: Seq[ConnectedPeer] = Seq()
 
   val blacklistedPeers: Seq[InetAddress] = Seq(InetAddress.getByName("4.4.4.4"), InetAddress.getByName("8.8.8.8"))
 
@@ -37,9 +45,10 @@ trait Stubs {
 
     import sparkz.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
 
-    def receive = {
-      //      case GetConnectedPeers => sender() ! connectedPeers
+    def receive: PartialFunction[Any, Unit] = {
+      // case GetConnectedPeers => sender() ! connectedPeers
       case GetAllPeers => sender() ! peers
+      case GetPeer(address) => sender() ! createPeerOption(address)
       case GetBlacklistedPeers => sender() ! blacklistedPeers
     }
   }
@@ -53,7 +62,8 @@ trait Stubs {
   }
 
   class NetworkControllerStub extends Actor {
-    def receive = {
+    def receive: PartialFunction[Any, Unit] = {
+      case GetConnectedPeers => sender() ! emptyPeers
       case _ => ()
     }
   }

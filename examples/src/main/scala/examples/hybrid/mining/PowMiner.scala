@@ -10,9 +10,9 @@ import examples.hybrid.wallet.HBoxWallet
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.block.Block.BlockId
 import sparkz.core.transaction.box.proposition.PublicKey25519Proposition
-import sparkz.core.utils.SparkzEncoding
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.util.SparkzEncoding
+import sparkz.crypto.hash.Blake2b256
+import sparkz.util.{ModifierId, SparkzLogging}
 
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -23,8 +23,10 @@ import scala.util.Random
   * currently it is starting to work on getting a (PoW; PoS) block references
   * and stops on a new PoW block found (when PoS ref is unknown)
   */
+
+@SuppressWarnings(Array("org.wartremover.warts.JavaSerializable"))
 class PowMiner(viewHolderRef: ActorRef, settings: HybridMiningSettings)(implicit ec: ExecutionContext)
-  extends Actor with ScorexLogging with SparkzEncoding {
+  extends Actor with SparkzLogging with SparkzEncoding {
 
   import PowMiner.ReceivableMessages._
   import PowMiner._

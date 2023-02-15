@@ -5,7 +5,7 @@ import akka.testkit.TestProbe
 import examples.commons.SimpleBoxTransactionMemPool
 import examples.hybrid.HybridNodeViewHolder
 import examples.hybrid.wallet.HBoxWallet
-import io.iohk.iodb.ByteArrayWrapper
+import examples.persistence.ByteArrayWrapper
 import sparkz.core._
 import sparkz.core.utils.NetworkTimeProvider
 

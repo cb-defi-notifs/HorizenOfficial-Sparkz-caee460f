@@ -8,9 +8,6 @@ import scala.util.{Failure, Success, Try}
 
 package object utils {
 
-  @deprecated("Use scorex.util.ScorexLogging instead.", "scorex-util 0.1.0")
-  type ScorexLogging = scorex.util.ScorexLogging
-
   /**
     * @param block - function to profile
     * @return - execution time in seconds and function result
@@ -22,9 +19,10 @@ package object utils {
     ((t1 - t0).toFloat / 1000000000, result)
   }
 
-  def toTry(b: Boolean, msg: String): Try[Unit] = b match {
-    case true => Success(Unit)
-    case false => Failure(new Exception(msg))
+  def toTry(b: Boolean, msg: String): Try[Unit] = if (b) {
+    Success(())
+  } else {
+    Failure(new Exception(msg))
   }
 
   @tailrec
@@ -47,7 +45,7 @@ package object utils {
     r
   }
 
-  def concatBytes(seq: Traversable[Array[Byte]]): Array[Byte] = {
+  def concatBytes(seq: Iterable[Array[Byte]]): Array[Byte] = {
     val length: Int = seq.map(_.length).sum
     val result: Array[Byte] = new Array[Byte](length)
     var pos: Int = 0
@@ -58,13 +56,13 @@ package object utils {
     result
   }
 
-  def concatFixLengthBytes(seq: Traversable[Array[Byte]]): Array[Byte] = seq.headOption match {
+  def concatFixLengthBytes(seq: Iterable[Array[Byte]]): Array[Byte] = seq.headOption match {
     case None => Array[Byte]()
     case Some(head) => concatFixLengthBytes(seq, head.length)
   }
 
 
-  def concatFixLengthBytes(seq: Traversable[Array[Byte]], length: Int): Array[Byte] = {
+  def concatFixLengthBytes(seq: Iterable[Array[Byte]], length: Int): Array[Byte] = {
     val result: Array[Byte] = new Array[Byte](seq.toSeq.length * length)
     var index = 0
     seq.foreach { s =>

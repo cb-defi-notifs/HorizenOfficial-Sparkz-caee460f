@@ -61,7 +61,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
     if ( git branch -r --contains "${TRAVIS_TAG}" | grep -xqE ". origin\/${PROD_RELEASE_BRANCH}$" ); then
       # Checking if package version matches PROD release version
       if ! [[ "${package_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-RC[0-9]+)?$ ]]; then
-        echo "Aborting, package version is in the wrong format."
+        echo "Aborting, package version is in the wrong format for production release."
         exit 1
       fi
 
@@ -81,7 +81,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
     else
       # Checking if package version matches DEV release version
       if ! [[ "${package_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-RC[0-9]+)?(-SNAPSHOT){1}$ ]]; then
-        echo "Aborting, package version is in the wrong format."
+        echo "Aborting, package version is in the wrong format for development release."
         exit 1
       fi
 

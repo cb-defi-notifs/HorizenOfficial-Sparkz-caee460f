@@ -10,14 +10,14 @@ import sparkz.core.consensus.ModifierSemanticValidity.Valid
 import sparkz.core.transaction.Transaction
 import sparkz.testkit.TestkitHelpers
 import sparkz.testkit.generators.SyntacticallyTargetedModifierProducer
-import scorex.util.ScorexLogging
+import sparkz.util.SparkzLogging
 
 
 trait HistoryTests[TX <: Transaction, PM <: PersistentNodeViewModifier, SI <: SyncInfo, HT <: History[PM, SI, HT]]
   extends AnyPropSpec
     with ScalaCheckPropertyChecks
     with Matchers
-    with ScorexLogging
+    with SparkzLogging
     with TestkitHelpers
     with SyntacticallyTargetedModifierProducer[PM, SI, HT] {
 
