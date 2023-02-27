@@ -2,7 +2,7 @@ package sparkz.core.api.http
 
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, Credentials}
 import akka.http.scaladsl.server.{AuthorizationFailedRejection, Directive0}
-import org.mindrot.jbcrypt.BCrypt
+import at.favre.lib.crypto.bcrypt.BCrypt
 import sparkz.core.settings.RESTApiSettings
 import sparkz.util.SparkzEncoding
 import sparkz.crypto.hash.Blake2b256
@@ -41,7 +41,7 @@ trait ApiDirectives extends CorsHandler with SparkzEncoding {
         if (apiKeyHash.equals(""))
           false
         else
-          BCrypt.checkpw(apiKey, apiKeyHash)
+          BCrypt.verifyer().verify(apiKey.toCharArray, apiKeyHash).verified
       case None => false
     }
   }
