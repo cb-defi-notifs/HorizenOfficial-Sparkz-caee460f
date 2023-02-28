@@ -522,7 +522,7 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     peerManagerProbe.expectMsg(RandomPeerForConnectionExcluding(Seq()))
     peerManagerProbe.reply(Some(getPeerInfo(peerAddressOne)))
     // Wait for the message to be received
-    Thread.sleep(1)
+    Thread.sleep(2)
 
     // Second attempt, discarding the peer we tried just before
     networkControllerRef ! ConnectionToPeer(emptyActiveConnections, emptyUnconfirmedConnections)

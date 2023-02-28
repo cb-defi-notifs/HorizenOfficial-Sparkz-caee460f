@@ -1,3 +1,7 @@
+2.0.0-RC11
+---------
+* Changed library for the Bcrypt hashing algorithm and added additional unit tests
+
 2.0.0-RC10
 ---------
 * UPnP module removed

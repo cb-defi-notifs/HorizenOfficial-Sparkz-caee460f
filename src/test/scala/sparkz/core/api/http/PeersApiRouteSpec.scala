@@ -5,9 +5,9 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit.{TestDuration, TestProbe}
+import at.favre.lib.crypto.bcrypt.BCrypt
 import io.circe.Json
 import io.circe.syntax._
-import org.mindrot.jbcrypt.BCrypt
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.api.http.PeersApiRoute.PeerInfoResponse
@@ -38,7 +38,9 @@ class PeersApiRouteSpec extends AnyFlatSpec
   private val body = HttpEntity("localhost:8080".asJson.toString).withContentType(ContentTypes.`application/json`)
   private val badBody = HttpEntity("badBodyContent".asJson.toString).withContentType(ContentTypes.`application/json`)
 
-  private val restApiSettingsWithApiKey = RESTApiSettings(addr, Some(BCrypt.hashpw(credentials.password(), BCrypt.gensalt())), None, 10 seconds)
+  //Algorithm cost, higher is the number, higher is the round in the algorithm and the time to hash/verify the password
+  private val bcryptCostAlgorithm = 12
+  private val restApiSettingsWithApiKey = RESTApiSettings(addr, Some(BCrypt.`with`(BCrypt.Version.VERSION_2Y).hashToString(bcryptCostAlgorithm, credentials.password().toCharArray)), None, 10 seconds)
   private val routes = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettings).route
   private val routesWithApiKey = PeersApiRoute(pmRef, networkControllerRef, timeProvider, restApiSettingsWithApiKey).route
 
@@ -59,6 +61,40 @@ class PeersApiRouteSpec extends AnyFlatSpec
       "lastSeen" -> handshake.time.asJson
     ).asJson
   }.asJson
+
+  it should "verify the Bcrypt hash" in {
+    // Test with the $a$ version
+    val password = "1234"
+    var bcryptHashString = BCrypt.withDefaults().hashToString(bcryptCostAlgorithm, password.toCharArray())
+    // $2a$12$US00g/uMhoSBm.HiuieBjeMtoN69SN.GE25fCpldebzkryUyopws6
+    var result = BCrypt.verifyer().verify(password.toCharArray(), bcryptHashString)
+    result.verified shouldBe true
+
+    //Test the same password with the newest version $y$
+    bcryptHashString = BCrypt.`with`(BCrypt.Version.VERSION_2Y).hashToString(bcryptCostAlgorithm, password.toCharArray)
+    result = BCrypt.verifyer().verify(password.toCharArray(), bcryptHashString)
+    result.verified shouldBe true
+  }
+
+  it should "not throw an exception in Bcrypt hash" in {
+    //Test verify with empty password
+    val password = "1234"
+    var bcryptHashString = BCrypt.withDefaults().hashToString(bcryptCostAlgorithm, password.toCharArray())
+    var result = BCrypt.verifyer().verify("".toCharArray(), bcryptHashString)
+    result.verified shouldBe false
+
+    //Test verify with dummy password hash
+    result = BCrypt.verifyer().verify(password.toCharArray(), "Horizen")
+    result.verified shouldBe false
+
+    //Test verify with NON UTF8 password
+    result = BCrypt.verifyer().verify("�����".toCharArray(), bcryptHashString)
+    result.verified shouldBe false
+
+    //Test verify with NON UTF8 password hash
+    result = BCrypt.verifyer().verify(password.toCharArray(), "�����")
+    result.verified shouldBe false
+  }
 
   it should "get all peers" in {
     Get(prefix + "/all") ~> routes ~> check {

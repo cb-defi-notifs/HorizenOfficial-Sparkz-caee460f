@@ -25,7 +25,7 @@ lazy val commonSettings = Seq(
     Wart.OptionPartial),
   organization := "io.horizen",
   organizationName := "Zen Blockchain Foundation",
-  version := "2.0.0-RC10",
+  version := "2.0.0-RC11",
   licenses := Seq("CC0" -> url("https://creativecommons.org/publicdomain/zero/1.0/legalcode")),
   homepage := Some(url("https://github.com/HorizenOfficial/Sparkz")),
   pomExtra :=
@@ -85,7 +85,7 @@ val testingDependencies = Seq(
 libraryDependencies ++= Seq(
   "com.iheart" %% "ficus" % "1.5.2",
   "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1",
-  "org.mindrot" % "jbcrypt" % "0.4"
+  "at.favre.lib" % "bcrypt" % "0.10.2"
 ) ++ networkDependencies ++ apiDependencies ++ loggingDependencies ++ testingDependencies
 
 
