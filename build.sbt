@@ -85,7 +85,7 @@ val testingDependencies = Seq(
 libraryDependencies ++= Seq(
   "com.iheart" %% "ficus" % "1.5.2",
   "org.scala-lang.modules" %% "scala-collection-compat" % "2.8.1",
-  "org.mindrot" % "jbcrypt" % "0.4"
+  "at.favre.lib" % "bcrypt" % "0.10.2"
 ) ++ networkDependencies ++ apiDependencies ++ loggingDependencies ++ testingDependencies
 
 
