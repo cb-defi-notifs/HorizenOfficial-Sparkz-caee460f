@@ -534,13 +534,17 @@ class NetworkController(settings: NetworkSettings,
     }
   }
 
-  private def closeConnection(peerAddress: InetSocketAddress): Unit =
-    connections.get(peerAddress).foreach { peer =>
-      connections = connections.filterNot { case (address, _) => // clear all connections related to banned peer ip
-        Option(peer.connectionId.remoteAddress.getAddress).exists(Option(address.getAddress).contains(_))
-      }
-      peer.handlerRef ! CloseConnection
+  private def closeConnection(peerAddress: InetSocketAddress): Unit = {
+    connections = connections.filter { case (_, connectedPeer) =>
+      Option(connectedPeer)
+        .filter(_.connectionId.remoteAddress.equals(peerAddress))
+        .map { peer =>
+          peer.handlerRef ! CloseConnection
+          context.system.eventStream.publish(DisconnectedPeer(peerAddress))
+        }
+        .isEmpty
     }
+  }
 
   /**
     * Register a new penalty for given peer address.
