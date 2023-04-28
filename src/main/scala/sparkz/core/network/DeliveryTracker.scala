@@ -38,6 +38,8 @@ class DeliveryTracker(system: ActorSystem,
                       deliveryTimeout: FiniteDuration,
                       maxDeliveryChecks: Int,
                       maxRequestedPerPeer: Int,
+                      slowModeFeatureFlag: Boolean,
+                      slowModeThreshold: Int,
                       nvsRef: ActorRef) extends SparkzLogging with SparkzEncoding {
 
   protected case class RequestedInfo(peer: ConnectedPeer, cancellable: Cancellable, checks: Int)
@@ -53,6 +55,8 @@ class DeliveryTracker(system: ActorSystem,
 
   // when our node received a modifier we put it to `received`
   protected val received: mutable.Map[ModifierId, ConnectedPeer] = mutable.Map()
+
+  var slowMode: Boolean = false
 
   /**
     * @return status of modifier `id`.
@@ -102,6 +106,15 @@ class DeliveryTracker(system: ActorSystem,
         case Some(RequestedInfo(peer,_,_)) if supplier.connectionId == peer.connectionId => //we already had this modifier, it is counted
         case Some(RequestedInfo(peer,_,_)) => decrementPeerLimitCounter(peer); incrementPeerLimitCounter(supplier)
         case None => incrementPeerLimitCounter(supplier)
+      }
+      if (slowModeFeatureFlag) {
+        if (requested.size > slowModeThreshold) {
+          slowMode = true
+          logger.warn("SLOW MODE ENGAGED. TRANSACTION WILL BE REJECTED ON P2P LAYER!")
+        } else {
+          slowMode = false
+          logger.warn("SLOW MODE DISABLED. TRANSACTION WILL BE SYNCED ON P2P LAYER!")
+        }
       }
     }
 
