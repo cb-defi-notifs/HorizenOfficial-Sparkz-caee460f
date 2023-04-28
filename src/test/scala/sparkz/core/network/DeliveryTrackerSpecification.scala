@@ -159,7 +159,7 @@ class DeliveryTrackerSpecification extends AnyPropSpec
     val probe = TestProbe("p")(system)
     implicit val nvsStub: ActorRef = probe.testActor
     val dt = FiniteDuration(3, MINUTES)
-    new DeliveryTracker(system, deliveryTimeout = dt, maxDeliveryChecks = 2, maxRequestedPerPeer = 3, nvsStub)
+    new DeliveryTracker(system, deliveryTimeout = dt, maxDeliveryChecks = 2, maxRequestedPerPeer = 3, false, 0, nvsStub)
   }
 
 }
