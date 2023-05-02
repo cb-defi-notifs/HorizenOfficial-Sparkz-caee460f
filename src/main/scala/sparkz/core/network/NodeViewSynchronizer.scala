@@ -58,7 +58,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
   protected val maxDeliveryChecks: Int = networkSettings.maxDeliveryChecks
   protected val maxRequestedPerPeer: Int = networkSettings.maxRequestedPerPeer
   protected val slowModeFeatureFlag: Boolean = networkSettings.slowModeFeatureFlag
-  protected val slowModeFeatureFlag: Boolean = networkSettings.slowModeThreshold
+  protected val slowModeThreshold: Int = networkSettings.slowModeThreshold
   protected val invSpec = new InvSpec(networkSettings.maxInvObjects)
   protected val requestModifierSpec = new RequestModifierSpec(networkSettings.maxInvObjects)
   protected val modifiersSpec = new ModifiersSpec(networkSettings.maxModifiersSpecMessageSize)
