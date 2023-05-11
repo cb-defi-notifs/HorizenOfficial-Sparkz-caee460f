@@ -3,8 +3,10 @@ package sparkz.core.network
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, TransactionsFromRemote}
-import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs}
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, ChangedMempool, FailedTransaction, SuccessfulTransaction}
 import sparkz.core.network.message._
+import sparkz.core.network.peer.PenaltyType
 import sparkz.core.network.peer.PenaltyType.MisbehaviorPenalty
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.SparkzSettings
@@ -23,10 +25,14 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
   private val modifiersSpec = new ModifiersSpec(1024 * 1024)
+  private val requestModifierSpec = new RequestModifierSpec(settings.network.maxInvObjects)
+  private val invSpec = new InvSpec(settings.network.maxInvObjects)
   private val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(settings)
-  private val peer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), TestProbe().ref, 0L, None)
-
-  private val messageSerializer = new MessageSerializer(Seq(modifiersSpec), settings.network.magicBytes, settings.network.messageLengthBytesLimit)
+  private val peerProbe = TestProbe()
+  private val peer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), peerProbe.ref, 0L, None)
+  private val messageSerializer = new MessageSerializer(Seq(modifiersSpec, invSpec, requestModifierSpec),
+                                                        settings.network.magicBytes,
+                                                        settings.network.messageLengthBytesLimit)
 
 
   "NodeViewSynchronizer" should "not penalize peer for sending valid modifiers" in {
@@ -45,6 +51,203 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     synchronizer ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Map(transaction.id -> txBytes))), Some(peer)))
     viewHolder.expectMsg(TransactionsFromRemote(Seq(transaction)))
     networkController.expectMsg(PenalizePeer(peer.connectionId.remoteAddress, MisbehaviorPenalty))
+  }
+
+  it should "request transactions if syncTransactionsEnabled is true" in {
+
+    val networkSettings = settings.copy(
+        network = settings.network.copy(
+          syncTransactionsEnabled = true
+        )
+    )
+    val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
+    setupHistoryAndMempoolReaders(synchronizer)
+
+    val transaction = TestTransaction(1, 1)
+    val invMsg = Message(invSpec, Right(InvData(Transaction.ModifierTypeId, Seq(transaction.id ))), Some(peer))
+
+    synchronizer ! roundTrip(invMsg)
+
+    viewHolder.expectNoMessage()
+    networkController.expectNoMessage()
+    peerProbe.receiveOne(0.seconds) match {
+      case Message(mod: MessageSpec[_], data: Right[Array[Byte], InvData], _) =>
+        assert(mod.messageCode == RequestModifierSpec.MessageCode)
+        assert(data == Right(InvData(Transaction.ModifierTypeId, Vector(transaction.id))))
+      case _ => fail("Wrong message received by peer connection handler")
+    }
+  }
+
+  it should "not request transactions if syncTransactionsEnabled is false" in {
+
+    val networkSettings = settings.copy(
+      network = settings.network.copy(
+        syncTransactionsEnabled = false
+      )
+    )
+    val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
+
+    setupHistoryAndMempoolReaders(synchronizer)
+
+    val transaction = TestTransaction(1, 1)
+    val invMsg = Message(invSpec, Right(InvData(Transaction.ModifierTypeId, Seq(transaction.id))), Some(peer))
+
+    synchronizer ! roundTrip(invMsg)
+    viewHolder.expectNoMessage()
+    networkController.expectNoMessage()
+    peerProbe.expectNoMessage()
+  }
+
+
+  it should "return transactions if syncTransactionsEnabled is true" in {
+
+    val networkSettings = settings.copy(
+      network = settings.network.copy(
+        syncTransactionsEnabled = true
+      )
+    )
+    val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
+    setupHistoryAndMempoolReaders(synchronizer)
+
+    val transaction = TestTransaction(1, 1)
+
+    val mempool = new TestMempool {
+      override def modifierById(modifierId: ModifierId): Option[TestTransaction] = None
+      override def getAll(ids: Seq[ModifierId]): Seq[TestTransaction] = Seq(transaction)
+    }
+
+    synchronizer ! ChangedMempool(mempool)
+
+    val invMsg = Message(requestModifierSpec, Right(InvData(Transaction.ModifierTypeId, Seq(transaction.id ))),  Some(peer))
+
+    synchronizer ! roundTrip(invMsg)
+
+    viewHolder.expectNoMessage()
+    networkController.expectNoMessage()
+    peerProbe.receiveOne(0.seconds) match {
+      case Message(mod: MessageSpec[_], _: Either[Array[Byte], ModifiersData], _) =>
+        assert(mod.messageCode == ModifiersSpec.MessageCode)
+      case p => fail(s"Wrong message received by peer connection handler $p")
+    }
+  }
+
+  it should "not return transactions if syncTransactionsEnabled is false" in {
+
+    val networkSettings = settings.copy(
+      network = settings.network.copy(
+        syncTransactionsEnabled = false
+      )
+    )
+    val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
+    setupHistoryAndMempoolReaders(synchronizer)
+
+    val transaction = TestTransaction(1, 1)
+
+    val mempool = new TestMempool {
+      override def modifierById(modifierId: ModifierId): Option[TestTransaction] = None
+      override def getAll(ids: Seq[ModifierId]): Seq[TestTransaction] = Seq(transaction)
+    }
+
+    synchronizer ! ChangedMempool(mempool)
+
+    val invMsg = Message(requestModifierSpec, Right(InvData(Transaction.ModifierTypeId, Seq(transaction.id))), Some(peer))
+
+    synchronizer ! roundTrip(invMsg)
+
+    viewHolder.expectNoMessage()
+    networkController.expectNoMessage()
+    peerProbe.expectNoMessage()
+  }
+
+  it should "broadcast transactions when SuccessfulTransaction if syncTransactionsEnabled is true" in {
+
+    val networkSettings = settings.copy(
+      network = settings.network.copy(
+        syncTransactionsEnabled = true
+      )
+    )
+    val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
+
+    val transaction = TestTransaction(1, 1)
+    synchronizer ! SuccessfulTransaction(transaction)
+
+    viewHolder.expectNoMessage()
+    peerProbe.expectNoMessage()
+    networkController.receiveOne(0.seconds) match {
+
+      case SendToNetwork(msg: Message[_],  _: SendingStrategy) =>
+        assert(msg.spec.messageCode == InvSpec.MessageCode)
+        assert(msg.data == Success(InvData(Transaction.ModifierTypeId, Seq(transaction.id))))
+      case p => fail(s"Wrong message received by peer connection handler: $p")
+    }
+
+  }
+
+  it should "not broadcast transactions  when SuccessfulTransaction if syncTransactionsEnabled is false" in {
+
+    val networkSettings = settings.copy(
+      network = settings.network.copy(
+        syncTransactionsEnabled = false
+      )
+    )
+    val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
+
+    val transaction = TestTransaction(1, 1)
+    synchronizer ! SuccessfulTransaction(transaction)
+
+    viewHolder.expectNoMessage()
+    peerProbe.expectNoMessage()
+    networkController.expectNoMessage()
+  }
+
+  it should "penalize peer when FailedTransaction if syncTransactionsEnabled is true" in {
+
+    val networkSettings = settings.copy(
+      network = settings.network.copy(
+        syncTransactionsEnabled = true
+      )
+    )
+    val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
+
+    val transaction = TestTransaction(1, 1)
+    synchronizer ! FailedTransaction(transaction.id, new Exception(), true)
+
+    viewHolder.expectNoMessage()
+    peerProbe.expectNoMessage()
+    networkController.receiveOne(0.seconds) match {
+      case PenalizePeer(remoteAddress: InetSocketAddress, penalty: PenaltyType) =>
+        assert(remoteAddress == peer.connectionId.remoteAddress)
+        assert(penalty == PenaltyType.MisbehaviorPenalty)
+      case p => fail(s"Wrong message received by peer connection handler $p")
+    }
+  }
+
+  it should "not penalize peer when FailedTransaction if syncTransactionsEnabled is false" in {
+
+      val networkSettings = settings.copy(
+        network = settings.network.copy(
+          syncTransactionsEnabled = false
+        )
+      )
+      val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
+
+      val transaction = TestTransaction(1, 1)
+      synchronizer ! FailedTransaction(transaction.id, new Exception(), true)
+
+      viewHolder.expectNoMessage()
+      peerProbe.expectNoMessage()
+      networkController.expectNoMessage()
+    }
+
+  def setupHistoryAndMempoolReaders(synchronizer: ActorRef): Unit = {
+    val history = new TestHistory
+    val mempool = new TestMempool {
+      override def modifierById(modifierId: ModifierId): Option[TestTransaction] = None
+    }
+
+    synchronizer ! ChangedHistory(history)
+    synchronizer ! ChangedMempool(mempool)
+
   }
 
   def roundTrip(msg: Message[_]): Message[_] = {
@@ -66,9 +269,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
       Map(Transaction.ModifierTypeId -> TestTransactionSerializer)
 
     val nodeViewSynchronizerRef = actorSystem.actorOf(Props(
-      new NodeViewSynchronizer
-        [
-          TestTransaction,
+      new NodeViewSynchronizer[TestTransaction,
           TestSyncInfo,
           TestSyncInfoMessageSpec.type,
           TestModifier,
@@ -85,6 +286,8 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
       ) {
         override val deliveryTracker: DeliveryTracker = new DeliveryTracker(context.system, settings.network, self) {
           override def status(modifierId: ModifierId): ModifiersStatus = ModifiersStatus.Requested
+          override private[network] def clearStatusForModifier(id: ModifierId, oldStatus: ModifiersStatus): Unit = {}
+          override def setInvalid(modifierId: ModifierId): Option[ConnectedPeer] = Some(peer)
         }
       }
     ))
