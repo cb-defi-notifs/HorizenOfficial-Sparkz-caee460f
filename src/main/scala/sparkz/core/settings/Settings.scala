@@ -58,7 +58,7 @@ case class NetworkSettings(nodeName: String,
                            temporalBanDuration: FiniteDuration,
                            penaltySafeInterval: FiniteDuration,
                            penaltyScoreThreshold: Int,
-                           syncTransactionsEnabled: Boolean)
+                           handlingTransactionsEnabled: Boolean)
 
 case class SparkzSettings(dataDir: File,
                           logDir: File,

@@ -53,11 +53,11 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     networkController.expectMsg(PenalizePeer(peer.connectionId.remoteAddress, MisbehaviorPenalty))
   }
 
-  it should "request transactions if syncTransactionsEnabled is true" in {
+  it should "request transactions if handlingTransactionsEnabled is true" in {
 
     val networkSettings = settings.copy(
         network = settings.network.copy(
-          syncTransactionsEnabled = true
+          handlingTransactionsEnabled = true
         )
     )
     val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
@@ -71,18 +71,18 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     viewHolder.expectNoMessage()
     networkController.expectNoMessage()
     peerProbe.receiveOne(0.seconds) match {
-      case Message(mod: MessageSpec[_], data: Right[Array[Byte], InvData], _) =>
+      case Message(mod: MessageSpec[_], data: Right[_, _], _) =>
         assert(mod.messageCode == RequestModifierSpec.MessageCode)
         assert(data == Right(InvData(Transaction.ModifierTypeId, Vector(transaction.id))))
       case _ => fail("Wrong message received by peer connection handler")
     }
   }
 
-  it should "not request transactions if syncTransactionsEnabled is false" in {
+  it should "not request transactions if handlingTransactionsEnabled is false" in {
 
     val networkSettings = settings.copy(
       network = settings.network.copy(
-        syncTransactionsEnabled = false
+        handlingTransactionsEnabled = false
       )
     )
     val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
@@ -99,11 +99,11 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
   }
 
 
-  it should "return transactions if syncTransactionsEnabled is true" in {
+  it should "return transactions if handlingTransactionsEnabled is true" in {
 
     val networkSettings = settings.copy(
       network = settings.network.copy(
-        syncTransactionsEnabled = true
+        handlingTransactionsEnabled = true
       )
     )
     val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
@@ -125,17 +125,17 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     viewHolder.expectNoMessage()
     networkController.expectNoMessage()
     peerProbe.receiveOne(0.seconds) match {
-      case Message(mod: MessageSpec[_], _: Either[Array[Byte], ModifiersData], _) =>
+      case Message(mod: MessageSpec[_], _: Either[_, _], _) =>
         assert(mod.messageCode == ModifiersSpec.MessageCode)
       case p => fail(s"Wrong message received by peer connection handler $p")
     }
   }
 
-  it should "not return transactions if syncTransactionsEnabled is false" in {
+  it should "not return transactions if handlingTransactionsEnabled is false" in {
 
     val networkSettings = settings.copy(
       network = settings.network.copy(
-        syncTransactionsEnabled = false
+        handlingTransactionsEnabled = false
       )
     )
     val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
@@ -159,11 +159,11 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     peerProbe.expectNoMessage()
   }
 
-  it should "broadcast transactions when SuccessfulTransaction if syncTransactionsEnabled is true" in {
+  it should "broadcast transactions when SuccessfulTransaction if handlingTransactionsEnabled is true" in {
 
     val networkSettings = settings.copy(
       network = settings.network.copy(
-        syncTransactionsEnabled = true
+        handlingTransactionsEnabled = true
       )
     )
     val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
@@ -183,11 +183,11 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
 
   }
 
-  it should "not broadcast transactions  when SuccessfulTransaction if syncTransactionsEnabled is false" in {
+  it should "not broadcast transactions  when SuccessfulTransaction if handlingTransactionsEnabled is false" in {
 
     val networkSettings = settings.copy(
       network = settings.network.copy(
-        syncTransactionsEnabled = false
+        handlingTransactionsEnabled = false
       )
     )
     val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
@@ -200,11 +200,11 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     networkController.expectNoMessage()
   }
 
-  it should "penalize peer when FailedTransaction if syncTransactionsEnabled is true" in {
+  it should "penalize peer when FailedTransaction if handlingTransactionsEnabled is true" in {
 
     val networkSettings = settings.copy(
       network = settings.network.copy(
-        syncTransactionsEnabled = true
+        handlingTransactionsEnabled = true
       )
     )
     val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)
@@ -222,11 +222,11 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     }
   }
 
-  it should "not penalize peer when FailedTransaction if syncTransactionsEnabled is false" in {
+  it should "not penalize peer when FailedTransaction if handlingTransactionsEnabled is false" in {
 
       val networkSettings = settings.copy(
         network = settings.network.copy(
-          syncTransactionsEnabled = false
+          handlingTransactionsEnabled = false
         )
       )
       val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(networkSettings)

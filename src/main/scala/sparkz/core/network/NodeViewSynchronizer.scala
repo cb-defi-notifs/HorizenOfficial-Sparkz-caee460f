@@ -105,13 +105,13 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
   protected def viewHolderEvents: Receive = {
     case SuccessfulTransaction(tx) =>
-      if (networkSettings.syncTransactionsEnabled) {
+      if (networkSettings.handlingTransactionsEnabled) {
         deliveryTracker.setHeld(tx.id)
         broadcastModifierInv(tx)
       }
 
     case FailedTransaction(id, _, immediateFailure) =>
-      if (networkSettings.syncTransactionsEnabled) {
+      if (networkSettings.handlingTransactionsEnabled) {
         val senderOpt = deliveryTracker.setInvalid(id)
         // penalize sender only in case transaction was invalidated at first validation.
         if (immediateFailure) senderOpt.foreach(penalizeMisbehavingPeer)
@@ -229,7 +229,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         val modifierTypeId = invData.typeId
         val newModifierIds = (modifierTypeId match {
           case Transaction.ModifierTypeId =>
-            if (networkSettings.syncTransactionsEnabled)
+            if (networkSettings.handlingTransactionsEnabled)
               invData.ids.filter(mid => deliveryTracker.status(mid, mempool) == ModifiersStatus.Unknown)
             else
               Seq.empty
@@ -254,7 +254,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     readersOpt.foreach { readers =>
       val objs: Seq[NodeViewModifier] = invData.typeId match {
         case typeId: ModifierTypeId if typeId == Transaction.ModifierTypeId =>
-          if (networkSettings.syncTransactionsEnabled)
+          if (networkSettings.handlingTransactionsEnabled)
             readers._2.getAll(invData.ids)
           else
             Seq.empty
