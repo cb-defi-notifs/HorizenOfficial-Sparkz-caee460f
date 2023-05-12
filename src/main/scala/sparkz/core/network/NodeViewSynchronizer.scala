@@ -99,7 +99,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       case Transaction.ModifierTypeId if deliveryTracker.slowMode => // will not broadcast due to the high load
       case _ =>
         val msg = Message(invSpec, Right(InvData(m.modifierTypeId, Seq(m.id))), None)
-        networkControllerRef ! SendToNetwork(msg, Broadcast)
+	    if (m.modifierTypeId == Transaction.ModifierTypeId)
+	      networkControllerRef ! SendToNetwork(msg, BroadcastTransaction)
+	    else
+	      networkControllerRef ! SendToNetwork(msg, Broadcast)
     }
   }
 

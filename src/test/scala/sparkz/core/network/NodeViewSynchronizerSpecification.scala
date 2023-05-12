@@ -125,7 +125,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     viewHolder.expectNoMessage()
     networkController.expectNoMessage()
     peerProbe.receiveOne(0.seconds) match {
-      case Message(mod: MessageSpec[_], _: Either[_, _], _) =>
+      case Message(mod: MessageSpec[_], _: Either[_, ModifiersData], _) =>
         assert(mod.messageCode == ModifiersSpec.MessageCode)
       case p => fail(s"Wrong message received by peer connection handler $p")
     }
