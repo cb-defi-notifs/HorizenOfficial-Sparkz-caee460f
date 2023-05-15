@@ -8,6 +8,7 @@ import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import sparkz.util.{ModifierId, SparkzLogging}
 
+import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
@@ -39,7 +40,7 @@ class DeliveryTracker(system: ActorSystem,
                       maxDeliveryChecks: Int,
                       maxRequestedPerPeer: Int,
                       slowModeFeatureFlag: Boolean,
-                      slowModeThreshold: Int,
+                      slowModeThresholdMs: Long,
                       nvsRef: ActorRef) extends SparkzLogging with SparkzEncoding {
 
   protected case class RequestedInfo(peer: ConnectedPeer, cancellable: Cancellable, checks: Int)
@@ -54,8 +55,9 @@ class DeliveryTracker(system: ActorSystem,
   protected val invalid: mutable.HashSet[ModifierId] = mutable.HashSet()
 
   // when our node received a modifier we put it to `received`
-  protected val received: mutable.Map[ModifierId, ConnectedPeer] = mutable.Map()
+  protected val received: mutable.Map[ModifierId, (ConnectedPeer, Long)] = mutable.Map()
 
+  private var averageProcessingTimeMs: Long = 0
   var slowMode: Boolean = false
 
   /**
@@ -103,18 +105,9 @@ class DeliveryTracker(system: ActorSystem,
       require(isCorrectTransition(status(id), Requested), s"Illegal status transition: ${status(id)} -> Requested")
       val cancellable = system.scheduler.scheduleOnce(deliveryTimeout, nvsRef, CheckDelivery(supplier, typeId, id))
       requested.put(id, RequestedInfo(supplier, cancellable, checksDone)) match {
-        case Some(RequestedInfo(peer,_,_)) if supplier.connectionId == peer.connectionId => //we already had this modifier, it is counted
-        case Some(RequestedInfo(peer,_,_)) => decrementPeerLimitCounter(peer); incrementPeerLimitCounter(supplier)
+        case Some(RequestedInfo(peer, _, _)) if supplier.connectionId == peer.connectionId => //we already had this modifier, it is counted
+        case Some(RequestedInfo(peer, _, _)) => decrementPeerLimitCounter(peer); incrementPeerLimitCounter(supplier)
         case None => incrementPeerLimitCounter(supplier)
-      }
-      if (slowModeFeatureFlag) {
-        if (requested.size > slowModeThreshold) {
-          slowMode = true
-          logger.warn("SLOW MODE ENGAGED. TRANSACTION WILL BE REJECTED ON P2P LAYER!")
-        } else {
-          slowMode = false
-          logger.warn("SLOW MODE DISABLED. TRANSACTION WILL BE SYNCED ON P2P LAYER!")
-        }
       }
     }
 
@@ -140,6 +133,10 @@ class DeliveryTracker(system: ActorSystem,
               .map(decrementPeerLimitCounter)
           case Received =>
             received.remove(modifierId)
+              .collect { case (peer, timestamp) =>
+                updateProcessingTime(timestamp)
+                peer
+              }
           case _ =>
             None
         }
@@ -179,12 +176,12 @@ class DeliveryTracker(system: ActorSystem,
   def setReceived(id: ModifierId, sender: ConnectedPeer): Unit =
     tryWithLogging {
       val oldStatus: ModifiersStatus = status(id)
-      require(isCorrectTransition(oldStatus, Invalid), s"Illegal status transition: $oldStatus -> Received")
+      require(isCorrectTransition(oldStatus, Received), s"Illegal status transition: $oldStatus -> Received")
       if (oldStatus != Received) {
         requested(id).cancellable.cancel()
         requested.remove(id)
         decrementPeerLimitCounter(sender)
-        received.put(id, sender)
+        received.put(id, (sender, System.nanoTime()))
       }
     }
 
@@ -194,7 +191,7 @@ class DeliveryTracker(system: ActorSystem,
       case Requested =>
         requested.get(id).map(_.peer)
       case Received =>
-        received.get(id)
+        received.get(id).map(_._1)
       case _ =>
         None
     }
@@ -247,6 +244,7 @@ class DeliveryTracker(system: ActorSystem,
           .map(decrementPeerLimitCounter)
       case Received =>
         received.remove(id)
+          .foreach(peer_timestamp => updateProcessingTime(peer_timestamp._2))
       case _ =>
         ()
     }
@@ -263,4 +261,18 @@ class DeliveryTracker(system: ActorSystem,
         log.warn("Unexpected error", e)
         Failure(e)
     }
+
+  private def updateProcessingTime(startTime: Long): Unit = {
+    if (slowModeFeatureFlag) {
+      val elapsedMs: Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime)
+      averageProcessingTimeMs = (averageProcessingTimeMs * 0.9).toLong + (elapsedMs * 0.1).toLong
+      if (averageProcessingTimeMs > slowModeThresholdMs && !slowMode) {
+        slowMode = true
+        logger.warn("Slow mode enabled on P2P layer due to high load. Transactions won't be requested or broadcasted.")
+      } else if (averageProcessingTimeMs < slowModeThresholdMs && slowMode) {
+        slowMode = false
+        logger.warn("Slow mode disabled on P2P layer. Transactions will be requested or broadcasted.")
+      }
+    }
+  }
 }
