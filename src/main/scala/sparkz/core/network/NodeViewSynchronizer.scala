@@ -58,7 +58,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
   protected val maxDeliveryChecks: Int = networkSettings.maxDeliveryChecks
   protected val maxRequestedPerPeer: Int = networkSettings.maxRequestedPerPeer
   protected val slowModeFeatureFlag: Boolean = networkSettings.slowModeFeatureFlag
-  protected val slowModeThreshold: Int = networkSettings.slowModeThreshold
+  protected val slowModeThresholdMs: Long = networkSettings.slowModeThresholdMs
   protected val invSpec = new InvSpec(networkSettings.maxInvObjects)
   protected val requestModifierSpec = new RequestModifierSpec(networkSettings.maxInvObjects)
   protected val modifiersSpec = new ModifiersSpec(networkSettings.maxModifiersSpecMessageSize)
@@ -70,7 +70,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     case (_: ModifiersSpec, data: ModifiersData, remote) => modifiersFromRemote(data, remote)
   }
 
-  protected val deliveryTracker = new DeliveryTracker(context.system, deliveryTimeout, maxDeliveryChecks, maxRequestedPerPeer, slowModeFeatureFlag, slowModeThreshold, self)
+  protected val deliveryTracker = new DeliveryTracker(context.system, deliveryTimeout, maxDeliveryChecks, maxRequestedPerPeer, slowModeFeatureFlag, slowModeThresholdMs, self)
   protected val statusTracker = new SyncTracker(self, context, networkSettings, timeProvider)
 
   protected var historyReaderOpt: Option[HR] = None
@@ -284,6 +284,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       case Some(serializer: SparkzSerializer[TX]@unchecked) if typeId == Transaction.ModifierTypeId =>
         // parse all transactions and send them to node view holder
         val parsed: Iterable[TX] = parseModifiers(requestedModifiers, serializer, remote)
+        parsed.foreach(tx => deliveryTracker.setReceived(tx.id, remote))
         viewHolderRef ! TransactionsFromRemote(parsed)
 
       case Some(serializer: SparkzSerializer[PMOD]@unchecked) =>
