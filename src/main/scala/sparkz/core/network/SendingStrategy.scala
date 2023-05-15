@@ -27,7 +27,7 @@ case object Broadcast extends SendingStrategy {
 case object BroadcastTransaction extends SendingStrategy {
   override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = {
     peers.filter(p => p.peerInfo.flatMap{
-      info =>  info.peerSpec.features.collectFirst {case TransactionsDisabledPeerFeature() => true}}.isEmpty)
+      info =>  info.peerSpec.features.collectFirst {case f:TransactionsDisabledPeerFeature => true}}.isEmpty)
   }
 }
 

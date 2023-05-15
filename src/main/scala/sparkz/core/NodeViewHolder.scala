@@ -149,18 +149,22 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
   //todo: this method causes delays in a block processing as it removes transactions from mempool and checks
   //todo: validity of remaining transactions in a synchronous way. Do this job async!
   protected def updateMemPool(blocksRemoved: Seq[PMOD], blocksApplied: Seq[PMOD], memPool: MP, state: MS): MP = {
-    val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
+    if (sparksSettings.network.handlingTransactionsEnabled){
+      val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
 
-    val appliedTxs = blocksApplied.flatMap(extractTransactions)
+      val appliedTxs = blocksApplied.flatMap(extractTransactions)
 
-    memPool.putWithoutCheck(rolledBackTxs).filter { tx =>
-      !appliedTxs.exists(t => t.id == tx.id) && {
-        state match {
-          case v: TransactionValidation[TX @unchecked] => v.validate(tx).isSuccess
-          case _ => true
+      memPool.putWithoutCheck(rolledBackTxs).filter { tx =>
+        !appliedTxs.exists(t => t.id == tx.id) && {
+          state match {
+            case v: TransactionValidation[TX @unchecked] => v.validate(tx).isSuccess
+            case _ => true
+          }
         }
       }
     }
+    else
+      memPool
   }
 
   private def trimChainSuffix(suffix: IndexedSeq[PMOD], rollbackPoint: sparkz.util.ModifierId): IndexedSeq[PMOD] = {
@@ -344,7 +348,8 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
 
   protected def transactionsProcessing: Receive = {
     case newTxs: NewTransactions[TX @unchecked] =>
-      newTxs.txs.foreach(txModify)
+      if (sparksSettings.network.handlingTransactionsEnabled)
+        newTxs.txs.foreach(txModify)
     case EliminateTransactions(ids) =>
       val updatedPool = memoryPool().filter(tx => !ids.contains(tx.id))
       updateNodeView(updatedMempool = Some(updatedPool))
