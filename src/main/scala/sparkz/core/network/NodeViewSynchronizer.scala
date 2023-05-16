@@ -54,11 +54,6 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
  modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]])(implicit ec: ExecutionContext)
   extends Actor with Synchronizer with SparkzLogging with SparkzEncoding {
 
-  protected val deliveryTimeout: FiniteDuration = networkSettings.deliveryTimeout
-  protected val maxDeliveryChecks: Int = networkSettings.maxDeliveryChecks
-  protected val maxRequestedPerPeer: Int = networkSettings.maxRequestedPerPeer
-  protected val slowModeFeatureFlag: Boolean = networkSettings.slowModeFeatureFlag
-  protected val slowModeThresholdMs: Long = networkSettings.slowModeThresholdMs
   protected val invSpec = new InvSpec(networkSettings.maxInvObjects)
   protected val requestModifierSpec = new RequestModifierSpec(networkSettings.maxInvObjects)
   protected val modifiersSpec = new ModifiersSpec(networkSettings.maxModifiersSpecMessageSize)
@@ -70,7 +65,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     case (_: ModifiersSpec, data: ModifiersData, remote) => modifiersFromRemote(data, remote)
   }
 
-  protected val deliveryTracker = new DeliveryTracker(context.system, deliveryTimeout, maxDeliveryChecks, maxRequestedPerPeer, slowModeFeatureFlag, slowModeThresholdMs, self)
+  protected val deliveryTracker = new DeliveryTracker(context.system, networkSettings, self)
   protected val statusTracker = new SyncTracker(self, context, networkSettings, timeProvider)
 
   protected var historyReaderOpt: Option[HR] = None
@@ -230,10 +225,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         val modifierTypeId = invData.typeId
         val newModifierIds = (modifierTypeId match {
           case Transaction.ModifierTypeId =>
-            if (deliveryTracker.slowMode)
-              Seq() // do not request transactions due to the high load
-            else
+            if (deliveryTracker.canRequestMoreTransactions)
               invData.ids.filter(mid => deliveryTracker.status(mid, mempool) == ModifiersStatus.Unknown)
+            else
+              Seq() // do not request transactions due to the high load
           case _ =>
             invData.ids.filter(mid => deliveryTracker.status(mid, history) == ModifiersStatus.Unknown)
         })
