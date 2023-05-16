@@ -2,6 +2,8 @@ package sparkz.core.network
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
+import org.mockito.Mockito.when
+import org.mockito.MockitoSugar.mock
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.propspec.AnyPropSpec
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
@@ -9,9 +11,10 @@ import sparkz.ObjectGenerators
 import sparkz.core.consensus.ContainsModifiers
 import sparkz.core.network.ModifiersStatus._
 import sparkz.core.serialization.SparkzSerializer
-import sparkz.core.{PersistentNodeViewModifier, ModifierTypeId}
+import sparkz.core.settings.NetworkSettings
+import sparkz.core.{ModifierTypeId, PersistentNodeViewModifier}
 import sparkz.crypto.hash.Blake2b256
-import sparkz.util.{bytesToId, ModifierId}
+import sparkz.util.{ModifierId, bytesToId}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -159,13 +162,16 @@ class DeliveryTrackerSpecification extends AnyPropSpec
     val probe = TestProbe("p")(system)
     implicit val nvsStub: ActorRef = probe.testActor
     val dt = FiniteDuration(3, MINUTES)
+    val networkSettings = mock[NetworkSettings]
+    when(networkSettings.deliveryTimeout).thenReturn(dt)
+    when(networkSettings.maxDeliveryChecks).thenReturn(2)
+    when(networkSettings.maxRequestedPerPeer).thenReturn(3)
+    when(networkSettings.slowModeFeatureFlag).thenReturn(true)
+    when(networkSettings.slowModeThresholdMs).thenReturn(100)
+    when(networkSettings.slowModeMeasurementImpact).thenReturn(0.1)
     val deliveryTracker = new DeliveryTracker(
       system,
-      deliveryTimeout = dt,
-      maxDeliveryChecks = 2,
-      maxRequestedPerPeer = 3,
-      slowModeFeatureFlag = true,
-      slowModeThresholdMs = 100,
+      networkSettings,
       nvsRef = nvsStub)
     deliveryTracker.slowMode shouldBe false
     val modifiers = (1 to 10).map(int => bytesToId(Blake2b256(int+ "")))
@@ -184,13 +190,15 @@ class DeliveryTrackerSpecification extends AnyPropSpec
     val probe = TestProbe("p")(system)
     implicit val nvsStub: ActorRef = probe.testActor
     val dt = FiniteDuration(3, MINUTES)
+    val networkSettings = mock[NetworkSettings]
+    when(networkSettings.deliveryTimeout).thenReturn(dt)
+    when(networkSettings.maxDeliveryChecks).thenReturn(2)
+    when(networkSettings.maxRequestedPerPeer).thenReturn(3)
+    when(networkSettings.slowModeFeatureFlag).thenReturn(false)
+    when(networkSettings.slowModeThresholdMs).thenReturn(100)
     val deliveryTracker = new DeliveryTracker(
       system,
-      deliveryTimeout = dt,
-      maxDeliveryChecks = 2,
-      maxRequestedPerPeer = 3,
-      slowModeFeatureFlag = false,
-      slowModeThresholdMs = 10,
+      networkSettings,
       nvsRef = nvsStub)
     deliveryTracker.slowMode shouldBe false
     val modifiers = (1 to 10).map(int => bytesToId(Blake2b256(int+ "")))
@@ -209,7 +217,16 @@ class DeliveryTrackerSpecification extends AnyPropSpec
     val probe = TestProbe("p")(system)
     implicit val nvsStub: ActorRef = probe.testActor
     val dt = FiniteDuration(3, MINUTES)
-    new DeliveryTracker(system, deliveryTimeout = dt, maxDeliveryChecks = 2, maxRequestedPerPeer = 3, false, 0, nvsStub)
+    val networkSettings = mock[NetworkSettings]
+    when(networkSettings.deliveryTimeout).thenReturn(dt)
+    when(networkSettings.maxDeliveryChecks).thenReturn(2)
+    when(networkSettings.maxRequestedPerPeer).thenReturn(3)
+    when(networkSettings.slowModeFeatureFlag).thenReturn(true)
+    when(networkSettings.slowModeThresholdMs).thenReturn(100)
+    new DeliveryTracker(
+      system,
+      networkSettings,
+      nvsRef = nvsStub)
   }
 
 }

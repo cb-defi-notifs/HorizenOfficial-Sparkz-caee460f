@@ -46,7 +46,7 @@ class DeliveryTracker(system: ActorSystem,
   protected val slowModeFeatureFlag: Boolean = networkSettings.slowModeFeatureFlag
   protected val slowModeThresholdMs: Long = networkSettings.slowModeThresholdMs
   protected val slowModeMaxRequested: Int = networkSettings.slowModeMaxRequested
-  protected val slowModeMeasurementImpact: Float = networkSettings.slowModeMeasurementImpact
+  protected val slowModeMeasurementImpact: Double = networkSettings.slowModeMeasurementImpact
 
   protected case class RequestedInfo(peer: ConnectedPeer, cancellable: Cancellable, checks: Int)
 
