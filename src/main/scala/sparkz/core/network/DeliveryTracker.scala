@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import sparkz.core.consensus.ContainsModifiers
 import sparkz.core.network.ModifiersStatus._
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.CheckDelivery
+import sparkz.core.settings.NetworkSettings
 import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import sparkz.util.{ModifierId, SparkzLogging}
@@ -36,12 +37,16 @@ import scala.util.{Failure, Try}
   * and its methods should not be called from lambdas, Future, Future.map, etc.
   */
 class DeliveryTracker(system: ActorSystem,
-                      deliveryTimeout: FiniteDuration,
-                      maxDeliveryChecks: Int,
-                      maxRequestedPerPeer: Int,
-                      slowModeFeatureFlag: Boolean,
-                      slowModeThresholdMs: Long,
+                      networkSettings: NetworkSettings,
                       nvsRef: ActorRef) extends SparkzLogging with SparkzEncoding {
+
+  protected val deliveryTimeout: FiniteDuration = networkSettings.deliveryTimeout
+  protected val maxDeliveryChecks: Int = networkSettings.maxDeliveryChecks
+  protected val maxRequestedPerPeer: Int = networkSettings.maxRequestedPerPeer
+  protected val slowModeFeatureFlag: Boolean = networkSettings.slowModeFeatureFlag
+  protected val slowModeThresholdMs: Long = networkSettings.slowModeThresholdMs
+  protected val slowModeMaxRequested: Int = networkSettings.slowModeMaxRequested
+  protected val slowModeMeasurementImpact: Float = networkSettings.slowModeMeasurementImpact
 
   protected case class RequestedInfo(peer: ConnectedPeer, cancellable: Cancellable, checks: Int)
 
@@ -201,6 +206,19 @@ class DeliveryTracker(system: ActorSystem,
     maxRequestedPerPeer - peerLimits.getOrElse(peer, 0)
   }
 
+  /**
+    * Check if we have capacity to request more transactions from remote peers.
+    * In order to decide that node cannot request more transactions, all 3 conditions must be satisfied:
+    *  - feature flag is enabled
+    *  - current node is in slow mode - average time it takes to process a modifier is higher than a threshold
+    *  - number of concurrently requested modifiers is bigger than a max allowed value
+    *
+    * @return
+    */
+  def canRequestMoreTransactions: Boolean = {
+    !(slowModeFeatureFlag && slowMode && requested.size > slowModeMaxRequested)
+  }
+
   private def incrementPeerLimitCounter(peer: ConnectedPeer): Unit = {
     peerLimits.get(peer) match {
       case Some(value) => peerLimits.put(peer, value + 1)
@@ -265,7 +283,7 @@ class DeliveryTracker(system: ActorSystem,
   private def updateProcessingTime(startTime: Long): Unit = {
     if (slowModeFeatureFlag) {
       val elapsedMs: Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime)
-      averageProcessingTimeMs = (averageProcessingTimeMs * 0.9).toLong + (elapsedMs * 0.1).toLong
+      averageProcessingTimeMs = (averageProcessingTimeMs * (1 - slowModeMeasurementImpact)).toLong + (elapsedMs * slowModeMeasurementImpact).toLong
       if (averageProcessingTimeMs > slowModeThresholdMs && !slowMode) {
         slowMode = true
         logger.warn("Slow mode enabled on P2P layer due to high load. Transactions won't be requested or broadcasted.")
