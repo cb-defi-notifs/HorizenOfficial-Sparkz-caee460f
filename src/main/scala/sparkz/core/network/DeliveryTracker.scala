@@ -286,7 +286,7 @@ class DeliveryTracker(system: ActorSystem,
       averageProcessingTimeMs = (averageProcessingTimeMs * (1 - slowModeMeasurementImpact)).toLong + (elapsedMs * slowModeMeasurementImpact).toLong
       if (averageProcessingTimeMs > slowModeThresholdMs && !slowMode) {
         slowMode = true
-        logger.warn("Slow mode enabled on P2P layer due to high load. Transactions won't be requested or broadcasted.")
+        logger.warn("Slow mode enabled on P2P layer due to high load. Transactions won't be requested and tx broadcast will be limited.")
       } else if (averageProcessingTimeMs < slowModeThresholdMs && slowMode) {
         slowMode = false
         logger.warn("Slow mode disabled on P2P layer. Transactions will be requested or broadcasted.")
