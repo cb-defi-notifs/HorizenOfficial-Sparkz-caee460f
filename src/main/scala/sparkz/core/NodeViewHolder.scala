@@ -350,6 +350,9 @@ trait NodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
     case newTxs: NewTransactions[TX @unchecked] =>
       if (sparksSettings.network.handlingTransactionsEnabled)
         newTxs.txs.foreach(txModify)
+      else
+        newTxs.txs.foreach(tx => context.system.eventStream.publish(
+          FailedTransaction(tx.id, new Exception("Transactions handling disabled"), immediateFailure = false)))
     case EliminateTransactions(ids) =>
       val updatedPool = memoryPool().filter(tx => !ids.contains(tx.id))
       updateNodeView(updatedMempool = Some(updatedPool))
