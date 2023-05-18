@@ -81,7 +81,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
       export CONTAINER_PUBLISH="true"
     else
       # Checking if package version matches DEV release version
-      if ! [[ "${package_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT[0-9]+){1}$ ]]; then
+      if ! [[ "${package_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT){1}[0-9]*$ ]]; then
         echo "Aborting, package version is in the wrong format for development release."
         exit 1
       fi
