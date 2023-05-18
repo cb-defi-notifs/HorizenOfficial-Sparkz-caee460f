@@ -19,12 +19,13 @@ function import_gpg_keys() {
   # shellcheck disable=SC2207
   declare -r my_arr=( $(echo "${@}" | tr " " "\n") )
 
-  for key in "${my_arr[@]}"; do
+for key in "${my_arr[@]}"; do
     echo "Importing key: ${key}"
     gpg -v --batch --keyserver hkps://keys.openpgp.org --recv-keys "${key}" ||
     gpg -v --batch --keyserver hkp://keyserver.ubuntu.com --recv-keys "${key}" ||
     gpg -v --batch --keyserver hkp://pgp.mit.edu:80 --recv-keys "${key}" ||
-    gpg -v --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "${key}"
+    gpg -v --batch --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "${key}" ||
+    echo -e "${key} can not be found on GPG key servers. Please upload it to at least one of the following GPG key servers:\nhttps://keys.openpgp.org/\nhttps://keyserver.ubuntu.com/\nhttps://pgp.mit.edu/"
   done
 }
 
@@ -60,7 +61,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
     # Prod vs dev release
     if ( git branch -r --contains "${TRAVIS_TAG}" | grep -xqE ". origin\/${PROD_RELEASE_BRANCH}$" ); then
       # Checking if package version matches PROD release version
-      if ! [[ "${package_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-RC[0-9]+)?$ ]]; then
+      if ! [[ "${package_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         echo "Aborting, package version is in the wrong format for production release."
         exit 1
       fi
@@ -80,7 +81,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
       export CONTAINER_PUBLISH="true"
     else
       # Checking if package version matches DEV release version
-      if ! [[ "${package_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-RC[0-9]+)?(-SNAPSHOT){1}$ ]]; then
+      if ! [[ "${package_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT){1}[0-9]*$ ]]; then
         echo "Aborting, package version is in the wrong format for development release."
         exit 1
       fi

@@ -15,8 +15,9 @@ import org.scalatest.matchers.should.Matchers
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.Internal.ConnectionToPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.DisconnectedPeer
 import sparkz.core.network.message._
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, GetAllPeers, RandomPeerForConnectionExcluding}
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, DisconnectFromAddress, GetAllPeers, RandomPeerForConnectionExcluding}
 import sparkz.core.network.peer._
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.LocalTimeProvider
