@@ -19,7 +19,7 @@ function import_gpg_keys() {
   # shellcheck disable=SC2207
   declare -r my_arr=( $(echo "${@}" | tr " " "\n") )
 
-  for key in "${my_arr[@]}"; do
+for key in "${my_arr[@]}"; do
     echo "Importing key: ${key}"
     gpg -v --batch --keyserver hkps://keys.openpgp.org --recv-keys "${key}" ||
     gpg -v --batch --keyserver hkp://keyserver.ubuntu.com --recv-keys "${key}" ||
