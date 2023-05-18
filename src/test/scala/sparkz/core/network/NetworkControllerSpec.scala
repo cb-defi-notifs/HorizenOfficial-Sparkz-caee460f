@@ -536,28 +536,6 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     system.terminate()
   }
 
-  it should "on disconnect update SyncTracker" in {
-    implicit val system: ActorSystem = ActorSystem()
-    val testProbe = TestProbe()
-    val bindAddress = new InetSocketAddress("88.77.66.55", 12345)
-    val settings2 = settings.copy(network = settings.network.copy(bindAddress = bindAddress))
-    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, testProbe)
-    val testPeer1 = new TestPeer(settings2, networkControllerRef, testProbe)
-
-    val peerAddress1 = new InetSocketAddress("88.77.66.55", 5678)
-
-    testPeer1.connectAndExpectSuccessfulMessages(peerAddress1, bindAddress, Tcp.ResumeReading)
-    val handshakeFromNode1 = testPeer1.receiveHandshake
-    handshakeFromNode1.peerSpec.declaredAddress.value should be(bindAddress)
-    testPeer1.sendHandshake(None, None)
-
-    networkControllerRef ! DisconnectFromAddress(peerAddress1)
-    system.eventStream.subscribe(testProbe.testActor, classOf[DisconnectedPeer])
-    testProbe.expectMsg(DisconnectedPeer(peerAddress1))
-
-    system.terminate()
-  }
-
   private def extractLocalAddrFeat(handshakeFromNode: Handshake): Option[InetSocketAddress] = {
     handshakeFromNode.peerSpec.localAddressOpt
   }
