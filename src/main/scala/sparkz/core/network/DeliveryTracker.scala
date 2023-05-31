@@ -236,8 +236,8 @@ class DeliveryTracker(system: ActorSystem,
   }
 
   def getRebroadcastModifiers: Seq[ModifierId] = {
-    val mods = rebroadcastQueue.take(rebroadcastQueueSize).toSeq
-    rebroadcastQueue.drop(rebroadcastQueueSize)
+    val mods = rebroadcastQueue.take(rebroadcastBatchSize).toSeq
+    rebroadcastQueue.drop(rebroadcastBatchSize)
     mods
   }
 
