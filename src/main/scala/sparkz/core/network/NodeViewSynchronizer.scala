@@ -1,6 +1,5 @@
 package sparkz.core.network
 
-import java.net.InetSocketAddress
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
 import sparkz.core.consensus.History._
@@ -21,10 +20,10 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier, PersistentNodeViewModifier
 import sparkz.util.serialization.{VLQByteBufferReader, VLQReader}
 import sparkz.util.{ModifierId, SparkzEncoding, SparkzLogging}
 
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success}
@@ -96,7 +95,8 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
   protected def broadcastModifierInv[M <: NodeViewModifier](m: M): Unit = {
     m.modifierTypeId match {
-      case Transaction.ModifierTypeId if deliveryTracker.slowMode => // will not broadcast due to the high load
+      case Transaction.ModifierTypeId if deliveryTracker.slowMode =>
+        deliveryTracker.putInRebroadcastQueue(m.id)
       case _ =>
         val msg = Message(invSpec, Right(InvData(m.modifierTypeId, Seq(m.id))), None)
         networkControllerRef ! SendToNetwork(msg, Broadcast)
@@ -436,6 +436,19 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       }
   }
 
+
+  protected def transactionRebroadcast: Receive = {
+    case TransactionRebroadcast =>
+      val mods = deliveryTracker.getRebroadcastModifiers
+      mempoolReaderOpt match {
+        case Some(mempool) =>
+          mempool.getAll(ids = mods).foreach { tx =>broadcastModifierInv(tx) }
+        case None =>
+          log.warn(s"Trying to rebroadcast while while readers are not ready $mempoolReaderOpt")
+      }
+      deliveryTracker.scheduleRebroadcastIfNeeded()
+  }
+
   override def receive: Receive =
     processDataFromPeer orElse
       getLocalSyncInfo orElse
@@ -443,7 +456,8 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       responseFromLocal orElse
       viewHolderEvents orElse
       peerManagerEvents orElse
-      checkDelivery orElse {
+      checkDelivery orElse
+      transactionRebroadcast orElse {
       case a: Any => log.error("Strange input: " + a)
     }
 
@@ -465,6 +479,8 @@ object NodeViewSynchronizer {
 
     // getLocalSyncInfo messages
     case object SendLocalSyncInfo
+
+    case object TransactionRebroadcast
 
     case class ResponseFromLocal[M <: NodeViewModifier](source: ConnectedPeer, modifierTypeId: ModifierTypeId, localObjects: Seq[M])
 
