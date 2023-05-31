@@ -10,6 +10,7 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import sparkz.ObjectGenerators
 import sparkz.core.consensus.ContainsModifiers
 import sparkz.core.network.ModifiersStatus._
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.TransactionRebroadcast
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.{ModifierTypeId, PersistentNodeViewModifier}
@@ -211,6 +212,113 @@ class DeliveryTrackerSpecification extends AnyPropSpec
     modifiers.foreach(deliveryTracker.setHeld)
     deliveryTracker.slowMode shouldBe false
   }
+
+  property(" should schedule and event to rebroadcast modifiers") {
+    val system = ActorSystem()
+    val probe = TestProbe("p")(system)
+    implicit val nvsStub: ActorRef = probe.testActor
+    val dt = FiniteDuration(3, MINUTES)
+    val networkSettings = mock[NetworkSettings]
+    when(networkSettings.deliveryTimeout).thenReturn(dt)
+    when(networkSettings.maxDeliveryChecks).thenReturn(2)
+    when(networkSettings.maxRequestedPerPeer).thenReturn(3)
+    when(networkSettings.slowModeFeatureFlag).thenReturn(true)
+    when(networkSettings.slowModeThresholdMs).thenReturn(100)
+    when(networkSettings.slowModeMeasurementImpact).thenReturn(0.1)
+    when(networkSettings.rebroadcastEnabled).thenReturn(true)
+    when(networkSettings.rebroadcastDelay).thenReturn(Duration.fromNanos(1000))
+    when(networkSettings.rebroadcastBatchSize).thenReturn(5)
+    when(networkSettings.rebroadcastQueueSize).thenReturn(1000)
+
+    val deliveryTracker = new DeliveryTracker(
+      system,
+      networkSettings,
+      nvsRef = nvsStub)
+    deliveryTracker.slowMode shouldBe false
+    val modifiersBatch1 = (1 to 10).map(int => bytesToId(Blake2b256(int+ "")))
+    val throttledModifiers = (1 to 10).map(int => bytesToId(Blake2b256(int+ "")))
+
+    // engage slow mode
+    deliveryTracker.setRequested(modifiersBatch1, mtid, cp)
+    modifiersBatch1.foreach(deliveryTracker.setReceived(_, cp))
+    Thread.sleep(200)
+    modifiersBatch1.foreach(deliveryTracker.setHeld)
+    deliveryTracker.slowMode shouldBe true
+
+    // send throttled transactions
+    throttledModifiers.foreach(deliveryTracker.putInRebroadcastQueue)
+
+    // end slow mode
+    deliveryTracker.setRequested(modifiersBatch1, mtid, cp)
+    modifiersBatch1.foreach(deliveryTracker.setReceived(_, cp))
+    modifiersBatch1.foreach(deliveryTracker.setHeld)
+    deliveryTracker.slowMode shouldBe false
+
+    // assert rebroadcast logic
+    probe.expectMsg(TransactionRebroadcast)
+    deliveryTracker.getRebroadcastModifiers should (
+      have size 5 and
+      contain theSameElementsAs throttledModifiers.take(5)
+    )
+    deliveryTracker.scheduleRebroadcastIfNeeded()
+    probe.expectMsg(TransactionRebroadcast)
+    deliveryTracker.getRebroadcastModifiers should (
+      have size 5 and
+      contain theSameElementsAs throttledModifiers.drop(5)
+    )
+    deliveryTracker.scheduleRebroadcastIfNeeded()
+    probe.expectNoMessage(200.millis)
+    deliveryTracker.getRebroadcastModifiers should have size 0
+  }
+
+  property("should not rebroadcast modifiers if disabled") {
+    val system = ActorSystem()
+    val probe = TestProbe("p")(system)
+    implicit val nvsStub: ActorRef = probe.testActor
+    val dt = FiniteDuration(3, MINUTES)
+    val networkSettings = mock[NetworkSettings]
+    when(networkSettings.deliveryTimeout).thenReturn(dt)
+    when(networkSettings.maxDeliveryChecks).thenReturn(2)
+    when(networkSettings.maxRequestedPerPeer).thenReturn(3)
+    when(networkSettings.slowModeFeatureFlag).thenReturn(true)
+    when(networkSettings.slowModeThresholdMs).thenReturn(100)
+    when(networkSettings.slowModeMeasurementImpact).thenReturn(0.1)
+    when(networkSettings.rebroadcastEnabled).thenReturn(false)
+    when(networkSettings.rebroadcastDelay).thenReturn(Duration.fromNanos(1000))
+    when(networkSettings.rebroadcastBatchSize).thenReturn(5)
+    when(networkSettings.rebroadcastQueueSize).thenReturn(1000)
+
+    val deliveryTracker = new DeliveryTracker(
+      system,
+      networkSettings,
+      nvsRef = nvsStub)
+    deliveryTracker.slowMode shouldBe false
+    val modifiersBatch1 = (1 to 10).map(int => bytesToId(Blake2b256(int+ "")))
+    val throttledModifiers = (1 to 10).map(int => bytesToId(Blake2b256(int+ "")))
+
+    // engage slow mode
+    deliveryTracker.setRequested(modifiersBatch1, mtid, cp)
+    modifiersBatch1.foreach(deliveryTracker.setReceived(_, cp))
+    Thread.sleep(200)
+    modifiersBatch1.foreach(deliveryTracker.setHeld)
+    deliveryTracker.slowMode shouldBe true
+
+    // send throttled transactions
+    throttledModifiers.foreach(deliveryTracker.putInRebroadcastQueue)
+
+    // end slow mode
+    deliveryTracker.setRequested(modifiersBatch1, mtid, cp)
+    modifiersBatch1.foreach(deliveryTracker.setReceived(_, cp))
+    modifiersBatch1.foreach(deliveryTracker.setHeld)
+    deliveryTracker.slowMode shouldBe false
+
+    // assert rebroadcast logic
+    probe.expectNoMessage(200.millis)
+    deliveryTracker.getRebroadcastModifiers should have size 0
+    deliveryTracker.scheduleRebroadcastIfNeeded()
+    probe.expectNoMessage(200.millis)
+  }
+
 
   private def genDeliveryTracker = {
     val system = ActorSystem()
