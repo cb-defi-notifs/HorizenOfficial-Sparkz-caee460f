@@ -213,7 +213,7 @@ class DeliveryTrackerSpecification extends AnyPropSpec
     deliveryTracker.slowMode shouldBe false
   }
 
-  property(" should schedule and event to rebroadcast modifiers") {
+  property(" should schedule an event to rebroadcast modifiers") {
     val system = ActorSystem()
     val probe = TestProbe("p")(system)
     implicit val nvsStub: ActorRef = probe.testActor
