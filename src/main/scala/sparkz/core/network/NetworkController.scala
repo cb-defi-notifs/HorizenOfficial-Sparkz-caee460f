@@ -144,6 +144,10 @@ class NetworkController(settings: NetworkSettings,
 
     case DisconnectFromAddress(peerAddress) =>
       closeConnection(peerAddress)
+
+    case DisconnectFromNode(peerAddress) =>
+      closeConnectionFromNode(peerAddress)
+
   }
 
   private def connectionEvents: Receive = {
@@ -551,6 +555,17 @@ class NetworkController(settings: NetworkSettings,
     }
   }
 
+  private def closeConnectionFromNode(peerAddress: InetSocketAddress): Unit = {
+    connections = connections.filterNot {
+      case (address, connectedPeer) => address == peerAddress match {
+        case true =>
+          connectedPeer.handlerRef ! CloseConnection
+          context.system.eventStream.publish(DisconnectedPeer(peerAddress))
+          true // exclude the entry from the filtered map
+      }
+    }
+  }
+
   /**
     * Register a new penalty for given peer address.
     */
@@ -576,6 +591,8 @@ object NetworkController {
     case class ConnectTo(peer: PeerInfo)
 
     case class DisconnectFrom(peer: ConnectedPeer)
+
+    case class DisconnectFromNode(address: InetSocketAddress)
 
     case class PenalizePeer(address: InetSocketAddress, penaltyType: PenaltyType)
 

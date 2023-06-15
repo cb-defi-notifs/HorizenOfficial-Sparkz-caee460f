@@ -11,6 +11,7 @@ import io.circe.syntax._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sparkz.core.api.http.PeersApiRoute.PeerInfoResponse
+import sparkz.core.network.NetworkController.ReceivableMessages.DisconnectFromNode
 import sparkz.core.network.peer.PeerInfo
 import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddToBlacklist, DisconnectFromAddress, RemoveFromBlacklist, RemovePeer}
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
@@ -228,7 +229,7 @@ class PeersApiRouteSpec extends AnyFlatSpec
 
     Delete(prefix + "/peer", body) ~> routesWithProbes ~> check {
       peerManagerProbe.expectMsgClass(classOf[RemovePeer])
-      networkControllerProbe.expectMsgClass(classOf[DisconnectFromAddress])
+      networkControllerProbe.expectMsgClass(classOf[DisconnectFromNode])
 
       status shouldBe StatusCodes.OK
     }

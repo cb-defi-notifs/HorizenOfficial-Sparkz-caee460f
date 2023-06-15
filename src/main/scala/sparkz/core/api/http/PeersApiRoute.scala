@@ -6,15 +6,14 @@ import akka.http.scaladsl.server.Route
 import io.circe.generic.auto.exportDecoder
 import io.circe.generic.semiauto._
 import io.circe.syntax._
-import io.circe.{Encoder, Decoder, Json}
+import io.circe.{Decoder, Encoder, Json}
 import sparkz.core.api.http.PeersApiRoute.PeerApiRequest.AddToBlacklistBodyRequest
 import sparkz.core.api.http.PeersApiRoute.Request.ConnectBodyRequest
 import sparkz.core.api.http.PeersApiRoute.{BlacklistedPeers, PeerInfoResponse, PeersStatusResponse}
 import sparkz.core.network.ConnectedPeer
-import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
+import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, DisconnectFromNode, GetConnectedPeers, GetPeersStatus}
 import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, GetAllPeers, GetBlacklistedPeers}
 import sparkz.core.network.peer.{PeerInfo, PeersStatus}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
@@ -179,7 +178,7 @@ case class PeersApiRoute(peerManager: ActorRef,
             val port = addressAndPort.group(2).toInt
             val peerAddress = new InetSocketAddress(host, port)
             peerManager ! RemovePeer(peerAddress)
-            networkController ! DisconnectFromAddress(peerAddress)
+            networkController ! DisconnectFromNode(peerAddress)
             ApiResponse.OK
         }
       }
