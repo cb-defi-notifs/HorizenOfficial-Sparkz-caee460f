@@ -284,6 +284,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
       case Some(serializer: SparkzSerializer[PMOD]@unchecked) =>
         // parse all modifiers and put them to modifiers cache
+        log.info(s"Received block ids ${modifiers.keySet.map(encoder.encodeId).mkString(",")}")
         val parsed: Iterable[PMOD] = parseModifiers(requestedModifiers, serializer, remote)
         val valid: Iterable[PMOD] = parsed.filter(validateAndSetStatus(remote, _))
         if (valid.nonEmpty) viewHolderRef ! ModifiersFromRemote[PMOD](valid)
