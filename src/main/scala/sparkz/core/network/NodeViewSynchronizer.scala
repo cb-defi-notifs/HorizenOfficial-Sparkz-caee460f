@@ -232,7 +232,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         val modifierTypeId = invData.typeId
         val newModifierIds = (modifierTypeId match {
           case Transaction.ModifierTypeId =>
-            if (networkSettings.handlingTransactionsEnabled)
+            if (deliveryTracker.canRequestMoreTransactions && networkSettings.handlingTransactionsEnabled)
               invData.ids.filter(mid => deliveryTracker.status(mid, mempool) == ModifiersStatus.Unknown)
             else
               Seq.empty
