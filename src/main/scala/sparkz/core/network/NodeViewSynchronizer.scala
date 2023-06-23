@@ -99,19 +99,26 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       case Transaction.ModifierTypeId if deliveryTracker.slowMode => // will not broadcast due to the high load
       case _ =>
         val msg = Message(invSpec, Right(InvData(m.modifierTypeId, Seq(m.id))), None)
-        networkControllerRef ! SendToNetwork(msg, Broadcast)
+	    if (m.modifierTypeId == Transaction.ModifierTypeId)
+	      networkControllerRef ! SendToNetwork(msg, BroadcastTransaction)
+	    else
+	      networkControllerRef ! SendToNetwork(msg, Broadcast)
     }
   }
 
   protected def viewHolderEvents: Receive = {
     case SuccessfulTransaction(tx) =>
-      deliveryTracker.setHeld(tx.id)
-      broadcastModifierInv(tx)
+      if (networkSettings.handlingTransactionsEnabled) {
+        deliveryTracker.setHeld(tx.id)
+        broadcastModifierInv(tx)
+      }
 
     case FailedTransaction(id, _, immediateFailure) =>
-      val senderOpt = deliveryTracker.setInvalid(id)
-      // penalize sender only in case transaction was invalidated at first validation.
-      if (immediateFailure) senderOpt.foreach(penalizeMisbehavingPeer)
+      if (networkSettings.handlingTransactionsEnabled) {
+        val senderOpt = deliveryTracker.setInvalid(id)
+        // penalize sender only in case transaction was invalidated at first validation.
+        if (immediateFailure) senderOpt.foreach(penalizeMisbehavingPeer)
+      }
 
     case SyntacticallySuccessfulModifier(mod) =>
       deliveryTracker.setHeld(mod.id)
@@ -225,10 +232,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         val modifierTypeId = invData.typeId
         val newModifierIds = (modifierTypeId match {
           case Transaction.ModifierTypeId =>
-            if (deliveryTracker.canRequestMoreTransactions)
+            if (deliveryTracker.canRequestMoreTransactions && networkSettings.handlingTransactionsEnabled)
               invData.ids.filter(mid => deliveryTracker.status(mid, mempool) == ModifiersStatus.Unknown)
             else
-              Seq() // do not request transactions due to the high load
+              Seq.empty
           case _ =>
             invData.ids.filter(mid => deliveryTracker.status(mid, history) == ModifiersStatus.Unknown)
         })
@@ -250,7 +257,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     readersOpt.foreach { readers =>
       val objs: Seq[NodeViewModifier] = invData.typeId match {
         case typeId: ModifierTypeId if typeId == Transaction.ModifierTypeId =>
-          readers._2.getAll(invData.ids)
+          if (networkSettings.handlingTransactionsEnabled)
+            readers._2.getAll(invData.ids)
+          else
+            Seq.empty
         case _: ModifierTypeId =>
           invData.ids.flatMap(id => readers._1.modifierById(id))
       }

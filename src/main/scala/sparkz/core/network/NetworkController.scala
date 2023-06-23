@@ -374,7 +374,12 @@ class NetworkController(settings: NetworkSettings,
       }
     }
     val isLocal = NetworkUtils.isLocalAddress(connectionId.remoteAddress.getAddress)
-    val mandatoryFeatures = sparkzContext.features :+ mySessionIdFeature
+    val mandatoryFeatures = if (settings.handlingTransactionsEnabled) {
+      sparkzContext.features :+ mySessionIdFeature
+    }
+    else {
+      sparkzContext.features :+ mySessionIdFeature :+ TransactionsDisabledPeerFeature()
+    }
     val peerFeatures = if (isLocal) {
       val la = new InetSocketAddress(connectionId.localAddress.getAddress, settings.bindAddress.getPort)
       val localAddrFeature = LocalAddressPeerFeature(la)
