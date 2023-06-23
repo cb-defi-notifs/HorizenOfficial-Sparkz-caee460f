@@ -446,7 +446,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         case Some(mempool) =>
           mempool.getAll(ids = mods).foreach { tx =>broadcastModifierInv(tx) }
         case None =>
-          log.warn(s"Trying to rebroadcast while while readers are not ready $mempoolReaderOpt")
+          log.warn(s"Trying to rebroadcast while readers are not ready $mempoolReaderOpt")
       }
       deliveryTracker.scheduleRebroadcastIfNeeded()
   }
