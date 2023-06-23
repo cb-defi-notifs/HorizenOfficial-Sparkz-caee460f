@@ -83,7 +83,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
         timeProvider,
         modifierSerializers
       ) {
-        override val deliveryTracker: DeliveryTracker = new DeliveryTracker(context.system, deliveryTimeout, maxDeliveryChecks, maxRequestedPerPeer, self) {
+        override val deliveryTracker: DeliveryTracker = new DeliveryTracker(context.system, settings.network, self) {
           override def status(modifierId: ModifierId): ModifiersStatus = ModifiersStatus.Requested
         }
       }

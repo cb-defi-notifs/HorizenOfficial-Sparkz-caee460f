@@ -54,9 +54,6 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
  modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]])(implicit ec: ExecutionContext)
   extends Actor with Synchronizer with SparkzLogging with SparkzEncoding {
 
-  protected val deliveryTimeout: FiniteDuration = networkSettings.deliveryTimeout
-  protected val maxDeliveryChecks: Int = networkSettings.maxDeliveryChecks
-  protected val maxRequestedPerPeer: Int = networkSettings.maxRequestedPerPeer
   protected val invSpec = new InvSpec(networkSettings.maxInvObjects)
   protected val requestModifierSpec = new RequestModifierSpec(networkSettings.maxInvObjects)
   protected val modifiersSpec = new ModifiersSpec(networkSettings.maxModifiersSpecMessageSize)
@@ -68,7 +65,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     case (_: ModifiersSpec, data: ModifiersData, remote) => modifiersFromRemote(data, remote)
   }
 
-  protected val deliveryTracker = new DeliveryTracker(context.system, deliveryTimeout, maxDeliveryChecks, maxRequestedPerPeer, self)
+  protected val deliveryTracker = new DeliveryTracker(context.system, networkSettings, self)
   protected val statusTracker = new SyncTracker(self, context, networkSettings, timeProvider)
 
   protected var historyReaderOpt: Option[HR] = None
@@ -98,8 +95,12 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
   private def readersOpt: Option[(HR, MR)] = historyReaderOpt.flatMap(h => mempoolReaderOpt.map(mp => (h, mp)))
 
   protected def broadcastModifierInv[M <: NodeViewModifier](m: M): Unit = {
-    val msg = Message(invSpec, Right(InvData(m.modifierTypeId, Seq(m.id))), None)
-    networkControllerRef ! SendToNetwork(msg, Broadcast)
+    m.modifierTypeId match {
+      case Transaction.ModifierTypeId if deliveryTracker.slowMode => // will not broadcast due to the high load
+      case _ =>
+        val msg = Message(invSpec, Right(InvData(m.modifierTypeId, Seq(m.id))), None)
+        networkControllerRef ! SendToNetwork(msg, Broadcast)
+    }
   }
 
   protected def viewHolderEvents: Receive = {
@@ -224,7 +225,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         val modifierTypeId = invData.typeId
         val newModifierIds = (modifierTypeId match {
           case Transaction.ModifierTypeId =>
-            invData.ids.filter(mid => deliveryTracker.status(mid, mempool) == ModifiersStatus.Unknown)
+            if (deliveryTracker.canRequestMoreTransactions)
+              invData.ids.filter(mid => deliveryTracker.status(mid, mempool) == ModifiersStatus.Unknown)
+            else
+              Seq() // do not request transactions due to the high load
           case _ =>
             invData.ids.filter(mid => deliveryTracker.status(mid, history) == ModifiersStatus.Unknown)
         })
@@ -275,10 +279,12 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       case Some(serializer: SparkzSerializer[TX]@unchecked) if typeId == Transaction.ModifierTypeId =>
         // parse all transactions and send them to node view holder
         val parsed: Iterable[TX] = parseModifiers(requestedModifiers, serializer, remote)
+        parsed.foreach(tx => deliveryTracker.setReceived(tx.id, remote))
         viewHolderRef ! TransactionsFromRemote(parsed)
 
       case Some(serializer: SparkzSerializer[PMOD]@unchecked) =>
         // parse all modifiers and put them to modifiers cache
+        log.info(s"Received block ids ${modifiers.keySet.map(encoder.encodeId).mkString(",")}")
         val parsed: Iterable[PMOD] = parseModifiers(requestedModifiers, serializer, remote)
         val valid: Iterable[PMOD] = parsed.filter(validateAndSetStatus(remote, _))
         if (valid.nonEmpty) viewHolderRef ! ModifiersFromRemote[PMOD](valid)
