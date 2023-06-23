@@ -3,7 +3,7 @@ package sparkz.core.network
 import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import sparkz.core.consensus.ContainsModifiers
 import sparkz.core.network.ModifiersStatus._
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.CheckDelivery
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{CheckDelivery, TransactionRebroadcast}
 import sparkz.core.settings.NetworkSettings
 import sparkz.util.SparkzEncoding
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
@@ -38,7 +38,7 @@ import scala.util.{Failure, Try}
   */
 class DeliveryTracker(system: ActorSystem,
                       networkSettings: NetworkSettings,
-                      nvsRef: ActorRef) extends SparkzLogging with SparkzEncoding {
+                      nvsRef: ActorRef)(implicit ec: ExecutionContext) extends SparkzLogging with SparkzEncoding {
 
   protected val deliveryTimeout: FiniteDuration = networkSettings.deliveryTimeout
   protected val maxDeliveryChecks: Int = networkSettings.maxDeliveryChecks
@@ -47,6 +47,10 @@ class DeliveryTracker(system: ActorSystem,
   protected val slowModeThresholdMs: Long = networkSettings.slowModeThresholdMs
   protected val slowModeMaxRequested: Int = networkSettings.slowModeMaxRequested
   protected val slowModeMeasurementImpact: Double = networkSettings.slowModeMeasurementImpact
+  protected val rebroadcastEnabled: Boolean = networkSettings.rebroadcastEnabled
+  protected val rebroadcastDelay: FiniteDuration = networkSettings.rebroadcastDelay
+  protected val rebroadcastQueueSize: Int = networkSettings.rebroadcastQueueSize
+  protected val rebroadcastBatchSize: Int = networkSettings.rebroadcastBatchSize
 
   protected case class RequestedInfo(peer: ConnectedPeer, cancellable: Cancellable, checks: Int)
 
@@ -61,6 +65,11 @@ class DeliveryTracker(system: ActorSystem,
 
   // when our node received a modifier we put it to `received`
   protected val received: mutable.Map[ModifierId, (ConnectedPeer, Long)] = mutable.Map()
+
+  // when the modifier is created but not broadcasted, we put it to `rebroadcastQueue`
+  protected val rebroadcastQueue: mutable.Queue[ModifierId] = mutable.Queue()
+
+  private var transactionRebroadcastEvent: Cancellable = Cancellable.alreadyCancelled
 
   private var averageProcessingTimeMs: Long = 0
   var slowMode: Boolean = false
@@ -92,8 +101,7 @@ class DeliveryTracker(system: ActorSystem,
     *
     * @return `true` if number of checks was not exceed, `false` otherwise
     */
-  def onStillWaiting(cp: ConnectedPeer, modifierTypeId: ModifierTypeId, modifierId: ModifierId)
-                    (implicit ec: ExecutionContext): Try[Unit] =
+  def onStillWaiting(cp: ConnectedPeer, modifierTypeId: ModifierTypeId, modifierId: ModifierId): Try[Unit] =
     tryWithLogging {
       val checks = requested(modifierId).checks + 1
       setUnknown(modifierId)
@@ -104,8 +112,7 @@ class DeliveryTracker(system: ActorSystem,
   /**
     * Set status of modifier with id `id` to `Requested`
     */
-  private def setRequested(id: ModifierId, typeId: ModifierTypeId, supplier: ConnectedPeer, checksDone: Int = 0)
-                          (implicit ec: ExecutionContext): Unit =
+  private def setRequested(id: ModifierId, typeId: ModifierTypeId, supplier: ConnectedPeer, checksDone: Int = 0): Unit =
     tryWithLogging {
       require(isCorrectTransition(status(id), Requested), s"Illegal status transition: ${status(id)} -> Requested")
       val cancellable = system.scheduler.scheduleOnce(deliveryTimeout, nvsRef, CheckDelivery(supplier, typeId, id))
@@ -116,8 +123,8 @@ class DeliveryTracker(system: ActorSystem,
       }
     }
 
-  def setRequested(ids: Seq[ModifierId], typeId: ModifierTypeId, cp: ConnectedPeer)
-                  (implicit ec: ExecutionContext): Unit = ids.foreach(setRequested(_, typeId, cp))
+  def setRequested(ids: Seq[ModifierId], typeId: ModifierTypeId, cp: ConnectedPeer): Unit =
+    ids.foreach(setRequested(_, typeId, cp))
 
   /**
     * Modified with id `id` is permanently invalid - set its status to `Invalid`
@@ -219,6 +226,32 @@ class DeliveryTracker(system: ActorSystem,
     !(slowModeFeatureFlag && slowMode && requested.size > slowModeMaxRequested)
   }
 
+  def putInRebroadcastQueue(modifierId: ModifierId): Unit = {
+    if (rebroadcastEnabled) {
+      rebroadcastQueue.enqueue(modifierId)
+      while (rebroadcastQueue.size > rebroadcastQueueSize) {
+        rebroadcastQueue.dequeue()
+      }
+    }
+  }
+
+  def getRebroadcastModifiers: Seq[ModifierId] = {
+    rebroadcastQueue.take(rebroadcastBatchSize).toSeq
+      .map(_ => rebroadcastQueue.dequeue())
+  }
+
+  /**
+    * Schedule rebroadcast of transactions if rebroadcast is enabled and there are transactions to rebroadcast.
+    * If there is already scheduled rebroadcast, cancel it and schedule new one, it means that during the delay node
+    * entered slow mode again.
+    */
+  def scheduleRebroadcastIfNeeded(): Unit = {
+    if (rebroadcastEnabled && rebroadcastQueue.nonEmpty) {
+      transactionRebroadcastEvent.cancel()
+      transactionRebroadcastEvent = system.scheduler.scheduleOnce(rebroadcastDelay, nvsRef, TransactionRebroadcast)
+    }
+  }
+
   private def incrementPeerLimitCounter(peer: ConnectedPeer): Unit = {
     peerLimits.get(peer) match {
       case Some(value) => peerLimits.put(peer, value + 1)
@@ -290,6 +323,7 @@ class DeliveryTracker(system: ActorSystem,
       } else if (averageProcessingTimeMs < slowModeThresholdMs && slowMode) {
         slowMode = false
         logger.warn("Slow mode disabled on P2P layer. Transactions will be requested or broadcasted.")
+        scheduleRebroadcastIfNeeded()
       }
     }
   }
