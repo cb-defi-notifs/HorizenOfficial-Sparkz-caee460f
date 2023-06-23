@@ -1,3 +1,7 @@
+2.0.1
+---------
+* P2p rate limitng feature
+
 2.0.0-RC11
 ---------
 * Changed library for the Bcrypt hashing algorithm and added additional unit tests
