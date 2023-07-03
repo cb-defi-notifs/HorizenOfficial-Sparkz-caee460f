@@ -557,16 +557,15 @@ class NetworkController(settings: NetworkSettings,
 
   private def closeConnectionFromNode(peerAddress: InetSocketAddress): Unit = {
     connections = connections.filterNot {
-      case (address, connectedPeer) => address == peerAddress match {
-        case true =>
+      case (address, connectedPeer) if address == peerAddress =>
           connectedPeer.handlerRef ! CloseConnection
           context.system.eventStream.publish(DisconnectedPeer(peerAddress))
           true // exclude the entry from the filtered map
-      }
+      case _ => false // don't modify the connections map
     }
   }
 
-  /**
+  /**sbt
     * Register a new penalty for given peer address.
     */
   private def penalize(peerAddress: InetSocketAddress, penaltyType: PenaltyType): Unit =
