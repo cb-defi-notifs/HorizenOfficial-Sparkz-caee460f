@@ -565,7 +565,7 @@ class NetworkController(settings: NetworkSettings,
     }
   }
 
-  /**sbt
+  /**
     * Register a new penalty for given peer address.
     */
   private def penalize(peerAddress: InetSocketAddress, penaltyType: PenaltyType): Unit =
