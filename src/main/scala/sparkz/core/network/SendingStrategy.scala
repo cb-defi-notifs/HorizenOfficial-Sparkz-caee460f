@@ -1,5 +1,7 @@
 package sparkz.core.network
 
+import sparkz.core.network.peer.TransactionsDisabledPeerFeature
+
 import java.security.SecureRandom
 
 trait SendingStrategy {
@@ -19,6 +21,14 @@ object SendToRandom extends SendingStrategy {
 
 case object Broadcast extends SendingStrategy {
   override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = peers
+}
+
+
+case object BroadcastTransaction extends SendingStrategy {
+  override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = {
+    peers.filter(p => p.peerInfo.flatMap{
+      info =>  info.peerSpec.features.collectFirst {case f:TransactionsDisabledPeerFeature => true}}.isEmpty)
+  }
 }
 
 case class BroadcastExceptOf(exceptOf: Seq[ConnectedPeer]) extends SendingStrategy {
