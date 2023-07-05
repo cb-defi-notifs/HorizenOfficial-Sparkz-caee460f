@@ -23,6 +23,7 @@ import sparkz.util.{ModifierId, SparkzEncoding, SparkzLogging}
 
 import java.nio.ByteBuffer
 import scala.annotation.{nowarn, tailrec}
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -96,22 +97,30 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
   protected def broadcastModifierInv[M <: NodeViewModifier](m: M): Unit = {
     m.modifierTypeId match {
-      case Transaction.ModifierTypeId if deliveryTracker.slowMode => // will not broadcast due to the high load
+      case Transaction.ModifierTypeId if deliveryTracker.slowMode =>
+        deliveryTracker.putInRebroadcastQueue(m.id)
       case _ =>
         val msg = Message(invSpec, Right(InvData(m.modifierTypeId, Seq(m.id))), None)
-        networkControllerRef ! SendToNetwork(msg, Broadcast)
+	    if (m.modifierTypeId == Transaction.ModifierTypeId)
+	      networkControllerRef ! SendToNetwork(msg, BroadcastTransaction)
+	    else
+	      networkControllerRef ! SendToNetwork(msg, Broadcast)
     }
   }
 
   protected def viewHolderEvents: Receive = {
     case SuccessfulTransaction(tx) =>
-      deliveryTracker.setHeld(tx.id)
-      broadcastModifierInv(tx)
+      if (networkSettings.handlingTransactionsEnabled) {
+        deliveryTracker.setHeld(tx.id)
+        broadcastModifierInv(tx)
+      }
 
     case FailedTransaction(id, _, immediateFailure) =>
-      val senderOpt = deliveryTracker.setInvalid(id)
-      // penalize sender only in case transaction was invalidated at first validation.
-      if (immediateFailure) senderOpt.foreach(penalizeMisbehavingPeer)
+      if (networkSettings.handlingTransactionsEnabled) {
+        val senderOpt = deliveryTracker.setInvalid(id)
+        // penalize sender only in case transaction was invalidated at first validation.
+        if (immediateFailure) senderOpt.foreach(penalizeMisbehavingPeer)
+      }
 
     case SyntacticallySuccessfulModifier(mod) =>
       deliveryTracker.setHeld(mod.id)
@@ -225,10 +234,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         val modifierTypeId = invData.typeId
         val newModifierIds = (modifierTypeId match {
           case Transaction.ModifierTypeId =>
-            if (deliveryTracker.canRequestMoreTransactions)
+            if (deliveryTracker.canRequestMoreTransactions && networkSettings.handlingTransactionsEnabled)
               invData.ids.filter(mid => deliveryTracker.status(mid, mempool) == ModifiersStatus.Unknown)
             else
-              Seq() // do not request transactions due to the high load
+              Seq.empty
           case _ =>
             invData.ids.filter(mid => deliveryTracker.status(mid, history) == ModifiersStatus.Unknown)
         })
@@ -250,7 +259,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     readersOpt.foreach { readers =>
       val objs: Seq[NodeViewModifier] = invData.typeId match {
         case typeId: ModifierTypeId if typeId == Transaction.ModifierTypeId =>
-          readers._2.getAll(invData.ids)
+          if (networkSettings.handlingTransactionsEnabled)
+            readers._2.getAll(invData.ids)
+          else
+            Seq.empty
         case _: ModifierTypeId =>
           invData.ids.flatMap(id => readers._1.modifierById(id))
       }
@@ -437,6 +449,18 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       }
   }
 
+  protected def transactionRebroadcast: Receive = {
+    case TransactionRebroadcast =>
+      val mods = deliveryTracker.getRebroadcastModifiers
+      mempoolReaderOpt match {
+        case Some(mempool) =>
+          mempool.getAll(ids = mods).foreach { tx =>broadcastModifierInv(tx) }
+        case None =>
+          log.warn(s"Trying to rebroadcast while readers are not ready $mempoolReaderOpt")
+      }
+      deliveryTracker.scheduleRebroadcastIfNeeded()
+  }
+
   override def receive: Receive =
     processDataFromPeer orElse
       getLocalSyncInfo orElse
@@ -444,7 +468,8 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       responseFromLocal orElse
       viewHolderEvents orElse
       peerManagerEvents orElse
-      checkDelivery orElse {
+      checkDelivery orElse
+      transactionRebroadcast orElse {
       case a: Any => log.error("Strange input: " + a)
     }
 
@@ -466,6 +491,8 @@ object NodeViewSynchronizer {
 
     // getLocalSyncInfo messages
     case object SendLocalSyncInfo
+
+    case object TransactionRebroadcast
 
     case class ResponseFromLocal[M <: NodeViewModifier](source: ConnectedPeer, modifierTypeId: ModifierTypeId, localObjects: Seq[M])
 
@@ -585,4 +612,44 @@ object NodeViewSynchronizerRef {
   (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props[TX, SI, SIS, PMOD, HR, MR](networkControllerRef, viewHolderRef,
       syncInfoSpec, networkSettings, timeProvider, modifierSerializers), name)
+}
+
+object Test extends App {
+
+  test()
+
+  protected val rebroadcastQueue: mutable.Queue[String] = mutable.Queue()
+
+  def test(): Unit = {
+    putInRebroadcastQueue("1")
+    putInRebroadcastQueue("2")
+    putInRebroadcastQueue("3")
+    putInRebroadcastQueue("4")
+    putInRebroadcastQueue("5")
+    putInRebroadcastQueue("6")
+    putInRebroadcastQueue("7")
+    putInRebroadcastQueue("8")
+    putInRebroadcastQueue("9")
+    putInRebroadcastQueue("10")
+
+    println(s"get modifiers = $getRebroadcastModifiers")
+
+    println(s"queue = $rebroadcastQueue")
+
+    println(s"get modifiers = $getRebroadcastModifiers")
+
+    println(s"queue = $rebroadcastQueue")
+  }
+
+  def putInRebroadcastQueue(modifierId: String): Unit = {
+    rebroadcastQueue.enqueue(modifierId)
+  }
+
+  def getRebroadcastModifiers: Seq[String] = {
+    val mods = rebroadcastQueue.take(5).toSeq
+    rebroadcastQueue.drop(5)
+    mods
+  }
+
+
 }
