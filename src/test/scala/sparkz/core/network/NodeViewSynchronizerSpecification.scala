@@ -2,9 +2,10 @@ package sparkz.core.network
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
+import sparkz.ObjectGenerators
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, TransactionsFromRemote}
 import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, ChangedMempool, FailedTransaction, SuccessfulTransaction}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.network.message._
 import sparkz.core.network.peer.PenaltyType
 import sparkz.core.network.peer.PenaltyType.MisbehaviorPenalty
@@ -14,23 +15,29 @@ import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import sparkz.util.ModifierId
+import sparkz.util.serialization.{Reader, Writer}
 
 import java.net.InetSocketAddress
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
 
-class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementations {
+class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementations with ObjectGenerators {
 
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
   private val modifiersSpec = new ModifiersSpec(1024 * 1024)
   private val requestModifierSpec = new RequestModifierSpec(settings.network.maxInvObjects)
+  private val syncSpec = new SyncInfoMessageSpec[TestSyncInfo](new SparkzSerializer[TestSyncInfo] {
+    override def serialize(obj: TestSyncInfo, w: Writer): Unit = {}
+
+    override def parse(r: Reader): TestSyncInfo = new TestSyncInfo
+  })
   private val invSpec = new InvSpec(settings.network.maxInvObjects)
   private val (synchronizer, networkController, viewHolder) = createNodeViewSynchronizer(settings)
   private val peerProbe = TestProbe()
   private val peer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), peerProbe.ref, 0L, None)
-  private val messageSerializer = new MessageSerializer(Seq(modifiersSpec, invSpec, requestModifierSpec),
+  private val messageSerializer = new MessageSerializer(Seq(modifiersSpec, invSpec, requestModifierSpec, syncSpec),
                                                         settings.network.magicBytes,
                                                         settings.network.messageLengthBytesLimit)
 
@@ -238,6 +245,41 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
       peerProbe.expectNoMessage()
       networkController.expectNoMessage()
     }
+
+  it should "send a sync message in response to peer's sync message if peer is outdated" in {
+    val pchProbe = TestProbe("PeerHandlerProbe")
+    val connectedPeer: ConnectedPeer = connectedPeerGen(pchProbe.ref).sample.getOrElse(throw new IllegalArgumentException())
+
+    // Setting low sync interval to clean right away the peer last sync timestamp to make it outdated and send the sync response back
+    val networkSettings = settings.copy(
+      network = settings.network.copy(
+        syncStatusRefreshStable = 1.millis,
+        syncStatusRefresh = 1.millis
+      )
+    )
+
+    val (synchronizer, networkController, _) = createNodeViewSynchronizer(networkSettings)
+
+    // Handshake with the peer
+    synchronizer ! HandshakedPeer(connectedPeer)
+
+    // Populate the history
+    setupHistoryAndMempoolReaders(synchronizer)
+
+    // This to update the updateLastSyncSentTime in the SyncTracker
+    synchronizer ! SendLocalSyncInfo
+
+    // The peer receives a sync message from the peer
+    synchronizer ! roundTrip(Message(syncSpec, Left(Array.emptyByteArray), Some(connectedPeer)))
+
+    networkController.expectMsgType[SendToNetwork]
+    networkController.expectMsgType[SendToNetwork]
+    // This is expected in response to the sync message
+    networkController.expectMsgPF() {
+      case ok@SendToNetwork(Message(_: SyncInfoMessageSpec[_], Right(TestSyncInfo()), None), SendToPeers(_)) => ok
+      case msg => fail(s"Unexpected message received $msg")
+    }
+  }
 
   def setupHistoryAndMempoolReaders(synchronizer: ActorRef): Unit = {
     val history = new TestHistory
