@@ -1,9 +1,10 @@
 package sparkz.core.network
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.testkit.TestProbe
+import akka.testkit.{TestActorRef, TestProbe}
 import sparkz.ObjectGenerators
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, TransactionsFromRemote}
+import sparkz.core.consensus.History.Unknown
 import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.network.message._
@@ -246,39 +247,22 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
       networkController.expectNoMessage()
     }
 
-  it should "send a sync message in response to peer's sync message if peer is outdated" in {
-    val pchProbe = TestProbe("PeerHandlerProbe")
-    val connectedPeer: ConnectedPeer = connectedPeerGen(pchProbe.ref).sample.getOrElse(throw new IllegalArgumentException())
+  it should "when HandshakedPeer message is received, statusTracker should add the peer" in {
+    // Arrange
+    val nodeViewSynchronizerRef = createNodeViewSynchronizerAsTestActorRef(settings)
+    val nodeViewSynchronizer = nodeViewSynchronizerRef.underlyingActor
 
-    // Setting low sync interval to clean right away the peer last sync timestamp to make it outdated and send the sync response back
-    val networkSettings = settings.copy(
-      network = settings.network.copy(
-        syncStatusRefreshStable = 1.millis,
-        syncStatusRefresh = 1.millis
-      )
-    )
+    val statusTrackerField = classOf[NodeViewSynchronizer[_, _, _, _, _, _]].getDeclaredField("statusTracker")
+    statusTrackerField.setAccessible(true)
+    val statusTracker = statusTrackerField.get(nodeViewSynchronizer).asInstanceOf[SyncTracker]
 
-    val (synchronizer, networkController, _) = createNodeViewSynchronizer(networkSettings)
+    // Act
+    nodeViewSynchronizerRef ! HandshakedPeer(peer)
 
-    // Handshake with the peer
-    synchronizer ! HandshakedPeer(connectedPeer)
-
-    // Populate the history
-    setupHistoryAndMempoolReaders(synchronizer)
-
-    // This to update the updateLastSyncSentTime in the SyncTracker
-    synchronizer ! SendLocalSyncInfo
-
-    // The peer receives a sync message from the peer
-    synchronizer ! roundTrip(Message(syncSpec, Left(Array.emptyByteArray), Some(connectedPeer)))
-
-    networkController.expectMsgType[SendToNetwork]
-    networkController.expectMsgType[SendToNetwork]
-    // This is expected in response to the sync message
-    networkController.expectMsgPF() {
-      case ok@SendToNetwork(Message(_: SyncInfoMessageSpec[_], Right(TestSyncInfo()), None), SendToPeers(_)) => ok
-      case msg => fail(s"Unexpected message received $msg")
-    }
+    // Assert
+    val peersStatus = statusTracker.peersByStatus
+    peersStatus.nonEmpty should be(true)
+    peersStatus(Unknown) should be(Set(peer))
   }
 
   def setupHistoryAndMempoolReaders(synchronizer: ActorRef): Unit = {
@@ -337,5 +321,40 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     viewHolderProbe.expectMsgType[GetNodeViewChanges](5000.millis)
 
     (nodeViewSynchronizerRef, networkControllerProbe, viewHolderProbe)
+  }
+
+  private def createNodeViewSynchronizerAsTestActorRef(settings: SparkzSettings): TestActorRef[NodeViewSynchronizer[_, _, _, _, _, _]] = {
+    val networkControllerProbe = TestProbe()
+    val viewHolderProbe = TestProbe()
+    val timeProvider = new NetworkTimeProvider(settings.ntp)
+
+    val modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
+      Map(Transaction.ModifierTypeId -> TestTransactionSerializer)
+
+    TestActorRef(Props(
+      new NodeViewSynchronizer[TestTransaction,
+        TestSyncInfo,
+        TestSyncInfoMessageSpec.type,
+        TestModifier,
+        TestHistory,
+        TestMempool
+      ]
+      (
+        networkControllerProbe.ref,
+        viewHolderProbe.ref,
+        TestSyncInfoMessageSpec,
+        settings.network,
+        timeProvider,
+        modifierSerializers
+      ) {
+        override val deliveryTracker: DeliveryTracker = new DeliveryTracker(context.system, settings.network, self) {
+          override def status(modifierId: ModifierId): ModifiersStatus = ModifiersStatus.Requested
+
+          override private[network] def clearStatusForModifier(id: ModifierId, oldStatus: ModifiersStatus): Unit = {}
+
+          override def setInvalid(modifierId: ModifierId): Option[ConnectedPeer] = Some(peer)
+        }
+      }
+    ))
   }
 }

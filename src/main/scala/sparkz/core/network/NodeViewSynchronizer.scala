@@ -23,7 +23,6 @@ import sparkz.util.{ModifierId, SparkzEncoding, SparkzLogging}
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import scala.annotation.{nowarn, tailrec}
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 import scala.reflect.ClassTag
@@ -192,10 +191,6 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
           log.warn("Extension is empty while comparison is younger")
 
         self ! OtherNodeSyncingStatus(remote, comparison, ext)
-        if (statusTracker.isPeerOutdated(remote)) {
-          // This triggers another round of sync to let the other peer update its internal status about this node
-          networkControllerRef ! SendToNetwork(Message(syncInfoSpec, Right(historyReader.syncInfo), None), SendToPeer(remote))
-        }
 
       case _ =>
     }
@@ -616,44 +611,4 @@ object NodeViewSynchronizerRef {
   (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props[TX, SI, SIS, PMOD, HR, MR](networkControllerRef, viewHolderRef,
       syncInfoSpec, networkSettings, timeProvider, modifierSerializers), name)
-}
-
-object Test extends App {
-
-  test()
-
-  protected val rebroadcastQueue: mutable.Queue[String] = mutable.Queue()
-
-  def test(): Unit = {
-    putInRebroadcastQueue("1")
-    putInRebroadcastQueue("2")
-    putInRebroadcastQueue("3")
-    putInRebroadcastQueue("4")
-    putInRebroadcastQueue("5")
-    putInRebroadcastQueue("6")
-    putInRebroadcastQueue("7")
-    putInRebroadcastQueue("8")
-    putInRebroadcastQueue("9")
-    putInRebroadcastQueue("10")
-
-    println(s"get modifiers = $getRebroadcastModifiers")
-
-    println(s"queue = $rebroadcastQueue")
-
-    println(s"get modifiers = $getRebroadcastModifiers")
-
-    println(s"queue = $rebroadcastQueue")
-  }
-
-  def putInRebroadcastQueue(modifierId: String): Unit = {
-    rebroadcastQueue.enqueue(modifierId)
-  }
-
-  def getRebroadcastModifiers: Seq[String] = {
-    val mods = rebroadcastQueue.take(5).toSeq
-    rebroadcastQueue.drop(5)
-    mods
-  }
-
-
 }
