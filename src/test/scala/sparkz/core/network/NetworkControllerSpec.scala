@@ -19,6 +19,7 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.DisconnectedP
 import sparkz.core.network.message._
 import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, DisconnectFromAddress, GetAllPeers, RandomPeerForConnectionExcluding}
 import sparkz.core.network.peer._
+import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.LocalTimeProvider
 
@@ -31,7 +32,8 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private val featureSerializers = Map(LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer)
+  private val featureSerializers = Map[Byte, SparkzSerializer[_ <: PeerFeature]](LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer,
+    TransactionsDisabledPeerFeature.featureId -> TransactionsDisabledPeerFeatureSerializer)
 
   "A NetworkController" should "send local address on handshake when peer and node address are in localhost" in {
     implicit val system: ActorSystem = ActorSystem()
@@ -109,6 +111,47 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     testPeer.sendHandshake(None, None)
     system.terminate()
   }
+
+  it should "not send TransactionsDisabledPeerFeature on handshake when handlingTransactionsEnabled is true" in {
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
+    val testPeer = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
+
+    val peerAddr = new InetSocketAddress("127.0.0.1", 5678)
+    val nodeAddr = new InetSocketAddress("127.0.0.1", settings.network.bindAddress.getPort)
+    testPeer.connectAndExpectSuccessfulMessages(peerAddr, nodeAddr, Tcp.ResumeReading)
+
+    val handshakeFromNode = testPeer.receiveHandshake
+    handshakeFromNode.peerSpec.features.exists{case f:TransactionsDisabledPeerFeature => true; case _ => false} shouldBe false
+
+    system.terminate()
+  }
+
+  it should "send TransactionsDisabledPeerFeature on handshake when handlingTransactionsEnabled is false" in {
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+    val networkSettings = settings.copy(
+      network = settings.network.copy(
+        handlingTransactionsEnabled = false
+      )
+    )
+
+    val (networkControllerRef: ActorRef, _) = createNetworkController(networkSettings, tcpManagerProbe)
+    val testPeer = new TestPeer(networkSettings, networkControllerRef, tcpManagerProbe)
+
+    val peerAddr = new InetSocketAddress("127.0.0.1", 5678)
+    val nodeAddr = new InetSocketAddress("127.0.0.1", networkSettings.network.bindAddress.getPort)
+    testPeer.connectAndExpectSuccessfulMessages(peerAddr, nodeAddr, Tcp.ResumeReading)
+
+    val handshakeFromNode = testPeer.receiveHandshake
+    handshakeFromNode.peerSpec.features.exists { case f: TransactionsDisabledPeerFeature => true; case _ => false } shouldBe true
+
+    system.terminate()
+  }
+
 
   it should "send known public peers" in {
     implicit val system: ActorSystem = ActorSystem()
@@ -582,7 +625,8 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
               (implicit ec: ExecutionContext) extends Matchers {
 
   private val timeProvider = LocalTimeProvider
-  private val featureSerializers = Map(LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer)
+  private val featureSerializers = Map[Byte, SparkzSerializer[_ <: PeerFeature]](LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer,
+    TransactionsDisabledPeerFeature.featureId -> TransactionsDisabledPeerFeatureSerializer)
   private val handshakeSerializer = new HandshakeSpec(featureSerializers, Int.MaxValue)
   private val peersSpec = new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects)
   private val messageSpecs = Seq(GetPeersSpec, peersSpec)

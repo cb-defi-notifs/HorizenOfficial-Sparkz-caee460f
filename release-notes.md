@@ -1,3 +1,8 @@
+2.0.2
+---------
+* P2p rate limitng feature - added tx rebroadcast when rate limiting is reenabled
+* Seeder nodes support
+
 2.0.1
 ---------
 * P2p rate limitng feature
