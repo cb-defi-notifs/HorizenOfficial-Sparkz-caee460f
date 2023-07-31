@@ -282,7 +282,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     val typeId = data.typeId
     val modifiers = data.modifiers
     log.info(s"Got ${modifiers.size} modifiers of type $typeId from remote connected peer: $remote")
-    log.trace(s"Received modifier ids ${modifiers.keySet.map(encoder.encodeId).mkString(",")}")
+    log.trace(s"Received modifier ids ${modifiers.map(_._1).map(encoder.encodeId).mkString(",")}")
 
     // filter out non-requested modifiers
     val requestedModifiers = processSpam(remote, typeId, modifiers)
@@ -296,7 +296,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
       case Some(serializer: SparkzSerializer[PMOD]@unchecked) =>
         // parse all modifiers and put them to modifiers cache
-        log.info(s"Received block ids ${modifiers.keySet.map(encoder.encodeId).mkString(",")}")
+        log.info(s"Received block ids ${modifiers.map(_._1).map(encoder.encodeId).mkString(",")}")
         val parsed: Iterable[PMOD] = parseModifiers(requestedModifiers, serializer, remote)
         val valid: Iterable[PMOD] = parsed.filter(validateAndSetStatus(remote, _))
         if (valid.nonEmpty) viewHolderRef ! ModifiersFromRemote[PMOD](valid)
@@ -337,7 +337,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     *
     * @return collection of parsed modifiers
     */
-  private def parseModifiers[M <: NodeViewModifier](modifiers: Map[ModifierId, Array[Byte]],
+  private def parseModifiers[M <: NodeViewModifier](modifiers: Seq[(ModifierId, Array[Byte])],
                                                     serializer: SparkzSerializer[M],
                                                     remote: ConnectedPeer): Iterable[M] = {
     modifiers.flatMap { case (id, bytes) =>
@@ -367,7 +367,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     */
   private def processSpam(remote: ConnectedPeer,
                           typeId: ModifierTypeId,
-                          modifiers: Map[ModifierId, Array[Byte]]): Map[ModifierId, Array[Byte]] = {
+                          modifiers: Seq[(ModifierId, Array[Byte])]): Seq[(ModifierId, Array[Byte])] = {
 
     val (requested, spam) = modifiers.partition { case (id, _) =>
       deliveryTracker.status(id) == Requested
@@ -375,7 +375,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
     if (spam.nonEmpty) {
       log.info(s"Spam attempt: peer $remote has sent a non-requested modifiers of type $typeId with ids" +
-        s": ${spam.keys.map(encoder.encodeId)}")
+        s": ${spam.map(_._1).map(encoder.encodeId)}")
       penalizeSpammingPeer(remote)
     }
     requested
@@ -433,7 +433,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
             size += NodeViewModifier.ModifierIdSize + 4 + modBytes.length
             size < networkSettings.maxModifiersSpecMessageSize
           }
-          peer.handlerRef ! Message(modifiersSpec, Right(ModifiersData(modType, batch.toMap)), None)
+          peer.handlerRef ! Message(modifiersSpec, Right(ModifiersData(modType, batch)), None)
           val remaining = mods.drop(batch.length)
           if (remaining.nonEmpty) {
             sendByParts(remaining)
@@ -454,7 +454,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       val mods = deliveryTracker.getRebroadcastModifiers
       mempoolReaderOpt match {
         case Some(mempool) =>
-          mempool.getAll(ids = mods).foreach { tx =>broadcastModifierInv(tx) }
+          mempool.getAll(ids = mods).foreach { tx => broadcastModifierInv(tx) }
         case None =>
           log.warn(s"Trying to rebroadcast while readers are not ready $mempoolReaderOpt")
       }

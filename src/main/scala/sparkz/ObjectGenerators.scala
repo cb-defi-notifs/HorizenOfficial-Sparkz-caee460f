@@ -76,7 +76,7 @@ trait ObjectGenerators {
 
   lazy val modifiersGen: Gen[ModifiersData] = for {
     modifierTypeId: ModifierTypeId <- modifierTypeIdGen
-    modifiers: Map[ModifierId, Array[Byte]] <- Gen.nonEmptyMap(modifierWithIdGen).suchThat(_.nonEmpty)
+    modifiers: Seq[(ModifierId, Array[Byte])] <- Gen.nonEmptyListOf(modifierWithIdGen).suchThat(_.nonEmpty)
   } yield ModifiersData(modifierTypeId, modifiers)
 
   lazy val appVersionGen: Gen[Version] = for {
