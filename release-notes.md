@@ -1,3 +1,7 @@
+2.1.0
+---------
+* Fixes/Improvements on the way the SyncTracker handles the internal statuses maps
+
 2.0.2
 ---------
 * P2p rate limitng feature - added tx rebroadcast when rate limiting is reenabled
