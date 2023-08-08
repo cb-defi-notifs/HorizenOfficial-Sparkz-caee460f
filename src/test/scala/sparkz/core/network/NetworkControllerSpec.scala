@@ -264,7 +264,7 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     val tcpManagerProbe = TestProbe()
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
-    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1))
+    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1, maxForgerConnections = 0))
     val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
@@ -282,6 +282,70 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     val peerInfo2 = getPeerInfo(peer2LocalAddr)
     testPeer.establishNewOutgoingConnection(peerInfo2)
     testPeer.connectAndExpectMessage(peer2LocalAddr, nodeAddr, Tcp.Close)
+
+    system.terminate()
+  }
+
+  it should "allow connecting to forger over maxOutgoingConnections limit" in {
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+
+    val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
+    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1, maxForgerConnections = 1))
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
+
+    val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
+    val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
+    val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
+    val peerInfo1 = getPeerInfo(peer1LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo1)
+    testPeer.connectAndExpectSuccessfulMessages(peer1LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer.receiveHandshake
+    testPeer.sendHandshake(Some(peer1DecalredAddr), Some(peer1LocalAddr))
+    testPeer.receiveGetPeers
+    testPeer.sendPeers(Seq.empty)
+
+    val peer2DeclaredAddr = new InetSocketAddress("99.88.77.66", 5678)
+    val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
+    val peerInfo2 = getPeerInfo(peer2LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo2)
+    testPeer.connectAndExpectSuccessfulMessages(peer2LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer.receiveHandshake
+    testPeer.sendHandshake(Some(peer2DeclaredAddr), Some(peer2LocalAddr), forgerNode = true)
+    tcpManagerProbe.expectNoMessage()
+
+    system.terminate()
+  }
+
+  it should "disconnect after handshake if the maxOutgoingConnections limit reached" in {
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+
+    val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
+    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1, maxForgerConnections = 1))
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
+
+    val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
+    val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
+    val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
+    val peerInfo1 = getPeerInfo(peer1LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo1)
+    testPeer.connectAndExpectSuccessfulMessages(peer1LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer.receiveHandshake
+    testPeer.sendHandshake(Some(peer1DecalredAddr), Some(peer1LocalAddr))
+    testPeer.receiveGetPeers
+    testPeer.sendPeers(Seq.empty)
+
+    val peer2DeclaredAddr = new InetSocketAddress("99.88.77.66", 5678)
+    val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
+    val peerInfo2 = getPeerInfo(peer2LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo2)
+    testPeer.connectAndExpectSuccessfulMessages(peer2LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer.receiveHandshake
+    testPeer.sendHandshake(Some(peer2DeclaredAddr), Some(peer2LocalAddr))
+    tcpManagerProbe.expectMsg(Abort)
 
     system.terminate()
   }
@@ -675,12 +739,12 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
     * @param localAddress
     * @return
     */
-  def sendHandshake(declaredAddress: Option[InetSocketAddress], localAddress: Option[InetSocketAddress]): Tcp.ResumeReading.type = {
+  def sendHandshake(declaredAddress: Option[InetSocketAddress], localAddress: Option[InetSocketAddress], forgerNode: Boolean = false): Tcp.ResumeReading.type = {
     val localFeature: Seq[PeerFeature] = localAddress.map(LocalAddressPeerFeature(_)).toSeq
     val features = localFeature :+ SessionIdPeerFeature(settings.network.magicBytes)
     val handshakeToNode = Handshake(PeerSpec(settings.network.agentName,
       Version(settings.network.appVersion), "test",
-      declaredAddress, features), timeProvider.time())
+      declaredAddress, features, forgerNode), timeProvider.time())
 
     tcpManagerProbe.send(connectionHandler, Tcp.Received(ByteString(handshakeSerializer.toBytes(handshakeToNode))))
     tcpManagerProbe.expectMsg(Tcp.ResumeReading)

@@ -247,7 +247,8 @@ class PeerConnectionHandler(val settings: NetworkSettings,
         Version(settings.appVersion),
         settings.nodeName,
         ownSocketAddress,
-        localFeatures
+        localFeatures,
+        settings.isForgerNode
       ),
       sparkzContext.timeProvider.time()
     )

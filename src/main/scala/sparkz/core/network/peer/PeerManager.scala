@@ -43,7 +43,7 @@ class PeerManager(
           PeerDatabaseValue(
             extractAddressFromPeerInfo(peerInfo),
             peerInfo,
-            PeerConfidence.Unknown
+            if (peerInfo.peerSpec.forgerPeer) PeerConfidence.Forger else PeerConfidence.Unknown
           )
         )
       }
@@ -75,7 +75,8 @@ class PeerManager(
             val address: InetSocketAddress = peerSpec.address.getOrElse(throw new IllegalArgumentException())
             val peerInfo: PeerInfo = PeerInfo(peerSpec, 0L, None)
             log.info(s"New discovered peer: $peerInfo")
-            PeerDatabaseValue(address, peerInfo, PeerConfidence.Unknown)
+            val peerConfidence = if (peerInfo.peerSpec.forgerPeer) PeerConfidence.Forger else PeerConfidence.Unknown
+            PeerDatabaseValue(address, peerInfo, peerConfidence)
         }
       peerDatabase.addOrUpdateKnownPeers(filteredPeers)
 
@@ -195,16 +196,23 @@ object PeerManager {
                           sparkzContext: SparkzContext): Option[PeerInfo] = {
         var response: Option[PeerInfo] = None
 
-        val highConfidencePeers = peers.filter(_._2.confidence == PeerConfidence.High)
-        val highConfidenceCandidates = highConfidencePeers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
+        val forgerPeers = peers.filter(_._2.confidence == PeerConfidence.Forger)
+        val forgerCandidates = forgerPeers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
 
-        if (highConfidenceCandidates.nonEmpty) {
-          response = Some(highConfidenceCandidates(secureRandom.nextInt(highConfidenceCandidates.size)).peerInfo)
+        if (forgerCandidates.nonEmpty) {
+          response = Some(forgerCandidates(secureRandom.nextInt(forgerCandidates.size)).peerInfo)
         } else {
-          val candidates = peers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
+          val highConfidencePeers = peers.filter(_._2.confidence == PeerConfidence.High)
+          val highConfidenceCandidates = highConfidencePeers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
 
-          if (candidates.nonEmpty)
-            response = Some(candidates(secureRandom.nextInt(candidates.size)).peerInfo)
+          if (highConfidenceCandidates.nonEmpty) {
+            response = Some(highConfidenceCandidates(secureRandom.nextInt(highConfidenceCandidates.size)).peerInfo)
+          } else {
+            val candidates = peers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
+
+            if (candidates.nonEmpty)
+              response = Some(candidates(secureRandom.nextInt(candidates.size)).peerInfo)
+          }
         }
 
         response
@@ -216,30 +224,6 @@ object PeerManager {
                           blacklistedPeers: Seq[InetAddress],
                           sparkzContext: SparkzContext): Option[PeerDatabaseValue] = {
         peers.get(peerAddress)
-      }
-    }
-
-    case class RandomPeerExcluding(excludedPeers: Seq[Option[InetSocketAddress]]) extends GetPeers[Option[PeerInfo]] {
-      private val secureRandom = new SecureRandom()
-
-      override def choose(peers: Map[InetSocketAddress, PeerDatabaseValue],
-                          blacklistedPeers: Seq[InetAddress],
-                          sparkzContext: SparkzContext): Option[PeerInfo] = {
-        var response: Option[PeerInfo] = None
-
-        val highConfidencePeers = peers.filter(_._2.confidence == PeerConfidence.High)
-        val highConfidenceCandidates = highConfidencePeers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
-
-        if (highConfidenceCandidates.nonEmpty) {
-          response = Some(highConfidenceCandidates(secureRandom.nextInt(highConfidenceCandidates.size)).peerInfo)
-        } else {
-          val candidates = peers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
-
-          if (candidates.nonEmpty)
-            response = Some(candidates(secureRandom.nextInt(candidates.size)).peerInfo)
-        }
-
-        response
       }
     }
 

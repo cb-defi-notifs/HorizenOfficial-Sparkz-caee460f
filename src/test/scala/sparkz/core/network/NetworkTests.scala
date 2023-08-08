@@ -18,8 +18,8 @@ class NetworkTests extends AnyFlatSpec with Matchers {
 
   protected def currentTime(): TimeProvider.Time = mockTimeProvider.time()
 
-  protected def getPeerInfo(address: InetSocketAddress, nameOpt: Option[String] = None, featureSeq: Seq[PeerFeature] = Seq()): PeerInfo = {
-    val data = PeerSpec("full node", Version.last, nameOpt.getOrElse(address.toString), Some(address), featureSeq)
+  protected def getPeerInfo(address: InetSocketAddress, nameOpt: Option[String] = None, featureSeq: Seq[PeerFeature] = Seq(), forgerNode: Boolean = false): PeerInfo = {
+    val data = PeerSpec("full node", Version.last, nameOpt.getOrElse(address.toString), Some(address), featureSeq, forgerNode)
     PeerInfo(data, currentTime(), None)
   }
 

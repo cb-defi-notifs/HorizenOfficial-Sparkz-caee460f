@@ -24,7 +24,8 @@ case class PeerSpec(agentName: String,
                     protocolVersion: Version,
                     nodeName: String,
                     declaredAddress: Option[InetSocketAddress],
-                    features: Seq[PeerFeature]) {
+                    features: Seq[PeerFeature],
+                    forgerPeer: Boolean = false) {
 
   lazy val localAddressOpt: Option[InetSocketAddress] = {
     features.collectFirst { case LocalAddressPeerFeature(addr) => addr }
@@ -72,6 +73,7 @@ class PeerSpecSerializer(featureSerializers: PeerFeature.Serializers) extends Sp
       w.putUShort(fBytes.length.toShortExact)
       w.putBytes(fBytes)
     }
+    w.putBoolean(obj.forgerPeer)
   }
 
   override def parse(r: Reader): PeerSpec = {
@@ -101,7 +103,9 @@ class PeerSpecSerializer(featureSerializers: PeerFeature.Serializers) extends Sp
       }
     }
 
-    PeerSpec(appName, protocolVersion, nodeName, declaredAddressOpt, feats)
+    val forgerPeer = r.getBoolean()
+
+    PeerSpec(appName, protocolVersion, nodeName, declaredAddressOpt, feats, forgerPeer)
   }
 
 }
