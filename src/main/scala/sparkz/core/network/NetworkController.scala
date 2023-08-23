@@ -446,10 +446,8 @@ class NetworkController(settings: NetworkSettings,
       // Drop connection if the peer does not fit in the limits.
       val isForgerConnection = peerInfo.peerSpec.forgerPeer
 
-      shouldDrop = shouldDrop ||
-        (isForgerConnection && shouldDropForgerConnection) ||
-        (!isForgerConnection && peerInfo.connectionType.contains(Incoming) && shouldDropIncomingConnection) ||
-        (!isForgerConnection && peerInfo.connectionType.contains(Outgoing) && shouldDropOutgoingConnection)
+      val connectionLimitExhausted = isConnectionLimitExhausted(peerInfo, isForgerConnection)
+      shouldDrop = shouldDrop || connectionLimitExhausted
 
       if (shouldDrop) {
         connectedPeer.handlerRef ! CloseConnection
@@ -463,6 +461,12 @@ class NetworkController(settings: NetworkSettings,
         context.system.eventStream.publish(HandshakedPeer(updatedConnectedPeer))
       }
     }
+  }
+
+  private[network] def isConnectionLimitExhausted(peerInfo: PeerInfo, isForgerConnection: Boolean) = {
+    (isForgerConnection && shouldDropForgerConnection) ||
+      (!isForgerConnection && peerInfo.connectionType.contains(Incoming) && shouldDropIncomingConnection) ||
+      (!isForgerConnection && peerInfo.connectionType.contains(Outgoing) && shouldDropOutgoingConnection)
   }
 
   /**

@@ -38,8 +38,7 @@ case class BroadcastBlock(settings: NetworkSettings) extends SendingStrategy {
     (settings.maxOutgoingConnections + settings.maxIncomingConnections) / 2
 
   override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = {
-    val forgerPeers = peers.filter(_.peerInfo.exists(_.peerSpec.forgerPeer))
-    val remainingPeers = peers.filter(_.peerInfo.exists(!_.peerSpec.forgerPeer))
+    val (forgerPeers, remainingPeers) = peers.partition(_.peerInfo.exists(_.peerSpec.forgerPeer))
 
     forgerPeers ++ Random.shuffle(remainingPeers).take(maxBlockBroadcastPeers - forgerPeers.length)
   }

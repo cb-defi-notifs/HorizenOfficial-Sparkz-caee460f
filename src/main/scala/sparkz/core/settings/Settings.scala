@@ -9,7 +9,6 @@ import sparkz.core.network.message.Message
 import sparkz.core.utils.NetworkTimeProviderSettings
 import sparkz.util.SparkzLogging
 
-import scala.collection.Seq
 import scala.concurrent.duration._
 
 case class RESTApiSettings(bindAddress: InetSocketAddress,
