@@ -47,7 +47,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     val transaction = TestTransaction(1, 1)
     val txBytes = TestTransactionSerializer.toBytes(transaction)
 
-    synchronizer ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Map(transaction.id -> txBytes))), Some(peer)))
+    synchronizer ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Seq(transaction.id -> txBytes))), Some(peer)))
     viewHolder.expectMsg(TransactionsFromRemote(Seq(transaction)))
     networkController.expectNoMessage()
   }
@@ -56,7 +56,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     val transaction = TestTransaction(1, 1)
     val txBytes = TestTransactionSerializer.toBytes(transaction) ++ Array[Byte](0x01, 0x02)
 
-    synchronizer ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Map(transaction.id -> txBytes))), Some(peer)))
+    synchronizer ! roundTrip(Message(modifiersSpec, Right(ModifiersData(Transaction.ModifierTypeId, Seq(transaction.id -> txBytes))), Some(peer)))
     viewHolder.expectMsg(TransactionsFromRemote(Seq(transaction)))
     networkController.expectMsg(PenalizePeer(peer.connectionId.remoteAddress, MisbehaviorPenalty))
   }
