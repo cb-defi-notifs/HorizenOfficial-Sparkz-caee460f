@@ -43,7 +43,7 @@ class PeerManager(
           PeerDatabaseValue(
             extractAddressFromPeerInfo(peerInfo),
             peerInfo,
-            if (peerInfo.peerSpec.forgerPeer) PeerConfidence.Forger else PeerConfidence.Unknown
+            if (peerInfo.peerSpec.features.contains(ForgerNodePeerFeature())) PeerConfidence.Forger else PeerConfidence.Unknown
           )
         )
       }
@@ -75,7 +75,8 @@ class PeerManager(
             val address: InetSocketAddress = peerSpec.address.getOrElse(throw new IllegalArgumentException())
             val peerInfo: PeerInfo = PeerInfo(peerSpec, 0L, None)
             log.info(s"New discovered peer: $peerInfo")
-            val peerConfidence = if (peerInfo.peerSpec.forgerPeer) PeerConfidence.Forger else PeerConfidence.Unknown
+            val peerConfidence =
+              if (peerInfo.peerSpec.features.contains(ForgerNodePeerFeature())) PeerConfidence.Forger else PeerConfidence.Unknown
             PeerDatabaseValue(address, peerInfo, peerConfidence)
         }
       peerDatabase.addOrUpdateKnownPeers(filteredPeers)

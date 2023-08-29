@@ -1,6 +1,6 @@
 package sparkz.core.network
 
-import sparkz.core.network.peer.TransactionsDisabledPeerFeature
+import sparkz.core.network.peer.{ForgerNodePeerFeature, TransactionsDisabledPeerFeature}
 import sparkz.core.settings.NetworkSettings
 
 import java.security.SecureRandom
@@ -38,7 +38,7 @@ case class BroadcastBlock(settings: NetworkSettings) extends SendingStrategy {
     (settings.maxOutgoingConnections + settings.maxIncomingConnections) / 2
 
   override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = {
-    val (forgerPeers, remainingPeers) = peers.partition(_.peerInfo.exists(_.peerSpec.forgerPeer))
+    val (forgerPeers, remainingPeers) = peers.partition(_.peerInfo.exists(_.peerSpec.features.contains(ForgerNodePeerFeature())))
 
     forgerPeers ++ Random.shuffle(remainingPeers).take(maxBlockBroadcastPeers - forgerPeers.length)
   }

@@ -300,7 +300,7 @@ class NetworkController(settings: NetworkSettings,
   }
 
   private def getForgerConnectionsSize: Int = {
-    connections.count { p => p._2.peerInfo.exists(_.peerSpec.forgerPeer) }
+    connections.count { p => p._2.peerInfo.exists(_.peerSpec.features.contains(ForgerNodePeerFeature())) }
   }
 
   private def connectionToPeer(activeConnections: Map[InetSocketAddress, ConnectedPeer], unconfirmedConnections: Set[InetSocketAddress]): Unit = {
@@ -398,19 +398,17 @@ class NetworkController(settings: NetworkSettings,
       }
     }
     val isLocal = NetworkUtils.isLocalAddress(connectionId.remoteAddress.getAddress)
-    val mandatoryFeatures = if (settings.handlingTransactionsEnabled) {
-      sparkzContext.features :+ mySessionIdFeature
-    }
-    else {
-      sparkzContext.features :+ mySessionIdFeature :+ TransactionsDisabledPeerFeature()
-    }
-    val peerFeatures = if (isLocal) {
+    val mandatoryFeatures = sparkzContext.features :+ mySessionIdFeature
+
+    val maybeTransactionDisabledFeature =
+      if (settings.handlingTransactionsEnabled) None else Some(TransactionsDisabledPeerFeature())
+    val maybeLocalAddressFeature = if (isLocal) {
       val la = new InetSocketAddress(connectionId.localAddress.getAddress, settings.bindAddress.getPort)
-      val localAddrFeature = LocalAddressPeerFeature(la)
-      mandatoryFeatures :+ localAddrFeature
-    } else {
-      mandatoryFeatures
-    }
+      Some(LocalAddressPeerFeature(la))
+    } else None
+    val maybeForgerNodeFeature = if (settings.isForgerNode) Some(ForgerNodePeerFeature()) else None
+
+    val peerFeatures = mandatoryFeatures ++ maybeTransactionDisabledFeature ++ maybeLocalAddressFeature ++ maybeForgerNodeFeature
     val selfAddressOpt = getNodeAddressForPeer(connectionId.localAddress)
 
     if (selfAddressOpt.isEmpty)
@@ -444,7 +442,7 @@ class NetworkController(settings: NetworkSettings,
 
       // We allow temporary overflowing outgoing connection limits to get the peerInfo and see if peer if a forger.
       // Drop connection if the peer does not fit in the limits.
-      val isForgerConnection = peerInfo.peerSpec.forgerPeer
+      val isForgerConnection = peerInfo.peerSpec.features.contains(ForgerNodePeerFeature())
 
       val connectionLimitExhausted = isConnectionLimitExhausted(peerInfo, isForgerConnection)
       shouldDrop = shouldDrop || connectionLimitExhausted

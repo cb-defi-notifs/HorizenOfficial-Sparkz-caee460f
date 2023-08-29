@@ -9,8 +9,7 @@ import sparkz.core.network.NetworkController.ReceivableMessages.{Handshaked, Pen
 import sparkz.core.network.PeerConnectionHandler.ReceivableMessages
 import sparkz.core.network.PeerFeature.Serializers
 import sparkz.core.network.message.{HandshakeSpec, MessageSerializer}
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.AddOrUpdatePeer
-import sparkz.core.network.peer.{PeerInfo, PenaltyType}
+import sparkz.core.network.peer.{ForgerNodePeerFeature, ForgerNodePeerFeatureSerializer, PeerInfo, PenaltyType}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
 import sparkz.util.SparkzLogging
@@ -35,11 +34,10 @@ class PeerConnectionHandler(val settings: NetworkSettings,
   private val direction = connectionDescription.connectionId.direction
   private val ownSocketAddress = connectionDescription.ownSocketAddress
   private val localFeatures = connectionDescription.localFeatures
+  private val mandatoryFeatureSerializers: Serializers = Map(ForgerNodePeerFeature.featureId -> ForgerNodePeerFeatureSerializer)
+  private val localFeatureSerializers: Serializers = localFeatures.map(f => f.featureId -> (f.serializer: SparkzSerializer[_ <: PeerFeature])).toMap
 
-  private val featureSerializers: Serializers =
-    localFeatures.map(f => f.featureId -> (f.serializer: SparkzSerializer[_ <: PeerFeature])).toMap
-
-  private val handshakeSerializer = new HandshakeSpec(featureSerializers, settings.maxHandshakeSize)
+  private val handshakeSerializer = new HandshakeSpec(mandatoryFeatureSerializers ++ localFeatureSerializers, settings.maxHandshakeSize)
   private val messageSerializer = new MessageSerializer(sparkzContext.messageSpecs, settings.magicBytes, settings.messageLengthBytesLimit)
 
   // there is no recovery for broken connections
@@ -247,8 +245,7 @@ class PeerConnectionHandler(val settings: NetworkSettings,
         Version(settings.appVersion),
         settings.nodeName,
         ownSocketAddress,
-        localFeatures,
-        settings.isForgerNode
+        localFeatures
       ),
       sparkzContext.timeProvider.time()
     )

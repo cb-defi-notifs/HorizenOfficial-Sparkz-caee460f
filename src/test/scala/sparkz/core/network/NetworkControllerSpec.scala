@@ -18,7 +18,7 @@ import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetC
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.DisconnectedPeer
 import sparkz.core.network.message._
 import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, DisconnectFromAddress, GetAllPeers, RandomPeerForConnectionExcluding}
-import sparkz.core.network.peer._
+import sparkz.core.network.peer.{ForgerNodePeerFeature, _}
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.LocalTimeProvider
@@ -33,7 +33,8 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private val featureSerializers = Map[Byte, SparkzSerializer[_ <: PeerFeature]](LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer,
-    TransactionsDisabledPeerFeature.featureId -> TransactionsDisabledPeerFeatureSerializer)
+    TransactionsDisabledPeerFeature.featureId -> TransactionsDisabledPeerFeatureSerializer,
+    ForgerNodePeerFeature.featureId -> ForgerNodePeerFeatureSerializer)
 
   "A NetworkController" should "send local address on handshake when peer and node address are in localhost" in {
     implicit val system: ActorSystem = ActorSystem()
@@ -690,7 +691,8 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
 
   private val timeProvider = LocalTimeProvider
   private val featureSerializers = Map[Byte, SparkzSerializer[_ <: PeerFeature]](LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer,
-    TransactionsDisabledPeerFeature.featureId -> TransactionsDisabledPeerFeatureSerializer)
+    TransactionsDisabledPeerFeature.featureId -> TransactionsDisabledPeerFeatureSerializer,
+    ForgerNodePeerFeature.featureId -> ForgerNodePeerFeatureSerializer)
   private val handshakeSerializer = new HandshakeSpec(featureSerializers, Int.MaxValue)
   private val peersSpec = new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects)
   private val messageSpecs = Seq(GetPeersSpec, peersSpec)
@@ -741,10 +743,11 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
     */
   def sendHandshake(declaredAddress: Option[InetSocketAddress], localAddress: Option[InetSocketAddress], forgerNode: Boolean = false): Tcp.ResumeReading.type = {
     val localFeature: Seq[PeerFeature] = localAddress.map(LocalAddressPeerFeature(_)).toSeq
-    val features = localFeature :+ SessionIdPeerFeature(settings.network.magicBytes)
+    val forgerNodeFeature = if (forgerNode) Some(ForgerNodePeerFeature()) else None
+    val features = localFeature ++ forgerNodeFeature :+ SessionIdPeerFeature(settings.network.magicBytes)
     val handshakeToNode = Handshake(PeerSpec(settings.network.agentName,
       Version(settings.network.appVersion), "test",
-      declaredAddress, features, forgerNode), timeProvider.time())
+      declaredAddress, features), timeProvider.time())
 
     tcpManagerProbe.send(connectionHandler, Tcp.Received(ByteString(handshakeSerializer.toBytes(handshakeToNode))))
     tcpManagerProbe.expectMsg(Tcp.ResumeReading)
