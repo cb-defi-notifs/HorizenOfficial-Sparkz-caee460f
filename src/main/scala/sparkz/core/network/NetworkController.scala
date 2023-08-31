@@ -83,6 +83,7 @@ class NetworkController(settings: NetworkSettings,
 
   override def receive: Receive =
     bindingLogic orElse
+      startConnectingCommand orElse
       businessLogic orElse
       peerCommands orElse
       connectionEvents orElse
@@ -92,13 +93,18 @@ class NetworkController(settings: NetworkSettings,
   private def bindingLogic: Receive = {
     case Bound(_) =>
       log.info("Successfully bound to the port " + settings.bindAddress.getPort)
-      scheduleConnectionToPeer()
-      scheduleDroppingDeadConnections()
 
     case CommandFailed(_: Bind) =>
       log.error("Network port " + settings.bindAddress.getPort + " already in use!")
       java.lang.System.exit(1) // Terminate node if port is in use
       context stop self
+  }
+
+  private def startConnectingCommand: Receive = {
+    case StartConnectingPeers =>
+      log.info("Start connecting to peers")
+      scheduleConnectionToPeer()
+      scheduleDroppingDeadConnections()
   }
 
   private def networkTime(): Time = sparkzContext.timeProvider.time()
@@ -253,14 +259,14 @@ class NetworkController(settings: NetworkSettings,
     * Schedule a periodic connection to a random known peer
     */
   private def scheduleConnectionToPeer(): Unit = {
-    context.system.scheduler.scheduleWithFixedDelay(5.seconds, tryNewConnectionAttemptDelay) {
-      () => {
-        if (canEstablishNewOutgoingConnection) {
-          log.trace(s"Looking for a new random connection")
-          connectionToPeer(connections, unconfirmedConnections)
-        }
+    val connectionTask: Runnable = () => {
+      if (canEstablishNewOutgoingConnection) {
+        log.trace(s"Looking for a new random connection")
+        connectionToPeer(connections, unconfirmedConnections)
       }
     }
+    context.system.scheduler.scheduleWithFixedDelay(5.seconds, tryNewConnectionAttemptDelay)(connectionTask)
+    connectionTask.run()
   }
 
   private def canEstablishNewOutgoingConnection: Boolean = {
@@ -582,6 +588,8 @@ object NetworkController {
     case class GetFilteredConnectedPeers(sendingStrategy: SendingStrategy, version: Version)
 
     case object GetConnectedPeers
+
+    case object StartConnectingPeers
 
     /**
       * Get p2p network status
