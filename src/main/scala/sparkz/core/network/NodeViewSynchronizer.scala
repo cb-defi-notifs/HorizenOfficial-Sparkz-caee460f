@@ -102,7 +102,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         if (m.modifierTypeId == Transaction.ModifierTypeId)
           networkControllerRef ! SendToNetwork(msg, BroadcastTransaction)
         else
-          networkControllerRef ! SendToNetwork(msg, BroadcastBlock(networkSettings))
+          networkControllerRef ! SendToNetwork(msg, Broadcast)
     }
   }
 

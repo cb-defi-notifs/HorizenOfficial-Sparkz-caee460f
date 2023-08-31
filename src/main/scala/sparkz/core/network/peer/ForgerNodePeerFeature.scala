@@ -6,7 +6,7 @@ import sparkz.util.serialization._
 import sparkz.core.serialization.SparkzSerializer
 
 /**
-  * This peer feature allows to detect peers who don't support transactions
+  * This peer feature marks forger nodes
   */
 case class ForgerNodePeerFeature() extends PeerFeature {
 
