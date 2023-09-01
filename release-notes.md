@@ -1,3 +1,7 @@
+2.0.3
+---------
+* Fix in the handshake process - start connecting to nodes only after the Synchronizer is initialized
+
 2.0.2
 ---------
 * P2p rate limitng feature - added tx rebroadcast when rate limiting is reenabled
