@@ -99,10 +99,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         deliveryTracker.putInRebroadcastQueue(m.id)
       case _ =>
         val msg = Message(invSpec, Right(InvData(m.modifierTypeId, Seq(m.id))), None)
-	    if (m.modifierTypeId == Transaction.ModifierTypeId)
-	      networkControllerRef ! SendToNetwork(msg, BroadcastTransaction)
-	    else
-	      networkControllerRef ! SendToNetwork(msg, Broadcast)
+        if (m.modifierTypeId == Transaction.ModifierTypeId)
+          networkControllerRef ! SendToNetwork(msg, BroadcastTransaction)
+        else
+          networkControllerRef ! SendToNetwork(msg, BroadcastBlock)
     }
   }
 
@@ -198,8 +198,8 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
   // Send history extension to the (less developed) peer 'remote' which does not have it.
   @nowarn def sendExtension(remote: ConnectedPeer,
-                    status: HistoryComparisonResult,
-                    ext: Seq[(ModifierTypeId, ModifierId)]): Unit =
+                            status: HistoryComparisonResult,
+                            ext: Seq[(ModifierTypeId, ModifierId)]): Unit =
     ext.groupBy(_._1).mapValues(_.map(_._2)).foreach {
       case (mid, mods) =>
         networkControllerRef ! SendToNetwork(Message(invSpec, Right(InvData(mid, mods)), None), SendToPeer(remote))

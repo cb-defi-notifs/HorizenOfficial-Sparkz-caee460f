@@ -61,7 +61,7 @@ class NetworkController(settings: NetworkSettings,
 
   private var connections = Map.empty[InetSocketAddress, ConnectedPeer]
   private var unconfirmedConnections = Set.empty[InetSocketAddress]
-  private val maxConnections = settings.maxIncomingConnections + settings.maxOutgoingConnections
+  private val maxConnections = settings.maxIncomingConnections + settings.maxOutgoingConnections + settings.maxForgerConnections
   private val peersLastConnectionAttempts = new LRUSimpleCache[InetSocketAddress, TimeProvider.Time](threshold = 10000)
 
   private val tryNewConnectionAttemptDelay = 5.seconds
@@ -206,7 +206,7 @@ class NetworkController(settings: NetworkSettings,
     log.info(s"Unconfirmed connection: ($remoteAddress, $localAddress) => $connectionId")
 
     val handlerRef = sender()
-    if (connectionDirection.isOutgoing && canEstablishNewOutgoingConnection) {
+    if (connectionDirection.isOutgoing && (canEstablishNewOutgoingConnection || canEstablishNewForgerConnection)) {
       createPeerConnectionHandler(connectionId, handlerRef)
     }
     else if (connectionDirection.isIncoming && canEstablishNewIncomingConnection)
@@ -259,7 +259,7 @@ class NetworkController(settings: NetworkSettings,
   private def scheduleConnectionToPeer(): Unit = {
     context.system.scheduler.scheduleWithFixedDelay(5.seconds, tryNewConnectionAttemptDelay) {
       () => {
-        if (canEstablishNewOutgoingConnection) {
+        if (canEstablishNewOutgoingConnection || canEstablishNewForgerConnection) {
           log.trace(s"Looking for a new random connection")
           connectionToPeer(connections, unconfirmedConnections)
         }
@@ -275,12 +275,32 @@ class NetworkController(settings: NetworkSettings,
     getIncomingConnectionsSize < settings.maxIncomingConnections
   }
 
+  private def canEstablishNewForgerConnection: Boolean = {
+    getForgerConnectionsSize < settings.maxForgerConnections
+  }
+
+  private def shouldDropForgerConnection: Boolean = {
+    getForgerConnectionsSize > settings.maxForgerConnections
+  }
+
+  private def shouldDropOutgoingConnection: Boolean = {
+    getOutgoingConnectionsSize > settings.maxOutgoingConnections
+  }
+
+  private def shouldDropIncomingConnection: Boolean = {
+    getIncomingConnectionsSize > settings.maxIncomingConnections
+  }
+
   private def getOutgoingConnectionsSize: Int = {
     connections.count { p => p._2.connectionId.direction == Outgoing }
   }
 
   private def getIncomingConnectionsSize: Int = {
     connections.count { p => p._2.connectionId.direction == Incoming }
+  }
+
+  private def getForgerConnectionsSize: Int = {
+    connections.count { p => p._2.peerInfo.exists(_.peerSpec.features.contains(ForgerNodePeerFeature())) }
   }
 
   private def connectionToPeer(activeConnections: Map[InetSocketAddress, ConnectedPeer], unconfirmedConnections: Set[InetSocketAddress]): Unit = {
@@ -378,19 +398,17 @@ class NetworkController(settings: NetworkSettings,
       }
     }
     val isLocal = NetworkUtils.isLocalAddress(connectionId.remoteAddress.getAddress)
-    val mandatoryFeatures = if (settings.handlingTransactionsEnabled) {
-      sparkzContext.features :+ mySessionIdFeature
-    }
-    else {
-      sparkzContext.features :+ mySessionIdFeature :+ TransactionsDisabledPeerFeature()
-    }
-    val peerFeatures = if (isLocal) {
+    val mandatoryFeatures = sparkzContext.features :+ mySessionIdFeature
+
+    val maybeTransactionDisabledFeature =
+      if (settings.handlingTransactionsEnabled) None else Some(TransactionsDisabledPeerFeature())
+    val maybeLocalAddressFeature = if (isLocal) {
       val la = new InetSocketAddress(connectionId.localAddress.getAddress, settings.bindAddress.getPort)
-      val localAddrFeature = LocalAddressPeerFeature(la)
-      mandatoryFeatures :+ localAddrFeature
-    } else {
-      mandatoryFeatures
-    }
+      Some(LocalAddressPeerFeature(la))
+    } else None
+    val maybeForgerNodeFeature = if (settings.isForgerNode) Some(ForgerNodePeerFeature()) else None
+
+    val peerFeatures = mandatoryFeatures ++ maybeTransactionDisabledFeature ++ maybeLocalAddressFeature ++ maybeForgerNodeFeature
     val selfAddressOpt = getNodeAddressForPeer(connectionId.localAddress)
 
     if (selfAddressOpt.isEmpty)
@@ -415,12 +433,19 @@ class NetworkController(settings: NetworkSettings,
       // Drop connection to self if occurred or peer already connected.
       // Decision whether connection is local or is from some other network is made
       // based on SessionIdPeerFeature if exists or in old way using isSelf() function
-      val shouldDrop =
+      var shouldDrop =
         connectionForPeerAddress(peerAddress).exists(_.handlerRef != peerHandlerRef) ||
         peerInfo.peerSpec.features.collectFirst {
           case SessionIdPeerFeature(networkMagic, sessionId) =>
             !networkMagic.sameElements(mySessionIdFeature.networkMagic) || sessionId == mySessionIdFeature.sessionId
         }.getOrElse(isSelf(remoteAddress))
+
+      // We allow temporary overflowing outgoing connection limits to get the peerInfo and see if peer if a forger.
+      // Drop connection if the peer does not fit in the limits.
+      val isForgerConnection = peerInfo.peerSpec.features.contains(ForgerNodePeerFeature())
+
+      val connectionLimitExhausted = isConnectionLimitExhausted(peerInfo, isForgerConnection)
+      shouldDrop = shouldDrop || connectionLimitExhausted
 
       if (shouldDrop) {
         connectedPeer.handlerRef ! CloseConnection
@@ -434,6 +459,12 @@ class NetworkController(settings: NetworkSettings,
         context.system.eventStream.publish(HandshakedPeer(updatedConnectedPeer))
       }
     }
+  }
+
+  private[network] def isConnectionLimitExhausted(peerInfo: PeerInfo, isForgerConnection: Boolean) = {
+    (isForgerConnection && shouldDropForgerConnection) ||
+      (!isForgerConnection && peerInfo.connectionType.contains(Incoming) && shouldDropIncomingConnection) ||
+      (!isForgerConnection && peerInfo.connectionType.contains(Outgoing) && shouldDropOutgoingConnection)
   }
 
   /**

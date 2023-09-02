@@ -45,7 +45,7 @@ object PeerDatabase {
     */
   object PeerConfidence extends Enumeration {
     type PeerConfidence = Value
-    val Unknown, Low, Medium, High: Value = Value
+    val Unknown, Low, Medium, High, Forger: Value = Value
   }
 
   case class PeerDatabaseValue(address: InetSocketAddress, peerInfo: PeerInfo, confidence: PeerConfidence) {
