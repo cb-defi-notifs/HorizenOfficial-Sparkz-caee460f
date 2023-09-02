@@ -5,7 +5,7 @@ import akka.testkit.{TestActorRef, TestProbe}
 import sparkz.ObjectGenerators
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, TransactionsFromRemote}
 import sparkz.core.consensus.History.Unknown
-import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork, StartConnectingPeers}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.network.message._
 import sparkz.core.network.peer.PenaltyType
@@ -317,7 +317,9 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
         }
       }
     ))
+
     networkControllerProbe.expectMsgType[RegisterMessageSpecs](5000.millis)
+    networkControllerProbe.expectMsgType[StartConnectingPeers.type](5000.millis)
     viewHolderProbe.expectMsgType[GetNodeViewChanges](5000.millis)
 
     (nodeViewSynchronizerRef, networkControllerProbe, viewHolderProbe)
