@@ -5,7 +5,7 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, Modifi
 import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, HistoryReader, SyncInfo}
 import sparkz.core.network.ModifiersStatus.Requested
-import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork, StartConnectingPeers}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.network.message._
 import sparkz.core.network.peer.PenaltyType
@@ -74,6 +74,8 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     // register as a handler for synchronization-specific types of messages
     val messageSpecs: Seq[MessageSpec[_]] = Seq(invSpec, requestModifierSpec, modifiersSpec, syncInfoSpec)
     networkControllerRef ! RegisterMessageSpecs(messageSpecs, self)
+    // trigger connecting to peers
+    networkControllerRef ! StartConnectingPeers
 
     // register as a listener for peers got connected (handshaked) or disconnected
     context.system.eventStream.subscribe(self, classOf[HandshakedPeer])
@@ -167,9 +169,13 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
   }
 
   protected def sendSync(syncTracker: SyncTracker, history: HR): Unit = {
+    logger.debug("SYNC INFO: Trying to send sync info")
     val peers = statusTracker.peersToSyncWith()
     if (peers.nonEmpty) {
+      logger.debug(s"SYNC INFO: Sending sync info to peers $peers")
       networkControllerRef ! SendToNetwork(Message(syncInfoSpec, Right(history.syncInfo), None), SendToPeers(peers))
+    } else {
+      logger.debug("SYNC INFO: No peers to send sync info to")
     }
   }
 
@@ -179,6 +185,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
   //sync info is coming from another node
   protected def processSync(syncInfo: SI, remote: ConnectedPeer): Unit = {
+    log.debug(s"SYNC INFO: Got sync info from $remote")
     historyReaderOpt match {
       case Some(historyReader) =>
         val ext = historyReader.continuationIds(syncInfo, networkSettings.desiredInvObjects)
