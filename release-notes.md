@@ -1,5 +1,9 @@
 2.1.0
 ---------
+* Added support for forger's connections prioritization
+* Node synchronization improvements:
+  * Optimization of lookup strategy in modifiersCache
+  * Preserve the order of block during synchronization
 * Fixes/Improvements on the way the SyncTracker handles the internal statuses maps
 
 2.0.3
