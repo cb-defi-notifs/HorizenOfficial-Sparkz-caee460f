@@ -1,8 +1,10 @@
 package sparkz.core.network
 
-import sparkz.core.network.peer.TransactionsDisabledPeerFeature
+import sparkz.core.network.peer.{ForgerNodePeerFeature, TransactionsDisabledPeerFeature}
+import sparkz.core.settings.NetworkSettings
 
 import java.security.SecureRandom
+import scala.util.Random
 
 trait SendingStrategy {
   val secureRandom = new SecureRandom()
@@ -28,6 +30,14 @@ case object BroadcastTransaction extends SendingStrategy {
   override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = {
     peers.filter(p => p.peerInfo.flatMap{
       info =>  info.peerSpec.features.collectFirst {case f:TransactionsDisabledPeerFeature => true}}.isEmpty)
+  }
+}
+
+case object BroadcastBlock extends SendingStrategy {
+  override def choose(peers: Seq[ConnectedPeer]): Seq[ConnectedPeer] = {
+    val (forgerPeers, remainingPeers) = peers.partition(_.peerInfo.exists(_.peerSpec.features.contains(ForgerNodePeerFeature())))
+
+    forgerPeers ++ remainingPeers
   }
 }
 

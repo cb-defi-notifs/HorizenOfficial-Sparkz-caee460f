@@ -11,9 +11,11 @@ import sparkz.core.network.{NetworkTests, PeerSpec}
 import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext
 
-class PeerManagerSpec(implicit val ec: ExecutionContext) extends NetworkTests with BeforeAndAfter {
+class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
   import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, GetAllPeers}
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  implicit val ec: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
 
   type Data = Map[InetSocketAddress, PeerInfo]
   private val DefaultPort = 27017
@@ -352,6 +354,36 @@ class PeerManagerSpec(implicit val ec: ExecutionContext) extends NetworkTests wi
     peerManagerRef ! GetBlacklistedPeers
     val blacklistedPeersAfterBlacklistMsg = p.expectMsgClass(classOf[Seq[InetAddress]])
     blacklistedPeersAfterBlacklistMsg.size shouldBe 0
+
+    system.terminate()
+  }
+
+  it should "prioritize forgerPeers over other peers" in {
+    // Arrange
+    val knownPeerAddress1 = new InetSocketAddress("127.0.0.1", DefaultPort)
+    val knownPeerAddress2 = new InetSocketAddress("127.0.0.2", DefaultPort)
+    val settingsWithKnownPeer = settings.copy(network = settings.network.copy(knownPeers = Seq(knownPeerAddress1, knownPeerAddress2)))
+
+    implicit val system: ActorSystem = ActorSystem()
+    val p = TestProbe("p")(system)
+    implicit val defaultSender: ActorRef = p.testActor
+
+    val sparkzContext = SparkzContext(Seq.empty, Seq.empty, mockTimeProvider, None)
+    val peerDatabase = new InMemoryPeerDatabase(settingsWithKnownPeer, sparkzContext)
+    val peerManager = PeerManagerRef(settingsWithKnownPeer, sparkzContext, peerDatabase)(system, ec)
+
+    val peerAddress = new InetSocketAddress("1.1.1.1", DefaultPort)
+    val peerInfo = getPeerInfo(peerAddress, forgerNode = true)
+
+    // Act
+    peerManager ! AddOrUpdatePeer(peerInfo)
+
+    peerManager ! RandomPeerForConnectionExcluding(Seq(Some(knownPeerAddress2)))
+
+    // Assert
+    val data = p.expectMsgClass(classOf[Option[PeerInfo]])
+    data shouldNot be(empty)
+    data.foreach(p => p.peerSpec.address.contains(peerAddress) shouldBe true)
 
     system.terminate()
   }

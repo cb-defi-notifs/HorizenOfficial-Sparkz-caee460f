@@ -103,11 +103,14 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
     bucketManager.removePeer(address)
   }
 
-  override def allPeers: Map[InetSocketAddress, PeerDatabaseValue] = knownPeers ++ bucketManager.getTriedPeers ++ bucketManager.getNewPeers
+  override def allPeers: Map[InetSocketAddress, PeerDatabaseValue] =
+    if (settings.onlyConnectToKnownPeers)
+      knownPeers
+    else
+      knownPeers ++ bucketManager.getTriedPeers ++ bucketManager.getNewPeers
 
   override def blacklistedPeers: Seq[InetAddress] = blacklist
-    .map { case (address, bannedTill) =>
-      checkBanned(address, bannedTill)
+    .map { case (address, bannedTill) if checkBanned(address, bannedTill) =>
       address
     }
     .toSeq
@@ -170,7 +173,11 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
         (360 * 10).days.toMillis
     }
 
-  override def randomPeersSubset: Map[InetSocketAddress, PeerDatabaseValue] = knownPeers ++ bucketManager.getRandomPeers
+  override def randomPeersSubset: Map[InetSocketAddress, PeerDatabaseValue] =
+    if (settings.onlyConnectToKnownPeers)
+      knownPeers
+    else
+      knownPeers ++ bucketManager.getRandomPeers
 
   override def updatePeer(peerDatabaseValue: PeerDatabaseValue): Unit = {
     if (peerIsNotBlacklistedAndNotKnownPeer(peerDatabaseValue)) {

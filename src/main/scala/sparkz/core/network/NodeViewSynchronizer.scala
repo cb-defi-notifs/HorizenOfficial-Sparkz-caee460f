@@ -1,6 +1,5 @@
 package sparkz.core.network
 
-import java.net.InetSocketAddress
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
 import sparkz.core.consensus.History._
@@ -21,11 +20,10 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier, PersistentNodeViewModifier
 import sparkz.util.serialization.{VLQByteBufferReader, VLQReader}
 import sparkz.util.{ModifierId, SparkzEncoding, SparkzLogging}
 
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import scala.annotation.{nowarn, tailrec}
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success}
@@ -103,10 +101,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
         deliveryTracker.putInRebroadcastQueue(m.id)
       case _ =>
         val msg = Message(invSpec, Right(InvData(m.modifierTypeId, Seq(m.id))), None)
-	    if (m.modifierTypeId == Transaction.ModifierTypeId)
-	      networkControllerRef ! SendToNetwork(msg, BroadcastTransaction)
-	    else
-	      networkControllerRef ! SendToNetwork(msg, Broadcast)
+        if (m.modifierTypeId == Transaction.ModifierTypeId)
+          networkControllerRef ! SendToNetwork(msg, BroadcastTransaction)
+        else
+          networkControllerRef ! SendToNetwork(msg, BroadcastBlock)
     }
   }
 
@@ -200,14 +198,15 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
           log.warn("Extension is empty while comparison is younger")
 
         self ! OtherNodeSyncingStatus(remote, comparison, ext)
+
       case _ =>
     }
   }
 
   // Send history extension to the (less developed) peer 'remote' which does not have it.
   @nowarn def sendExtension(remote: ConnectedPeer,
-                    status: HistoryComparisonResult,
-                    ext: Seq[(ModifierTypeId, ModifierId)]): Unit =
+                            status: HistoryComparisonResult,
+                            ext: Seq[(ModifierTypeId, ModifierId)]): Unit =
     ext.groupBy(_._1).mapValues(_.map(_._2)).foreach {
       case (mid, mods) =>
         networkControllerRef ! SendToNetwork(Message(invSpec, Right(InvData(mid, mods)), None), SendToPeer(remote))
@@ -289,7 +288,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     val typeId = data.typeId
     val modifiers = data.modifiers
     log.info(s"Got ${modifiers.size} modifiers of type $typeId from remote connected peer: $remote")
-    log.trace(s"Received modifier ids ${modifiers.keySet.map(encoder.encodeId).mkString(",")}")
+    log.trace(s"Received modifier ids ${modifiers.map(_._1).map(encoder.encodeId).mkString(",")}")
 
     // filter out non-requested modifiers
     val requestedModifiers = processSpam(remote, typeId, modifiers)
@@ -303,7 +302,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
       case Some(serializer: SparkzSerializer[PMOD]@unchecked) =>
         // parse all modifiers and put them to modifiers cache
-        log.info(s"Received block ids ${modifiers.keySet.map(encoder.encodeId).mkString(",")}")
+        log.info(s"Received block ids ${modifiers.map(_._1).map(encoder.encodeId).mkString(",")}")
         val parsed: Iterable[PMOD] = parseModifiers(requestedModifiers, serializer, remote)
         val valid: Iterable[PMOD] = parsed.filter(validateAndSetStatus(remote, _))
         if (valid.nonEmpty) viewHolderRef ! ModifiersFromRemote[PMOD](valid)
@@ -344,7 +343,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     *
     * @return collection of parsed modifiers
     */
-  private def parseModifiers[M <: NodeViewModifier](modifiers: Map[ModifierId, Array[Byte]],
+  private def parseModifiers[M <: NodeViewModifier](modifiers: Seq[(ModifierId, Array[Byte])],
                                                     serializer: SparkzSerializer[M],
                                                     remote: ConnectedPeer): Iterable[M] = {
     modifiers.flatMap { case (id, bytes) =>
@@ -374,7 +373,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     */
   private def processSpam(remote: ConnectedPeer,
                           typeId: ModifierTypeId,
-                          modifiers: Map[ModifierId, Array[Byte]]): Map[ModifierId, Array[Byte]] = {
+                          modifiers: Seq[(ModifierId, Array[Byte])]): Seq[(ModifierId, Array[Byte])] = {
 
     val (requested, spam) = modifiers.partition { case (id, _) =>
       deliveryTracker.status(id) == Requested
@@ -382,7 +381,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
     if (spam.nonEmpty) {
       log.info(s"Spam attempt: peer $remote has sent a non-requested modifiers of type $typeId with ids" +
-        s": ${spam.keys.map(encoder.encodeId)}")
+        s": ${spam.map(_._1).map(encoder.encodeId)}")
       penalizeSpammingPeer(remote)
     }
     requested
@@ -440,7 +439,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
             size += NodeViewModifier.ModifierIdSize + 4 + modBytes.length
             size < networkSettings.maxModifiersSpecMessageSize
           }
-          peer.handlerRef ! Message(modifiersSpec, Right(ModifiersData(modType, batch.toMap)), None)
+          peer.handlerRef ! Message(modifiersSpec, Right(ModifiersData(modType, batch)), None)
           val remaining = mods.drop(batch.length)
           if (remaining.nonEmpty) {
             sendByParts(remaining)
@@ -461,7 +460,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       val mods = deliveryTracker.getRebroadcastModifiers
       mempoolReaderOpt match {
         case Some(mempool) =>
-          mempool.getAll(ids = mods).foreach { tx =>broadcastModifierInv(tx) }
+          mempool.getAll(ids = mods).foreach { tx => broadcastModifierInv(tx) }
         case None =>
           log.warn(s"Trying to rebroadcast while readers are not ready $mempoolReaderOpt")
       }
@@ -619,44 +618,4 @@ object NodeViewSynchronizerRef {
   (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props[TX, SI, SIS, PMOD, HR, MR](networkControllerRef, viewHolderRef,
       syncInfoSpec, networkSettings, timeProvider, modifierSerializers), name)
-}
-
-object Test extends App {
-
-  test()
-
-  protected val rebroadcastQueue: mutable.Queue[String] = mutable.Queue()
-
-  def test(): Unit = {
-    putInRebroadcastQueue("1")
-    putInRebroadcastQueue("2")
-    putInRebroadcastQueue("3")
-    putInRebroadcastQueue("4")
-    putInRebroadcastQueue("5")
-    putInRebroadcastQueue("6")
-    putInRebroadcastQueue("7")
-    putInRebroadcastQueue("8")
-    putInRebroadcastQueue("9")
-    putInRebroadcastQueue("10")
-
-    println(s"get modifiers = $getRebroadcastModifiers")
-
-    println(s"queue = $rebroadcastQueue")
-
-    println(s"get modifiers = $getRebroadcastModifiers")
-
-    println(s"queue = $rebroadcastQueue")
-  }
-
-  def putInRebroadcastQueue(modifierId: String): Unit = {
-    rebroadcastQueue.enqueue(modifierId)
-  }
-
-  def getRebroadcastModifiers: Seq[String] = {
-    val mods = rebroadcastQueue.take(5).toSeq
-    rebroadcastQueue.drop(5)
-    mods
-  }
-
-
 }

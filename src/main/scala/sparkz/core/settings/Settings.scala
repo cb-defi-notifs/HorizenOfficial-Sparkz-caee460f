@@ -2,7 +2,6 @@ package sparkz.core.settings
 
 import java.io.File
 import java.net.InetSocketAddress
-
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
@@ -21,9 +20,11 @@ case class NetworkSettings(nodeName: String,
                            addedMaxDelay: Option[FiniteDuration],
                            localOnly: Boolean,
                            knownPeers: Seq[InetSocketAddress],
+                           onlyConnectToKnownPeers: Boolean,
                            bindAddress: InetSocketAddress,
                            maxIncomingConnections: Int,
                            maxOutgoingConnections: Int,
+                           maxForgerConnections: Int,
                            connectionTimeout: FiniteDuration,
                            declaredAddress: Option[InetSocketAddress],
                            handshakeTimeout: FiniteDuration,
@@ -62,7 +63,8 @@ case class NetworkSettings(nodeName: String,
                            temporalBanDuration: FiniteDuration,
                            penaltySafeInterval: FiniteDuration,
                            penaltyScoreThreshold: Int,
-                           handlingTransactionsEnabled: Boolean)
+                           handlingTransactionsEnabled: Boolean,
+                           isForgerNode: Boolean)
 
 case class SparkzSettings(dataDir: File,
                           logDir: File,

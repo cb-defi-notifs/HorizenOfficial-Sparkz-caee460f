@@ -9,9 +9,9 @@ import sparkz.util.Extensions._
 import sparkz.util.serialization.{Reader, Writer}
 import sparkz.util.{ModifierId, SparkzLogging, bytesToId, idToBytes}
 
-import scala.collection.immutable
+import scala.collection.mutable
 
-case class ModifiersData(typeId: ModifierTypeId, modifiers: Map[ModifierId, Array[Byte]])
+case class ModifiersData(typeId: ModifierTypeId, modifiers: Seq[(ModifierId, Array[Byte])])
 
 case class InvData(typeId: ModifierTypeId, ids: Seq[ModifierId])
 
@@ -157,7 +157,7 @@ class ModifiersSpec(maxMessageSize: Int) extends MessageSpecV1[ModifiersData] wi
     }
 
     if (msgSize > maxMessageSize) {
-      log.warn(s"Message with modifiers ${modifiers.keySet} has size $msgSize exceeding limit $maxMessageSize." +
+      log.warn(s"Message with modifiers ${modifiers.map(_._1)} has size $msgSize exceeding limit $maxMessageSize." +
         s" Sending ${w.length() - start} bytes instead")
     }
   }
@@ -165,7 +165,7 @@ class ModifiersSpec(maxMessageSize: Int) extends MessageSpecV1[ModifiersData] wi
   override def parse(r: Reader): ModifiersData = {
     val typeId = ModifierTypeId @@ r.getByte() // 1 byte
     val count = r.getUInt().toIntExact // 8 bytes
-    val resMap = immutable.Map.newBuilder[ModifierId, Array[Byte]]
+    val res = mutable.Buffer[(ModifierId, Array[Byte])]()
     (0 until count).foldLeft(HeaderLength) { case (msgSize, _) =>
       val id = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
       val objBytesCnt = r.getUInt().toIntExact
@@ -174,10 +174,10 @@ class ModifiersSpec(maxMessageSize: Int) extends MessageSpecV1[ModifiersData] wi
         throw new Exception("Too big message with modifiers, size: " + maxMessageSize)
       }
       val obj = r.getBytes(objBytesCnt)
-      resMap += (id -> obj)
+      res += (id -> obj)
       newMsgSize
     }
-    ModifiersData(typeId, resMap.result())
+    ModifiersData(typeId, res.toSeq)
   }
 }
 
@@ -256,8 +256,9 @@ class HandshakeSpec(featureSerializers: PeerFeature.Serializers, sizeLimit: Int)
 
   /**
     * Serializing handshake into a byte writer.
+    *
     * @param hs - handshake instance
-    * @param w - writer to write bytes to
+    * @param w  - writer to write bytes to
     */
   override def serialize(hs: Handshake, w: Writer): Unit = {
     // first writes down handshake time, then peer specification of our node
