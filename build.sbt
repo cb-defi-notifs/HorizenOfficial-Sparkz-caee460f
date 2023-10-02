@@ -25,7 +25,7 @@ lazy val commonSettings = Seq(
     Wart.OptionPartial),
   organization := "io.horizen",
   organizationName := "Zen Blockchain Foundation",
-  version := "2.1.0-SNAPSHOT",
+  version := "2.1.0",
   licenses := Seq("CC0" -> url("https://creativecommons.org/publicdomain/zero/1.0/legalcode")),
   homepage := Some(url("https://github.com/HorizenOfficial/Sparkz")),
   pomExtra :=
