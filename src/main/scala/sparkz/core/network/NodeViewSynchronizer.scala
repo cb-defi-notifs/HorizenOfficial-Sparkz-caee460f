@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
 import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, HistoryReader, SyncInfo}
-import sparkz.core.network.ModifiersStatus.Requested
+import sparkz.core.network.ModifiersStatus.{Invalid, Requested}
 import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork, StartConnectingPeers}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.network.message._
@@ -126,13 +126,13 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
       deliveryTracker.setHeld(mod.id)
 
     case SyntacticallyFailedModification(mod, _) =>
-      deliveryTracker.setInvalid(mod.id).foreach(penalizeMisbehavingPeer)
+      deliveryTracker.setInvalid(mod.id).foreach(penalizeAndDisconnectPeer)
 
     case SemanticallySuccessfulModifier(mod) =>
       broadcastModifierInv(mod)
 
     case SemanticallyFailedModification(mod, _) =>
-      deliveryTracker.setInvalid(mod.id).foreach(penalizeMisbehavingPeer)
+      deliveryTracker.setInvalid(mod.id).foreach(penalizeAndDisconnectPeer)
 
     case ChangedHistory(reader: HR) =>
       historyReaderOpt = Some(reader)
@@ -317,22 +317,29 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     */
   @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
   private def validateAndSetStatus(remote: ConnectedPeer, pmod: PMOD): Boolean = {
-    historyReaderOpt match {
-      case Some(hr) =>
-        hr.applicableTry(pmod) match {
-          case Failure(e) if e.isInstanceOf[MalformedModifierError] =>
-            log.warn(s"Modifier ${pmod.encodedId} is permanently invalid", e)
-            deliveryTracker.setInvalid(pmod.id)
-            penalizeMisbehavingPeer(remote)
-            false
-          case _ =>
-            deliveryTracker.setReceived(pmod.id, remote)
-            true
-        }
-      case None =>
-        log.error("Got modifier while history reader is not ready")
-        deliveryTracker.setReceived(pmod.id, remote)
-        true
+    if (deliveryTracker.status(pmod.parentId) == Invalid) {
+      log.warn(s"Modifier ${pmod.encodedId} is invalid because of its parent ${pmod.parentId}")
+      deliveryTracker.setInvalid(pmod.id)
+      penalizeAndDisconnectPeer(remote)
+      false
+    } else {
+      historyReaderOpt match {
+        case Some(hr) =>
+          hr.applicableTry(pmod) match {
+            case Failure(e) if e.isInstanceOf[MalformedModifierError] =>
+              log.warn(s"Modifier ${pmod.encodedId} is permanently invalid", e)
+              deliveryTracker.setInvalid(pmod.id)
+              penalizeMisbehavingPeer(remote)
+              false
+            case _ =>
+              deliveryTracker.setReceived(pmod.id, remote)
+              true
+          }
+        case None =>
+          log.error("Got modifier while history reader is not ready")
+          deliveryTracker.setReceived(pmod.id, remote)
+          true
+      }
     }
   }
 
@@ -422,6 +429,10 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
 
   protected def penalizeMaliciousPeer(peer: ConnectedPeer): Unit = {
     networkControllerRef ! PenalizePeer(peer.connectionId.remoteAddress, PenaltyType.PermanentPenalty)
+  }
+
+  protected def penalizeAndDisconnectPeer(peer: ConnectedPeer): Unit = {
+    networkControllerRef ! PenalizePeer(peer.connectionId.remoteAddress, PenaltyType.DisconnectPenalty(networkSettings))
   }
 
   /**
