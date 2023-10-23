@@ -316,7 +316,7 @@ class NodeViewSynchronizer[TX <: Transaction, SI <: SyncInfo, SIS <: SyncInfoMes
     * Move `pmod` to `Invalid` if it is permanently invalid, to `Received` otherwise
     */
   @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
-  private def validateAndSetStatus(remote: ConnectedPeer, pmod: PMOD): Boolean = {
+  private[network] def validateAndSetStatus(remote: ConnectedPeer, pmod: PMOD): Boolean = {
     if (deliveryTracker.status(pmod.parentId) == Invalid) {
       log.warn(s"Modifier ${pmod.encodedId} is invalid because of its parent ${pmod.parentId}")
       deliveryTracker.setInvalid(pmod.id)

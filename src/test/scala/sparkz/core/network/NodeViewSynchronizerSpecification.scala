@@ -14,7 +14,7 @@ import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.utils.NetworkTimeProvider
-import sparkz.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.{ModifierTypeId, NodeViewModifier, PersistentNodeViewModifier}
 import sparkz.util.ModifierId
 import sparkz.util.serialization.{Reader, Writer}
 
@@ -249,7 +249,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
 
   it should "when HandshakedPeer message is received, statusTracker should add the peer" in {
     // Arrange
-    val nodeViewSynchronizerRef = createNodeViewSynchronizerAsTestActorRef(settings)
+    val nodeViewSynchronizerRef = createNodeViewSynchronizerAsTestActorRef(settings)._1
     val nodeViewSynchronizer = nodeViewSynchronizerRef.underlyingActor
 
     val statusTrackerField = classOf[NodeViewSynchronizer[_, _, _, _, _, _]].getDeclaredField("statusTracker")
@@ -263,6 +263,20 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     val peersStatus = statusTracker.peersByStatus
     peersStatus.nonEmpty should be(true)
     peersStatus(Unknown) should be(Set(peer))
+  }
+
+  it should "penalize peer for sending invalid modifiers or continuation of invalid fork" in {
+    // Arrange
+    val (nodeViewSynchronizerRef, networkControllerProbe) = createNodeViewSynchronizerAsTestActorRef(settings, ModifiersStatus.Invalid)
+    val nodeViewSynchronizer = nodeViewSynchronizerRef.underlyingActor
+    networkControllerProbe.expectMsgType[RegisterMessageSpecs]
+    networkControllerProbe.expectMsgType[Any] //StartConnectingPeers
+
+    val result = nodeViewSynchronizer
+      .validateAndSetStatus(peer, TestModifier(ModifierId @@ "2", ModifierId @@ "1"))
+
+    result shouldBe false
+    networkControllerProbe.expectMsgType[PenalizePeer]
   }
 
   def setupHistoryAndMempoolReaders(synchronizer: ActorRef): Unit = {
@@ -325,7 +339,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     (nodeViewSynchronizerRef, networkControllerProbe, viewHolderProbe)
   }
 
-  private def createNodeViewSynchronizerAsTestActorRef(settings: SparkzSettings): TestActorRef[NodeViewSynchronizer[_, _, _, _, _, _]] = {
+  private def createNodeViewSynchronizerAsTestActorRef(settings: SparkzSettings, modStatus: ModifiersStatus = ModifiersStatus.Requested): (TestActorRef[NodeViewSynchronizer[_, _, _, TestModifier, _, _]], TestProbe) = {
     val networkControllerProbe = TestProbe()
     val viewHolderProbe = TestProbe()
     val timeProvider = new NetworkTimeProvider(settings.ntp)
@@ -333,7 +347,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
     val modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
       Map(Transaction.ModifierTypeId -> TestTransactionSerializer)
 
-    TestActorRef(Props(
+    val nvs: TestActorRef[NodeViewSynchronizer[_, _, _, TestModifier, _, _]] = TestActorRef(Props(
       new NodeViewSynchronizer[TestTransaction,
         TestSyncInfo,
         TestSyncInfoMessageSpec.type,
@@ -350,7 +364,7 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
         modifierSerializers
       ) {
         override val deliveryTracker: DeliveryTracker = new DeliveryTracker(context.system, settings.network, self) {
-          override def status(modifierId: ModifierId): ModifiersStatus = ModifiersStatus.Requested
+          override def status(modifierId: ModifierId): ModifiersStatus = modStatus
 
           override private[network] def clearStatusForModifier(id: ModifierId, oldStatus: ModifiersStatus): Unit = {}
 
@@ -358,5 +372,6 @@ class NodeViewSynchronizerSpecification extends NetworkTests with TestImplementa
         }
       }
     ))
+    (nvs, networkControllerProbe)
   }
 }
