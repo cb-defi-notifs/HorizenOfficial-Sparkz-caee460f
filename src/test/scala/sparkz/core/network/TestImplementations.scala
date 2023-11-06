@@ -31,8 +31,7 @@ trait TestImplementations {
     override type NVCT = this.type
   }
 
-  class TestModifier(val id: ModifierId) extends PersistentNodeViewModifier {
-    override def parentId: ModifierId = ???
+  case class TestModifier(id: ModifierId, parentId: ModifierId) extends PersistentNodeViewModifier {
 
     override val modifierTypeId: ModifierTypeId = ModifierTypeId @@ (0: Byte)
     override type M = this.type
