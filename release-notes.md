@@ -1,6 +1,6 @@
 2.2.0
 ---------
-* Improved banning mechanism for deprecated nodes (nodes not update after an hardfork will start to ban updated nodes because receiving newer blocks without a known parent - this will prevent unnecessary network traffic)
+* Improved banning mechanism for deprecated nodes (nodes not updated after an hardfork will start to ban updated nodes because receiving newer blocks without a known parent - this will prevent unnecessary network traffic)
 
 2.1.0
 ---------
