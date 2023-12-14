@@ -12,7 +12,7 @@ libraryDependencies ++= Seq(
   "org.rudogma" %% "supertagged" % "1.5",
   "com.google.guava" % "guava" % "23.0",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-  "org.bouncycastle" % "bcprov-jdk15on" % "1.70"
+  "org.bouncycastle" % "bcprov-jdk18on" % "1.77"
 
 )
 

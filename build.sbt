@@ -46,18 +46,17 @@ lazy val commonSettings = Seq(
   fork := true // otherwise, "java.net.SocketException: maximum number of DatagramSockets reached"
 )
 
-val circeVersion = "0.14.2"
-val akkaVersion = "2.7.0"
-val akkaHttpVersion = "10.4.0"
+val circeVersion = "0.14.5"
+val akkaVersion = "2.8.5"
+val akkaHttpVersion = "10.5.3"
 
 val networkDependencies = Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
   "com.typesafe.akka" %% "akka-parsing" % akkaHttpVersion,
-  "com.typesafe.akka" %% "akka-protobuf" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-  "commons-net" % "commons-net" % "3.9.0"
+  "commons-net" % "commons-net" % "3.10.0"
 )
 
 val apiDependencies = Seq(
@@ -68,16 +67,16 @@ val apiDependencies = Seq(
 )
 
 val loggingDependencies = Seq(
-  "ch.qos.logback" % "logback-classic" % "1.3.0-alpha16"
+  "ch.qos.logback" % "logback-classic" % "1.4.14"
 )
 
 
 val testingDependencies = Seq(
   "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test",
   "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
-  "org.scalactic" %% "scalactic" % "3.2.12" % "test",
-  "org.scalatest" %% "scalatest" % "3.2.12" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.16.0",
+  "org.scalactic" %% "scalactic" % "3.2.15" % "test",
+  "org.scalatest" %% "scalatest" % "3.2.15" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.17.0",
   "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2" % Test,
   "org.mockito" %% "mockito-scala" % "1.17.12" % Test
 )
