@@ -110,7 +110,7 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
       knownPeers ++ bucketManager.getTriedPeers ++ bucketManager.getNewPeers
 
   override def blacklistedPeers: Seq[InetAddress] = blacklist
-    .map { case (address, bannedTill) if checkBanned(address, bannedTill) =>
+    .collect { case (address, bannedTill) if checkBanned(address, bannedTill) =>
       address
     }
     .toSeq
