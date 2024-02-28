@@ -343,7 +343,7 @@ class PeerManagerSpec extends NetworkTests with BeforeAndAfter {
 
     peerManagerRef ! AddOrUpdatePeer(peerInfo)
     peerManagerRef ! AddToBlacklist(peerAddress)
-    peerManagerRef ! RemoveFromBlacklist(peerAddress)
+    peerManagerRef ! RemoveFromBlacklist(peerAddress.getAddress)
 
     // Check all peers
     peerManagerRef ! GetAllPeers

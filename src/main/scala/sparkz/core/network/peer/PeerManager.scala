@@ -88,7 +88,7 @@ class PeerManager(
       }
 
     case RemoveFromBlacklist(address) =>
-      peerDatabase.removeFromBlacklist(address.getAddress)
+      peerDatabase.removeFromBlacklist(address)
 
     case RemovePeer(address) =>
       peerDatabase.remove(address)
@@ -139,7 +139,7 @@ object PeerManager {
 
     case class AddToBlacklist(remote: InetSocketAddress, penalty: Option[PenaltyType] = None)
 
-    case class RemoveFromBlacklist(remote: InetSocketAddress)
+    case class RemoveFromBlacklist(remote: InetAddress)
 
     // peerListOperations messages
 
