@@ -317,7 +317,7 @@ class NetworkController(settings: NetworkSettings,
 
     val peersAlreadyTriedFewTimeBefore = getPeersWeAlreadyTriedToConnectFewTimeAgo
 
-    val randomPeerF = peerManagerRef ? RandomPeerForConnectionExcluding(peersAddresses ++ peersAlreadyTriedFewTimeBefore)
+    val randomPeerF = peerManagerRef ? RandomPeerForConnectionExcluding(peersAddresses ++ peersAlreadyTriedFewTimeBefore, settings.onlyConnectToKnownPeers)
     randomPeerF.mapTo[Option[PeerInfo]].foreach {
       case Some(peerInfo) =>
         peerInfo.peerSpec.address.foreach(address => {

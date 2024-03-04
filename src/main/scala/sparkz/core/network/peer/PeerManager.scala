@@ -3,6 +3,7 @@ package sparkz.core.network.peer
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import sparkz.core.app.SparkzContext
 import sparkz.core.network._
+import sparkz.core.network.peer.PeerDatabase.PeerConfidence.PeerConfidence
 import sparkz.core.network.peer.PeerDatabase.{PeerConfidence, PeerDatabaseValue}
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.NetworkUtils
@@ -174,9 +175,10 @@ object PeerManager {
                           blacklistedPeers: Seq[InetAddress],
                           sparkzContext: SparkzContext): Seq[PeerInfo] = {
         val recentlySeenNonBlacklisted = peers.values.toSeq
-          .filter { p =>
-            (p.peerInfo.connectionType.isDefined || p.peerInfo.lastHandshake > 0) &&
-              !blacklistedPeers.contains(p.address.getAddress)
+          .filterNot(peer => blacklistedPeers.contains(peer.address.getAddress))
+          .filter { p => p.peerInfo.connectionType.isDefined ||
+            p.peerInfo.lastHandshake > 0 ||
+            p.confidence == PeerConfidence.High
           }
         Random.shuffle(recentlySeenNonBlacklisted).take(howMany).map(_.peerInfo)
       }
@@ -189,34 +191,26 @@ object PeerManager {
                           sparkzContext: SparkzContext): Map[InetSocketAddress, PeerInfo] = peers.map(p => p._1 -> p._2.peerInfo)
     }
 
-    case class RandomPeerForConnectionExcluding(excludedPeers: Seq[Option[InetSocketAddress]]) extends GetPeers[Option[PeerInfo]] {
+    case class RandomPeerForConnectionExcluding(excludedPeers: Seq[Option[InetSocketAddress]], onlyKnownPeers: Boolean = false) extends GetPeers[Option[PeerInfo]] {
       private val secureRandom = new SecureRandom()
 
       override def choose(peers: Map[InetSocketAddress, PeerDatabaseValue],
                           blacklistedPeers: Seq[InetAddress],
                           sparkzContext: SparkzContext): Option[PeerInfo] = {
-        var response: Option[PeerInfo] = None
+        val candidates: Map[PeerConfidence, Seq[PeerDatabaseValue]] = peers.values.toSeq
+          .filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _))
+          .groupBy(_.confidence)
 
-        val forgerPeers = peers.filter(_._2.confidence == PeerConfidence.Forger)
-        val forgerCandidates = forgerPeers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
+        val forgerCandidates = candidates.getOrElse(PeerConfidence.Forger, Seq())
+        val highConfidenceCandidates = candidates.getOrElse(PeerConfidence.High, Seq())
 
-        if (forgerCandidates.nonEmpty) {
-          response = Some(forgerCandidates(secureRandom.nextInt(forgerCandidates.size)).peerInfo)
-        } else {
-          val highConfidencePeers = peers.filter(_._2.confidence == PeerConfidence.High)
-          val highConfidenceCandidates = highConfidencePeers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
-
-          if (highConfidenceCandidates.nonEmpty) {
-            response = Some(highConfidenceCandidates(secureRandom.nextInt(highConfidenceCandidates.size)).peerInfo)
-          } else {
-            val candidates = peers.values.filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _)).toSeq
-
-            if (candidates.nonEmpty)
-              response = Some(candidates(secureRandom.nextInt(candidates.size)).peerInfo)
-          }
-        }
-
-        response
+        if (forgerCandidates.nonEmpty && !onlyKnownPeers) {
+          Some(forgerCandidates(secureRandom.nextInt(forgerCandidates.size)).peerInfo)
+        } else if (highConfidenceCandidates.nonEmpty) {
+         Some(highConfidenceCandidates(secureRandom.nextInt(highConfidenceCandidates.size)).peerInfo)
+        } else if (!onlyKnownPeers) {
+            Some(candidates.values.flatten.toSeq(secureRandom.nextInt(candidates.size)).peerInfo)
+        } else None
       }
     }
 
