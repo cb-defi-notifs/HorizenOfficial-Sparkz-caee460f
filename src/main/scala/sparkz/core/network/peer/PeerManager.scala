@@ -178,7 +178,7 @@ object PeerManager {
           .filterNot(peer => blacklistedPeers.contains(peer.address.getAddress))
           .filter { p => p.peerInfo.connectionType.isDefined ||
             p.peerInfo.lastHandshake > 0 ||
-            p.confidence == PeerConfidence.High
+            p.confidence == PeerConfidence.KnownPeer
           }
         Random.shuffle(recentlySeenNonBlacklisted).take(howMany).map(_.peerInfo)
       }
@@ -201,16 +201,20 @@ object PeerManager {
           .filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _))
           .groupBy(_.confidence)
 
+        val knownPeersCandidates = candidates.getOrElse(PeerConfidence.KnownPeer, Seq())
         val forgerCandidates = candidates.getOrElse(PeerConfidence.Forger, Seq())
-        val highConfidenceCandidates = candidates.getOrElse(PeerConfidence.High, Seq())
 
-        if (forgerCandidates.nonEmpty && !onlyKnownPeers) {
-          Some(forgerCandidates(secureRandom.nextInt(forgerCandidates.size)).peerInfo)
-        } else if (highConfidenceCandidates.nonEmpty) {
-         Some(highConfidenceCandidates(secureRandom.nextInt(highConfidenceCandidates.size)).peerInfo)
-        } else if (!onlyKnownPeers) {
+        if (onlyKnownPeers) {
+          Some(knownPeersCandidates(secureRandom.nextInt(knownPeersCandidates.size)).peerInfo)
+        } else {
+          if (forgerCandidates.nonEmpty)
+            Some(forgerCandidates(secureRandom.nextInt(forgerCandidates.size)).peerInfo)
+          else if (knownPeersCandidates.nonEmpty)
+            Some(knownPeersCandidates(secureRandom.nextInt(knownPeersCandidates.size)).peerInfo)
+          else if (candidates.nonEmpty)
             Some(candidates.values.flatten.toSeq(secureRandom.nextInt(candidates.size)).peerInfo)
-        } else None
+          else None
+        }
       }
     }
 

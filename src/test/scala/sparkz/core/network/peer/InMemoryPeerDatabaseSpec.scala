@@ -277,7 +277,7 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
       db.addOrUpdateKnownPeer(peerDatabaseValueThree)
 
       val allPeers = db.allPeers
-      allPeers.foreach(p => p._2.confidence shouldBe PeerConfidence.High)
+      allPeers.foreach(p => p._2.confidence shouldBe PeerConfidence.KnownPeer)
       allPeers.contains(firstAddress) shouldBe true
       allPeers.contains(secondAddress) shouldBe true
       allPeers.contains(thirdAddress) shouldBe true
