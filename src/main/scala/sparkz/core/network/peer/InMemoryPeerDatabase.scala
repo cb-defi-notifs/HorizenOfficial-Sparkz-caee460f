@@ -50,7 +50,7 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
   // fill database with known peers
   settings.knownPeers.foreach { address =>
     if (!NetworkUtils.isSelf(address, settings.bindAddress, sparkzContext.externalNodeAddress)) {
-      knownPeers += address -> PeerDatabaseValue(address, PeerInfo.fromAddress(address), PeerConfidence.High)
+      knownPeers += address -> PeerDatabaseValue(address, PeerInfo.fromAddress(address), PeerConfidence.KnownPeer)
     }
   }
 
@@ -104,10 +104,7 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
   }
 
   override def allPeers: Map[InetSocketAddress, PeerDatabaseValue] =
-    if (settings.onlyConnectToKnownPeers)
-      knownPeers
-    else
-      knownPeers ++ bucketManager.getTriedPeers ++ bucketManager.getNewPeers
+    knownPeers ++ bucketManager.getTriedPeers ++ bucketManager.getNewPeers
 
   override def blacklistedPeers: Seq[InetAddress] = blacklist
     .collect { case (address, bannedTill) if checkBanned(address, bannedTill) =>
@@ -174,10 +171,7 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
     }
 
   override def randomPeersSubset: Map[InetSocketAddress, PeerDatabaseValue] =
-    if (settings.onlyConnectToKnownPeers)
-      knownPeers
-    else
-      knownPeers ++ bucketManager.getRandomPeers
+    knownPeers ++ bucketManager.getRandomPeers
 
   override def updatePeer(peerDatabaseValue: PeerDatabaseValue): Unit = {
     if (peerIsNotBlacklistedAndNotKnownPeer(peerDatabaseValue)) {

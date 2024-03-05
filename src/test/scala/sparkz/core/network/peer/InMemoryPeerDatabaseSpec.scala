@@ -277,50 +277,10 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
       db.addOrUpdateKnownPeer(peerDatabaseValueThree)
 
       val allPeers = db.allPeers
-      allPeers.foreach(p => p._2.confidence shouldBe PeerConfidence.High)
+      allPeers.foreach(p => p._2.confidence shouldBe PeerConfidence.KnownPeer)
       allPeers.contains(firstAddress) shouldBe true
       allPeers.contains(secondAddress) shouldBe true
       allPeers.contains(thirdAddress) shouldBe true
-    }
-  }
-
-  it should "only return knownPeers if the flag is set to true" in {
-    val firstAddress = new InetSocketAddress(10)
-    val secondAddress = new InetSocketAddress(11)
-    val thirdAddress = new InetSocketAddress(12)
-    val forthAddress = new InetSocketAddress(13)
-    val fifthAddress = new InetSocketAddress(14)
-    val sixthAddress = new InetSocketAddress(15)
-    val knownPeers = Seq(firstAddress, secondAddress, thirdAddress)
-
-    def withDbHavingKnownPeers(test: InMemoryPeerDatabase => Assertion): Assertion =
-      test(new InMemoryPeerDatabase(
-        settings.copy(network = settings.network.copy(penaltySafeInterval = 1.seconds, knownPeers = knownPeers, onlyConnectToKnownPeers = true)),
-        sparkzContext
-      ))
-
-    withDbHavingKnownPeers { db =>
-      val extraPeerOne = PeerDatabaseValue(forthAddress, getPeerInfo(forthAddress), PeerConfidence.Unknown)
-      val extraPeerTwo = PeerDatabaseValue(fifthAddress, getPeerInfo(fifthAddress), PeerConfidence.Unknown)
-      val extraPeerThree = PeerDatabaseValue(sixthAddress, getPeerInfo(sixthAddress), PeerConfidence.Unknown)
-
-      db.addOrUpdateKnownPeer(extraPeerOne)
-      db.addOrUpdateKnownPeer(extraPeerTwo)
-      db.addOrUpdateKnownPeer(extraPeerThree)
-
-      val allPeers = db.allPeers
-      allPeers.size shouldBe 3
-      allPeers.foreach(p => p._2.confidence shouldBe PeerConfidence.High)
-      allPeers.contains(firstAddress) shouldBe true
-      allPeers.contains(secondAddress) shouldBe true
-      allPeers.contains(thirdAddress) shouldBe true
-
-      val randomPeersSubset = db.randomPeersSubset
-      randomPeersSubset.size shouldBe 3
-      randomPeersSubset.foreach(p => p._2.confidence shouldBe PeerConfidence.High)
-      randomPeersSubset.contains(firstAddress) shouldBe true
-      randomPeersSubset.contains(secondAddress) shouldBe true
-      randomPeersSubset.contains(thirdAddress) shouldBe true
     }
   }
 
