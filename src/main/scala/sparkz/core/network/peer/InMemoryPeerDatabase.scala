@@ -50,7 +50,7 @@ final class InMemoryPeerDatabase(sparkzSettings: SparkzSettings, sparkzContext: 
   // fill database with known peers
   settings.knownPeers.foreach { address =>
     if (!NetworkUtils.isSelf(address, settings.bindAddress, sparkzContext.externalNodeAddress)) {
-      knownPeers += address -> PeerDatabaseValue(address, PeerInfo.fromAddress(address), PeerConfidence.KnownPeer)
+      knownPeers += address -> PeerDatabaseValue(address, PeerInfo.fromAddress(address), PeerConfidence.High)
     }
   }
 

@@ -178,7 +178,7 @@ object PeerManager {
           .filterNot(peer => blacklistedPeers.contains(peer.address.getAddress))
           .filter { p => p.peerInfo.connectionType.isDefined ||
             p.peerInfo.lastHandshake > 0 ||
-            p.confidence == PeerConfidence.KnownPeer
+            p.confidence == PeerConfidence.High
           }
         Random.shuffle(recentlySeenNonBlacklisted).take(howMany).map(_.peerInfo)
       }
@@ -201,7 +201,7 @@ object PeerManager {
           .filterNot(goodCandidateFilter(excludedPeers, blacklistedPeers, _))
           .groupBy(_.confidence)
 
-        val knownPeersCandidates = candidates.getOrElse(PeerConfidence.KnownPeer, Seq())
+        val knownPeersCandidates = candidates.getOrElse(PeerConfidence.High, Seq())
         val forgerCandidates = candidates.getOrElse(PeerConfidence.Forger, Seq())
 
         if (onlyKnownPeers) {
