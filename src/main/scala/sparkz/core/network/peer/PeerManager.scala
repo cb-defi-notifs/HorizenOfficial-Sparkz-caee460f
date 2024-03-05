@@ -205,7 +205,9 @@ object PeerManager {
         val forgerCandidates = candidates.getOrElse(PeerConfidence.Forger, Seq())
 
         if (onlyKnownPeers) {
-          Some(knownPeersCandidates(secureRandom.nextInt(knownPeersCandidates.size)).peerInfo)
+          if (knownPeersCandidates.nonEmpty)
+            Some(knownPeersCandidates(secureRandom.nextInt(knownPeersCandidates.size)).peerInfo)
+          else None
         } else {
           if (forgerCandidates.nonEmpty)
             Some(forgerCandidates(secureRandom.nextInt(forgerCandidates.size)).peerInfo)
