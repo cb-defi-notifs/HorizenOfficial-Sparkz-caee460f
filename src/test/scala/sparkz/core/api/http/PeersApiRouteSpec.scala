@@ -188,7 +188,25 @@ class PeersApiRouteSpec extends AnyFlatSpec
       status shouldBe StatusCodes.OK
     }
 
-    Delete(prefix + "/blacklist", body).addCredentials(credentials) ~> routesWithProbes ~> check {
+    val bodyDeleteIpV4WithoutPort = HttpEntity("""{"address": "127.0.0.1"}""")
+      .withContentType(ContentTypes.`application/json`)
+    Delete(prefix + "/blacklist", bodyDeleteIpV4WithoutPort).addCredentials(credentials) ~> routesWithProbes ~> check {
+      peerManagerProbe.expectMsgClass(classOf[RemoveFromBlacklist])
+
+      status shouldBe StatusCodes.OK
+    }
+
+    val bodyDeleteIpV6 = HttpEntity("""{"address": "0:0:0:0:0:0:0:1"}""")
+      .withContentType(ContentTypes.`application/json`)
+    Delete(prefix + "/blacklist", bodyDeleteIpV6).addCredentials(credentials) ~> routesWithProbes ~> check {
+      peerManagerProbe.expectMsgClass(classOf[RemoveFromBlacklist])
+
+      status shouldBe StatusCodes.OK
+    }
+
+    val bodyDeleteHostname = HttpEntity("""{"address": "localhost"}""")
+      .withContentType(ContentTypes.`application/json`)
+    Delete(prefix + "/blacklist", bodyDeleteHostname).addCredentials(credentials) ~> routesWithProbes ~> check {
       peerManagerProbe.expectMsgClass(classOf[RemoveFromBlacklist])
 
       status shouldBe StatusCodes.OK
@@ -216,8 +234,9 @@ class PeersApiRouteSpec extends AnyFlatSpec
       }
     })
 
-
-    Delete(prefix + "/blacklist", badBody).addCredentials(credentials) ~> routesWithApiKey ~> check {
+    val bodyDeleteIpV4WithPort = HttpEntity("""{"address": "127.0.0.1:8080"}""")
+      .withContentType(ContentTypes.`application/json`)
+    Delete(prefix + "/blacklist", bodyDeleteIpV4WithPort).addCredentials(credentials) ~> routesWithApiKey ~> check {
       status shouldBe StatusCodes.BadRequest
     }
   }

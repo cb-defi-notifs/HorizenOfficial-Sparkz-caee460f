@@ -284,43 +284,16 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
     }
   }
 
-  it should "only return knownPeers if the flag is set to true" in {
-    val firstAddress = new InetSocketAddress(10)
-    val secondAddress = new InetSocketAddress(11)
-    val thirdAddress = new InetSocketAddress(12)
-    val forthAddress = new InetSocketAddress(13)
-    val fifthAddress = new InetSocketAddress(14)
-    val sixthAddress = new InetSocketAddress(15)
-    val knownPeers = Seq(firstAddress, secondAddress, thirdAddress)
+  it should "check blacklisted peers expiration and return only not expired" in {
+    withDb { db =>
+      db.blacklistedPeers shouldBe empty
+      db.addToBlacklist(peerAddress1, PenaltyType.CustomPenaltyDuration(0))
+      db.addToBlacklist(peerAddress2, PenaltyType.CustomPenaltyDuration(1))
 
-    def withDbHavingKnownPeers(test: InMemoryPeerDatabase => Assertion): Assertion =
-      test(new InMemoryPeerDatabase(
-        settings.copy(network = settings.network.copy(penaltySafeInterval = 1.seconds, knownPeers = knownPeers, onlyConnectToKnownPeers = true)),
-        sparkzContext
-      ))
-
-    withDbHavingKnownPeers { db =>
-      val extraPeerOne = PeerDatabaseValue(forthAddress, getPeerInfo(forthAddress), PeerConfidence.Unknown)
-      val extraPeerTwo = PeerDatabaseValue(fifthAddress, getPeerInfo(fifthAddress), PeerConfidence.Unknown)
-      val extraPeerThree = PeerDatabaseValue(sixthAddress, getPeerInfo(sixthAddress), PeerConfidence.Unknown)
-
-      db.addOrUpdateKnownPeer(extraPeerOne)
-      db.addOrUpdateKnownPeer(extraPeerTwo)
-      db.addOrUpdateKnownPeer(extraPeerThree)
-
-      val allPeers = db.allPeers
-      allPeers.size shouldBe 3
-      allPeers.foreach(p => p._2.confidence shouldBe PeerConfidence.High)
-      allPeers.contains(firstAddress) shouldBe true
-      allPeers.contains(secondAddress) shouldBe true
-      allPeers.contains(thirdAddress) shouldBe true
-
-      val randomPeersSubset = db.randomPeersSubset
-      randomPeersSubset.size shouldBe 3
-      randomPeersSubset.foreach(p => p._2.confidence shouldBe PeerConfidence.High)
-      randomPeersSubset.contains(firstAddress) shouldBe true
-      randomPeersSubset.contains(secondAddress) shouldBe true
-      randomPeersSubset.contains(thirdAddress) shouldBe true
+      // first call should filter peer1 as it penalty duration expired
+      db.blacklistedPeers shouldBe Seq(peerAddress2.getAddress)
+      //second call to check behaviour when only one peer is blacklisted and it stays in blacklist
+      db.blacklistedPeers shouldBe Seq(peerAddress2.getAddress)
     }
   }
 }

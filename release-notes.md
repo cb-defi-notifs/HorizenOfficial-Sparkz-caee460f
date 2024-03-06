@@ -1,3 +1,9 @@
+2.3.0
+---------
+* Updated dependencies
+* [Bugfix] /node/removeFromBlackList now don't require explicitly the port number
+* [Bugfix] Node was not able to get new peers other than the known ones under some configurations
+
 2.2.0
 ---------
 * Improved banning mechanism for deprecated nodes (nodes not updated after an hardfork will start to ban updated nodes because receiving newer blocks without a known parent - this will prevent unnecessary network traffic)
