@@ -1,6 +1,6 @@
 2.3.0
 ---------
-* Updtated dependencies
+* Updated dependencies
 * [Bugfix] /node/removePeer and /node/removeFromBlackList now don't require explicitly the port number
 * [Bugfix] Node was not able to get new peers other than the known ones under some configurations
 
