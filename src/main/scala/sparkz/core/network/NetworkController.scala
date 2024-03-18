@@ -448,7 +448,7 @@ class NetworkController(settings: NetworkSettings,
 
       // We allow temporary overflowing outgoing connection limits to get the peerInfo and see if peer if a forger.
       // Drop connection if the peer does not fit in the limits.
-      val isForgerConnection = peerInfo.peerSpec.features.contains(ForgerNodePeerFeature())
+      val isForgerConnection = peerInfo.peerSpec.features.contains(ForgerNodePeerFeature()) && settings.isForgerNode
 
       val connectionLimitExhausted = isConnectionLimitExhausted(peerInfo, isForgerConnection)
       shouldDrop = shouldDrop || connectionLimitExhausted

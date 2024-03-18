@@ -293,7 +293,7 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     val tcpManagerProbe = TestProbe()
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
-    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1, maxForgerConnections = 1))
+    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1, maxForgerConnections = 1, isForgerNode = true))
     val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
