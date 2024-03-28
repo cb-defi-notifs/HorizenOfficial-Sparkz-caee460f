@@ -1,3 +1,7 @@
+2.4.0
+---------
+* Increased default maxForgerConnections to 100, forger connections pool will only work for forger nodes
+
 2.3.0
 ---------
 * Updated dependencies
