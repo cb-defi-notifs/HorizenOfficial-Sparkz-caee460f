@@ -11,10 +11,17 @@ import sparkz.util.SparkzLogging
 
 import scala.concurrent.duration._
 
+trait ApiSettings {
+    def bindAddress: InetSocketAddress;
+    def apiKeyHash: Option[String];
+    def corsAllowedOrigin: Option[String];
+    def timeout: FiniteDuration;
+}
+
 case class RESTApiSettings(bindAddress: InetSocketAddress,
                            apiKeyHash: Option[String],
                            corsAllowedOrigin: Option[String],
-                           timeout: FiniteDuration)
+                           timeout: FiniteDuration) extends ApiSettings
 
 case class NetworkSettings(nodeName: String,
                            addedMaxDelay: Option[FiniteDuration],
