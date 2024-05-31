@@ -95,7 +95,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
           exit 1
         fi
       elif [[ "${package_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-RC[0-9]+){1}$ ]]; then
-        if [[ "${TRAVIS_TAG}" =~ "${package_version}"$ ]]; then
+        if [[ "${TRAVIS_TAG}" == "${package_version}" ]]; then
           echo "" && echo "=== RC release build ===" && echo ""
           export RC_RELEASE="true"
         else
