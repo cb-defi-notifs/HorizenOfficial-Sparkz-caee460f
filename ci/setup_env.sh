@@ -115,6 +115,10 @@ if [ -n "${TRAVIS_TAG}" ]; then
   fi
 fi
 
+echo "" && echo "Debugging PROD RELEASE var in setup_env.sh: ${PROD_RELEASE}"
+echo "" && echo "Debugging RC RELEASE var in setup_env.sh: ${RC_RELEASE}"
+echo "" && echo "Debugging DEV RELEASE var in setup_env.sh: ${DEV_RELEASE}"
+
 # unset credentials if not publishing
 if [ "${CONTAINER_PUBLISH}" = "false" ]; then
   export CONTAINER_OSSRH_JIRA_USERNAME=""

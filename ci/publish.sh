@@ -5,6 +5,10 @@ set -x
 
 retval=0
 
+echo "" && echo "Debugging PROD RELEASE var in publish.sh: ${PROD_RELEASE}"
+echo "" && echo "Debugging RC RELEASE var in publish.sh: ${RC_RELEASE}"
+echo "" && echo "Debugging DEV RELEASE var in publish.sh: ${DEV_RELEASE}"
+
 if [[ "${DEV_RELEASE}" == "true" ]]; then
   echo "" && echo "=== Publishing development release on Sonatype Nexus repository. Timestamp is: $(date '+%a %b %d %H:%M:%S %Z %Y') ===" && echo ""
 #  sbt -ivy ./.ivy2 -sbt-dir ./.sbt +publish
