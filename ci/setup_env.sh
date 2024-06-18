@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -eo pipefail
-set -x
 
 export CONTAINER_PUBLISH="false"
 package_version=$(grep -w "version :=" build.sbt | cut -d '"' -f2)
