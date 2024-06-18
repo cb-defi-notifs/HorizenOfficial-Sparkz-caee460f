@@ -3,12 +3,12 @@ package sparkz.core.api.http
 import akka.http.scaladsl.server.directives.{AuthenticationDirective, Credentials}
 import akka.http.scaladsl.server.{AuthorizationFailedRejection, Directive0}
 import at.favre.lib.crypto.bcrypt.BCrypt
-import sparkz.core.settings.RESTApiSettings
+import sparkz.core.settings.ApiSettings
 import sparkz.util.SparkzEncoding
 import sparkz.crypto.hash.Blake2b256
 
 trait ApiDirectives extends CorsHandler with SparkzEncoding {
-  val settings: RESTApiSettings
+  val settings: ApiSettings
   val apiKeyHeaderName: String
 
   lazy val withAuth: Directive0 = optionalHeaderValueByName(apiKeyHeaderName).flatMap {
