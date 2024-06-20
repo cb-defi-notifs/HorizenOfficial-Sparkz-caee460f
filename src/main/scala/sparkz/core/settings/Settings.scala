@@ -2,7 +2,6 @@ package sparkz.core.settings
 
 import java.io.File
 import java.net.InetSocketAddress
-
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
@@ -12,18 +11,27 @@ import sparkz.util.SparkzLogging
 
 import scala.concurrent.duration._
 
+trait ApiSettings {
+    def bindAddress: InetSocketAddress;
+    def apiKeyHash: Option[String];
+    def corsAllowedOrigin: Option[String];
+    def timeout: FiniteDuration;
+}
+
 case class RESTApiSettings(bindAddress: InetSocketAddress,
                            apiKeyHash: Option[String],
                            corsAllowedOrigin: Option[String],
-                           timeout: FiniteDuration)
+                           timeout: FiniteDuration) extends ApiSettings
 
 case class NetworkSettings(nodeName: String,
                            addedMaxDelay: Option[FiniteDuration],
                            localOnly: Boolean,
                            knownPeers: Seq[InetSocketAddress],
+                           onlyConnectToKnownPeers: Boolean,
                            bindAddress: InetSocketAddress,
                            maxIncomingConnections: Int,
                            maxOutgoingConnections: Int,
+                           maxForgerConnections: Int,
                            connectionTimeout: FiniteDuration,
                            declaredAddress: Option[InetSocketAddress],
                            handshakeTimeout: FiniteDuration,
@@ -31,6 +39,14 @@ case class NetworkSettings(nodeName: String,
                            maxDeliveryChecks: Int,
                            penalizeNonDelivery: Boolean,
                            maxRequestedPerPeer: Int,
+                           slowModeFeatureFlag: Boolean,
+                           slowModeThresholdMs: Long,
+                           slowModeMaxRequested: Int,
+                           slowModeMeasurementImpact: Double,
+                           rebroadcastEnabled: Boolean,
+                           rebroadcastDelay: FiniteDuration,
+                           rebroadcastQueueSize: Int,
+                           rebroadcastBatchSize: Int,
                            appVersion: String,
                            agentName: String,
                            maxModifiersSpecMessageSize: Int,
@@ -53,7 +69,9 @@ case class NetworkSettings(nodeName: String,
                            storageBackupDelay: FiniteDuration,
                            temporalBanDuration: FiniteDuration,
                            penaltySafeInterval: FiniteDuration,
-                           penaltyScoreThreshold: Int)
+                           penaltyScoreThreshold: Int,
+                           handlingTransactionsEnabled: Boolean,
+                           isForgerNode: Boolean)
 
 case class SparkzSettings(dataDir: File,
                           logDir: File,

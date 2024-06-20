@@ -1,3 +1,39 @@
+2.4.0
+---------
+* Increased default maxForgerConnections to 100, forger connections pool will only work for forger nodes
+
+2.3.0
+---------
+* Updated dependencies
+* [Bugfix] /node/removeFromBlackList now don't require explicitly the port number
+* [Bugfix] Node was not able to get new peers other than the known ones under some configurations
+
+2.2.0
+---------
+* Improved banning mechanism for deprecated nodes (nodes not updated after an hardfork will start to ban updated nodes because receiving newer blocks without a known parent - this will prevent unnecessary network traffic)
+
+2.1.0
+---------
+* Added support for forger's connections prioritization
+* Node synchronization improvements:
+  * Optimization of lookup strategy in modifiersCache
+  * Preserve the order of block during synchronization
+* Added option to force only connecting to known peers
+* Fixes/Improvements on the way the SyncTracker handles the internal statuses maps
+
+2.0.3
+---------
+* Fix in the handshake process - start connecting to nodes only after the Synchronizer is initialized
+
+2.0.2
+---------
+* P2p rate limitng feature - added tx rebroadcast when rate limiting is reenabled
+* Seeder nodes support
+
+2.0.1
+---------
+* P2p rate limitng feature
+
 2.0.0-RC11
 ---------
 * Changed library for the Bcrypt hashing algorithm and added additional unit tests

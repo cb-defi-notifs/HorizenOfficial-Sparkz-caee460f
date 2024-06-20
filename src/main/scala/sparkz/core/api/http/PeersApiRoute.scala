@@ -6,21 +6,21 @@ import akka.http.scaladsl.server.Route
 import io.circe.generic.auto.exportDecoder
 import io.circe.generic.semiauto._
 import io.circe.syntax._
-import io.circe.{Encoder, Decoder, Json}
+import io.circe.{Decoder, Encoder, Json}
 import sparkz.core.api.http.PeersApiRoute.PeerApiRequest.AddToBlacklistBodyRequest
-import sparkz.core.api.http.PeersApiRoute.Request.ConnectBodyRequest
+import sparkz.core.api.http.PeersApiRoute.Request.AddressBodyRequest
 import sparkz.core.api.http.PeersApiRoute.{BlacklistedPeers, PeerInfoResponse, PeersStatusResponse}
 import sparkz.core.network.ConnectedPeer
-import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
+import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, DisconnectFromNode, GetConnectedPeers, GetPeersStatus}
 import sparkz.core.network.peer.PeerManager.ReceivableMessages._
 import sparkz.core.network.peer.PenaltyType.CustomPenaltyDuration
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddPeersIfEmpty, GetAllPeers, GetBlacklistedPeers}
 import sparkz.core.network.peer.{PeerInfo, PeersStatus}
 import sparkz.core.settings.RESTApiSettings
 import sparkz.core.utils.NetworkTimeProvider
 
 import java.net.{InetAddress, InetSocketAddress}
 import scala.concurrent.ExecutionContext
+import scala.util.{Failure, Success, Try}
 
 case class PeersApiRoute(peerManager: ActorRef,
                          networkController: ActorRef,
@@ -118,7 +118,7 @@ case class PeersApiRoute(peerManager: ActorRef,
 
   def connect: Route = (path("connect") & post & withBasicAuth) {
     _ => {
-      entity(as[ConnectBodyRequest]) { bodyRequest =>
+      entity(as[AddressBodyRequest]) { bodyRequest =>
         val peerAddress = bodyRequest.address
 
         val maybeAddress = addressAndPortRegexp.findFirstMatchIn(peerAddress)
@@ -179,7 +179,7 @@ case class PeersApiRoute(peerManager: ActorRef,
             val port = addressAndPort.group(2).toInt
             val peerAddress = new InetSocketAddress(host, port)
             peerManager ! RemovePeer(peerAddress)
-            networkController ! DisconnectFromAddress(peerAddress)
+            networkController ! DisconnectFromNode(peerAddress)
             ApiResponse.OK
         }
       }
@@ -188,16 +188,14 @@ case class PeersApiRoute(peerManager: ActorRef,
 
   def removeFromBlacklist: Route = (path("blacklist") & delete & withBasicAuth) {
     _ => {
-      entity(as[Json]) { json =>
-        val maybeAddress = json.asString.flatMap(addressAndPortRegexp.findFirstMatchIn)
+      entity(as[AddressBodyRequest]) { bodyRequest =>
+        val peerAddress = bodyRequest.address
+        Try(InetAddress.getByName(peerAddress)) match {
+          case Failure(exception) =>
+            ApiError(StatusCodes.BadRequest, s"address $peerAddress is not well formatted: ${exception.getMessage}")
 
-        maybeAddress match {
-          case None => ApiError(StatusCodes.BadRequest, s"address $maybeAddress is not well formatted")
-
-          case Some(addressAndPort) =>
-            val host = InetAddress.getByName(addressAndPort.group(1))
-            val port = addressAndPort.group(2).toInt
-            peerManager ! RemoveFromBlacklist(new InetSocketAddress(host, port))
+          case Success(address) =>
+            peerManager ! RemoveFromBlacklist(address)
             ApiResponse.OK
         }
       }
@@ -225,7 +223,7 @@ object PeersApiRoute {
   }
 
   object Request {
-    case class ConnectBodyRequest(address: String)
+    case class AddressBodyRequest(address: String)
   }
 
   object PeerApiRequest {
@@ -248,6 +246,6 @@ object PeersApiRoute {
   implicit val encodePeersStatusResponse: Encoder[PeersStatusResponse] = deriveEncoder
 
   @SuppressWarnings(Array("org.wartremover.warts.PublicInference"))
-  implicit val decodeConnectBodyRequest: Decoder[ConnectBodyRequest] = deriveDecoder
+  implicit val decodeConnectBodyRequest: Decoder[AddressBodyRequest] = deriveDecoder
 }
 

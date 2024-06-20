@@ -283,4 +283,17 @@ class InMemoryPeerDatabaseSpec extends NetworkTests with ObjectGenerators with B
       allPeers.contains(thirdAddress) shouldBe true
     }
   }
+
+  it should "check blacklisted peers expiration and return only not expired" in {
+    withDb { db =>
+      db.blacklistedPeers shouldBe empty
+      db.addToBlacklist(peerAddress1, PenaltyType.CustomPenaltyDuration(0))
+      db.addToBlacklist(peerAddress2, PenaltyType.CustomPenaltyDuration(1))
+
+      // first call should filter peer1 as it penalty duration expired
+      db.blacklistedPeers shouldBe Seq(peerAddress2.getAddress)
+      //second call to check behaviour when only one peer is blacklisted and it stays in blacklist
+      db.blacklistedPeers shouldBe Seq(peerAddress2.getAddress)
+    }
+  }
 }

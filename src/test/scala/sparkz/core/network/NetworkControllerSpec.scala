@@ -15,9 +15,11 @@ import org.scalatest.matchers.should.Matchers
 import sparkz.core.app.{SparkzContext, Version}
 import sparkz.core.network.NetworkController.ReceivableMessages.Internal.ConnectionToPeer
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers, GetPeersStatus}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.DisconnectedPeer
 import sparkz.core.network.message._
-import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, GetAllPeers, RandomPeerForConnectionExcluding}
-import sparkz.core.network.peer._
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{AddOrUpdatePeer, ConfirmConnection, DisconnectFromAddress, GetAllPeers, RandomPeerForConnectionExcluding}
+import sparkz.core.network.peer.{ForgerNodePeerFeature, _}
+import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.utils.LocalTimeProvider
 
@@ -30,7 +32,9 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private val featureSerializers = Map(LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer)
+  private val featureSerializers = Map[Byte, SparkzSerializer[_ <: PeerFeature]](LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer,
+    TransactionsDisabledPeerFeature.featureId -> TransactionsDisabledPeerFeatureSerializer,
+    ForgerNodePeerFeature.featureId -> ForgerNodePeerFeatureSerializer)
 
   "A NetworkController" should "send local address on handshake when peer and node address are in localhost" in {
     implicit val system: ActorSystem = ActorSystem()
@@ -108,6 +112,47 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     testPeer.sendHandshake(None, None)
     system.terminate()
   }
+
+  it should "not send TransactionsDisabledPeerFeature on handshake when handlingTransactionsEnabled is true" in {
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings, tcpManagerProbe)
+    val testPeer = new TestPeer(settings, networkControllerRef, tcpManagerProbe)
+
+    val peerAddr = new InetSocketAddress("127.0.0.1", 5678)
+    val nodeAddr = new InetSocketAddress("127.0.0.1", settings.network.bindAddress.getPort)
+    testPeer.connectAndExpectSuccessfulMessages(peerAddr, nodeAddr, Tcp.ResumeReading)
+
+    val handshakeFromNode = testPeer.receiveHandshake
+    handshakeFromNode.peerSpec.features.exists{case f:TransactionsDisabledPeerFeature => true; case _ => false} shouldBe false
+
+    system.terminate()
+  }
+
+  it should "send TransactionsDisabledPeerFeature on handshake when handlingTransactionsEnabled is false" in {
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+    val networkSettings = settings.copy(
+      network = settings.network.copy(
+        handlingTransactionsEnabled = false
+      )
+    )
+
+    val (networkControllerRef: ActorRef, _) = createNetworkController(networkSettings, tcpManagerProbe)
+    val testPeer = new TestPeer(networkSettings, networkControllerRef, tcpManagerProbe)
+
+    val peerAddr = new InetSocketAddress("127.0.0.1", 5678)
+    val nodeAddr = new InetSocketAddress("127.0.0.1", networkSettings.network.bindAddress.getPort)
+    testPeer.connectAndExpectSuccessfulMessages(peerAddr, nodeAddr, Tcp.ResumeReading)
+
+    val handshakeFromNode = testPeer.receiveHandshake
+    handshakeFromNode.peerSpec.features.exists { case f: TransactionsDisabledPeerFeature => true; case _ => false } shouldBe true
+
+    system.terminate()
+  }
+
 
   it should "send known public peers" in {
     implicit val system: ActorSystem = ActorSystem()
@@ -220,7 +265,7 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     val tcpManagerProbe = TestProbe()
 
     val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
-    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1))
+    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1, maxForgerConnections = 0))
     val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
 
     val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
@@ -238,6 +283,70 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     val peerInfo2 = getPeerInfo(peer2LocalAddr)
     testPeer.establishNewOutgoingConnection(peerInfo2)
     testPeer.connectAndExpectMessage(peer2LocalAddr, nodeAddr, Tcp.Close)
+
+    system.terminate()
+  }
+
+  it should "allow connecting to forger over maxOutgoingConnections limit" in {
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+
+    val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
+    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1, maxForgerConnections = 1, isForgerNode = true))
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
+
+    val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
+    val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
+    val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
+    val peerInfo1 = getPeerInfo(peer1LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo1)
+    testPeer.connectAndExpectSuccessfulMessages(peer1LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer.receiveHandshake
+    testPeer.sendHandshake(Some(peer1DecalredAddr), Some(peer1LocalAddr))
+    testPeer.receiveGetPeers
+    testPeer.sendPeers(Seq.empty)
+
+    val peer2DeclaredAddr = new InetSocketAddress("99.88.77.66", 5678)
+    val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
+    val peerInfo2 = getPeerInfo(peer2LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo2)
+    testPeer.connectAndExpectSuccessfulMessages(peer2LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer.receiveHandshake
+    testPeer.sendHandshake(Some(peer2DeclaredAddr), Some(peer2LocalAddr), forgerNode = true)
+    tcpManagerProbe.expectNoMessage()
+
+    system.terminate()
+  }
+
+  it should "disconnect after handshake if the maxOutgoingConnections limit reached" in {
+    implicit val system: ActorSystem = ActorSystem()
+
+    val tcpManagerProbe = TestProbe()
+
+    val nodeAddr = new InetSocketAddress("88.77.66.55", 12345)
+    val settings2 = settings.copy(network = settings.network.copy(bindAddress = nodeAddr, maxOutgoingConnections = 1, maxForgerConnections = 1))
+    val (networkControllerRef: ActorRef, _) = createNetworkController(settings2, tcpManagerProbe)
+
+    val testPeer = new TestPeer(settings2, networkControllerRef, tcpManagerProbe)
+    val peer1DecalredAddr = new InetSocketAddress("88.77.66.55", 5678)
+    val peer1LocalAddr = new InetSocketAddress("192.168.1.55", 5678)
+    val peerInfo1 = getPeerInfo(peer1LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo1)
+    testPeer.connectAndExpectSuccessfulMessages(peer1LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer.receiveHandshake
+    testPeer.sendHandshake(Some(peer1DecalredAddr), Some(peer1LocalAddr))
+    testPeer.receiveGetPeers
+    testPeer.sendPeers(Seq.empty)
+
+    val peer2DeclaredAddr = new InetSocketAddress("99.88.77.66", 5678)
+    val peer2LocalAddr = new InetSocketAddress("192.168.1.56", 5678)
+    val peerInfo2 = getPeerInfo(peer2LocalAddr)
+    testPeer.establishNewOutgoingConnection(peerInfo2)
+    testPeer.connectAndExpectSuccessfulMessages(peer2LocalAddr, nodeAddr, Tcp.ResumeReading)
+    testPeer.receiveHandshake
+    testPeer.sendHandshake(Some(peer2DeclaredAddr), Some(peer2LocalAddr))
+    tcpManagerProbe.expectMsg(Abort)
 
     system.terminate()
   }
@@ -522,7 +631,7 @@ class NetworkControllerSpec extends NetworkTests with ScalaFutures {
     peerManagerProbe.expectMsg(RandomPeerForConnectionExcluding(Seq()))
     peerManagerProbe.reply(Some(getPeerInfo(peerAddressOne)))
     // Wait for the message to be received
-    Thread.sleep(2)
+    Thread.sleep(200)
 
     // Second attempt, discarding the peer we tried just before
     networkControllerRef ! ConnectionToPeer(emptyActiveConnections, emptyUnconfirmedConnections)
@@ -581,7 +690,9 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
               (implicit ec: ExecutionContext) extends Matchers {
 
   private val timeProvider = LocalTimeProvider
-  private val featureSerializers = Map(LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer)
+  private val featureSerializers = Map[Byte, SparkzSerializer[_ <: PeerFeature]](LocalAddressPeerFeature.featureId -> LocalAddressPeerFeatureSerializer,
+    TransactionsDisabledPeerFeature.featureId -> TransactionsDisabledPeerFeatureSerializer,
+    ForgerNodePeerFeature.featureId -> ForgerNodePeerFeatureSerializer)
   private val handshakeSerializer = new HandshakeSpec(featureSerializers, Int.MaxValue)
   private val peersSpec = new PeersSpec(featureSerializers, settings.network.maxPeerSpecObjects)
   private val messageSpecs = Seq(GetPeersSpec, peersSpec)
@@ -630,9 +741,10 @@ class TestPeer(settings: SparkzSettings, networkControllerRef: ActorRef, tcpMana
     * @param localAddress
     * @return
     */
-  def sendHandshake(declaredAddress: Option[InetSocketAddress], localAddress: Option[InetSocketAddress]): Tcp.ResumeReading.type = {
+  def sendHandshake(declaredAddress: Option[InetSocketAddress], localAddress: Option[InetSocketAddress], forgerNode: Boolean = false): Tcp.ResumeReading.type = {
     val localFeature: Seq[PeerFeature] = localAddress.map(LocalAddressPeerFeature(_)).toSeq
-    val features = localFeature :+ SessionIdPeerFeature(settings.network.magicBytes)
+    val forgerNodeFeature = if (forgerNode) Some(ForgerNodePeerFeature()) else None
+    val features = localFeature ++ forgerNodeFeature :+ SessionIdPeerFeature(settings.network.magicBytes)
     val handshakeToNode = Handshake(PeerSpec(settings.network.agentName,
       Version(settings.network.appVersion), "test",
       declaredAddress, features), timeProvider.time())

@@ -38,9 +38,12 @@ class PeerSynchronizer(val networkControllerRef: ActorRef,
 
     networkControllerRef ! RegisterMessageSpecs(Seq(GetPeersSpec, peersSpec), self)
 
-    val msg = Message[Unit](GetPeersSpec, Right(()), None)
-    val stn = SendToNetwork(msg, SendToRandom)
-    context.system.scheduler.scheduleWithFixedDelay(2.seconds, settings.getPeersInterval, networkControllerRef, stn)
+    //do not ask network for new peers if we are only connecting to known peers
+    if (!settings.onlyConnectToKnownPeers) {
+      val msg = Message[Unit](GetPeersSpec, Right(()), None)
+      val stn = SendToNetwork(msg, SendToRandom)
+      context.system.scheduler.scheduleWithFixedDelay(2.seconds, settings.getPeersInterval, networkControllerRef, stn)
+    }
   }
 
   override def receive: Receive = {

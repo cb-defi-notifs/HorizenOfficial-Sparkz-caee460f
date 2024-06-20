@@ -76,14 +76,14 @@ class MessageSpecification extends AnyPropSpec
         val recovered = modifiersSpec.parseByteString(bytes)
 
         recovered.typeId shouldEqual data.typeId
-        recovered.modifiers.keys.size shouldEqual data.modifiers.keys.size
+        recovered.modifiers.map(_._1).size shouldEqual data.modifiers.map(_._1).size
 
-        recovered.modifiers.keys.foreach { id =>
-          data.modifiers.get(id).isDefined shouldEqual true
+        recovered.modifiers.map(_._1).foreach { id =>
+          data.modifiers.exists(_._1 == id) shouldEqual true
         }
 
-        recovered.modifiers.values.toSet.foreach { v: Array[Byte] =>
-          data.modifiers.values.toSet.exists(_.sameElements(v)) shouldEqual true
+        recovered.modifiers.map(_._2).toSet.foreach { v: Array[Byte] =>
+          data.modifiers.map(_._2).toSet.exists(_.sameElements(v)) shouldEqual true
         }
 
         modifiersSpec.toByteString(data) shouldEqual bytes
@@ -93,8 +93,8 @@ class MessageSpecification extends AnyPropSpec
         val recovered2 = modifiersSpecLimited.parseByteString(bytes2)
 
         recovered2.typeId shouldEqual data.typeId
-        (recovered2.modifiers.keys.size == data.modifiers.keys.size) shouldEqual false
-        recovered2.modifiers.keys.size shouldEqual 0
+        (recovered2.modifiers.map(_._1).size == data.modifiers.map(_._1).size) shouldEqual false
+        recovered2.modifiers.map(_._1).size shouldEqual 0
       }
     }
   }

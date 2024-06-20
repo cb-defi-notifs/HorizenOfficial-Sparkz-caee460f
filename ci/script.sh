@@ -42,6 +42,9 @@ elif [ "${1}" = "release" ]; then
       -v "${HOME}"/key.asc:/key.asc \
       -e CONTAINER_PUBLISH \
       -e TRAVIS_TAG \
+      -e PROD_RELEASE \
+      -e RC_RELEASE \
+      -e DEV_RELEASE \
       -e LOCAL_USER_ID="$(id -u)" \
       -e LOCAL_GRP_ID="$(id -g)"\
        $(env | grep -E '^CONTAINER_' | sed -n '/^[^\t]/s/=.*//p' | sed '/^$/d' | sed 's/^/-e /g' | tr '\n' ' ') \
